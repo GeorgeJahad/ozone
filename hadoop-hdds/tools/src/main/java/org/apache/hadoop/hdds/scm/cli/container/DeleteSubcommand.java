@@ -25,6 +25,9 @@ import org.apache.hadoop.hdds.scm.cli.ScmSubcommand;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 
 import static org.apache.hadoop.hdds.scm.cli.container.ContainerCommands.checkContainerExists;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
@@ -41,6 +44,9 @@ public class DeleteSubcommand extends ScmSubcommand {
 
   @Parameters(description = "Id of the container to close")
   private long containerId;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DeleteSubcommand.class);
+
 
   @Option(names = {"-f",
       "--force"}, description = "forcibly delete the container")
@@ -49,6 +55,16 @@ public class DeleteSubcommand extends ScmSubcommand {
   @Override
   public void execute(ScmClient scmClient) throws IOException {
     checkContainerExists(scmClient, containerId);
-    scmClient.deleteContainer(containerId, force);
+    try {
+      scmClient.deleteContainer(containerId, force);
+    } catch(Exception e) {
+      if (e.getMessage().startsWith("Unknown command type: DeleteContainer")) {
+        LOG.info("This command is only available to Ozone SCM version >= 1.2." +
+            "See https://issues.apache.org/jira/browse/HDDS-5328 " +
+            "for more details.");
+      } else {
+        throw e;
+      }
+    }
   }
 }
