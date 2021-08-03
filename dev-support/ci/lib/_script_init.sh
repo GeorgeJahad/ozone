@@ -25,29 +25,18 @@ if [[ $(uname -s) != "Darwin" ]]; then
     set -u
 fi
 
-export AIRFLOW_SOURCES="${AIRFLOW_SOURCES:=$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../.." && pwd )}"
-readonly AIRFLOW_SOURCES
+export OZONE_SOURCES="${OZONE_SOURCES:=$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../.." && pwd )}"
+readonly OZONE_SOURCES
 
-# shellcheck source=scripts/ci/libraries/_all_libs.sh
-. "${AIRFLOW_SOURCES}/scripts/ci/libraries/_all_libs.sh"
+# shellcheck source=dev-support/ci/lib/_all_libs.sh
+. "${OZONE_SOURCES}/dev-support/ci/lib/_all_libs.sh"
 
 initialization::initialize_common_environment
 
-sanity_checks::basic_sanity_checks
-
 start_end::script_start
-
-build_images::determine_docker_cache_strategy
 
 initialization::get_environment_for_builds_on_ci
 
-build_images::get_docker_image_names
-
 initialization::make_constants_read_only
-
-# Work around occasional unexplained failure on CI. Clear file flags on
-# STDOUT (which is connected to a tmp file by GitHub Runner).
-# The one error I did see: BlockingIOError: [Errno 11] write could not complete without blocking
-[[ "$CI" == "true" ]] && python3 -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 
 traps::add_trap start_end::script_end EXIT HUP INT TERM
