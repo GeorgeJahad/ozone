@@ -147,6 +147,7 @@ SOURCES_TRIGGERING_TESTS=(
     "^hadoop-hdds"
     "^hadoop-ozone"
     "^pom.xml"
+    "^README.md"
 )
 readonly SOURCES_TRIGGERING_TESTS
 
