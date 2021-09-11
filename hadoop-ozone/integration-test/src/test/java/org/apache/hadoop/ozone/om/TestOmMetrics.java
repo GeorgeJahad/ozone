@@ -108,7 +108,7 @@ public class TestOmMetrics {
 
 
 
-  @Test
+  //  @Test
   public void testVolumeOps() throws IOException {
     VolumeManager volumeManager =
         (VolumeManager) HddsWhiteboxTestUtils.getInternalState(
@@ -185,7 +185,7 @@ public class TestOmMetrics {
 
   }
 
-  @Test
+  //  @Test
   public void testBucketOps() throws IOException {
     BucketManager bucketManager =
         (BucketManager) HddsWhiteboxTestUtils.getInternalState(
@@ -345,7 +345,7 @@ public class TestOmMetrics {
 
   }
 
-  @Test
+  //  @Test
   public void testAclOperations() throws IOException {
     try {
       // Create a volume.
@@ -381,7 +381,7 @@ public class TestOmMetrics {
     }
   }
 
-  @Test
+  //  @Test
   public void testAclOperationsHA() throws Exception {
     ObjectStore objectStore = cluster.getClient().getObjectStore();
     // Create a volume.
