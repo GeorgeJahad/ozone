@@ -2494,6 +2494,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   @Override
+  public StatusAndMessages finalizeUpgrade(String upgradeClientID)
+      throws IOException {
+    return upgradeFinalizer.finalize(upgradeClientID, this);
+  }
+
+  @Override
   public StatusAndMessages queryUpgradeFinalizationProgress(
       String upgradeClientID, boolean takeover, boolean readonly
   ) throws IOException {
@@ -2502,6 +2508,22 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           Collections.emptyList());
     }
     return upgradeFinalizer.reportStatus(upgradeClientID, takeover);
+  }
+
+  @Override
+  /**
+   * {@inheritDoc}
+   */
+  public S3SecretValue getS3Secret(String kerberosID) throws IOException {
+    UserGroupInformation user = ProtobufRpcEngine.Server.getRemoteUser();
+
+    // Check whether user name passed is matching with the current user or not.
+    if (!user.getUserName().equals(kerberosID)) {
+      throw new OMException("User mismatch. Requested user name is " +
+          "mismatched " + kerberosID + ", with current user " +
+          user.getUserName(), OMException.ResultCodes.USER_MISMATCH);
+    }
+    return s3SecretManager.getS3Secret(kerberosID);
   }
 
   @Override
