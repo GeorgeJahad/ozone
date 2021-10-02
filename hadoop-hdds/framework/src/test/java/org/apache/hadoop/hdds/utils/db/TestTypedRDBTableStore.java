@@ -264,7 +264,7 @@ public class TestTypedRDBTableStore {
     }
   }
 
-  @Test
+  // @Test
   public void testTypedTableWithCacheWithFewDeletedOperationType()
       throws Exception {
     int iterCount = 10;
