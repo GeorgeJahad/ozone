@@ -359,7 +359,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
 
   @Override
   public void cleanupCache(List<Long> epochs) {
-    cache.cleanup(epochs);
+    //    cache.cleanup(epochs);
   }
 
   @VisibleForTesting
