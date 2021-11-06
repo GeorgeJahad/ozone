@@ -42,12 +42,14 @@ import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.scm.HddsWhiteboxTestUtils;
+import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.pipeline.MockPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.hdds.utils.HAUtils;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
@@ -77,7 +79,13 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
+import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -89,6 +97,9 @@ import static org.mockito.Mockito.when;
 /**
  * Unit test key manager.
  */
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(HAUtils.class)
+@PowerMockIgnore("javax.management.*")
 public class TestKeyManagerUnit {
 
   private OzoneConfiguration configuration;
@@ -111,7 +122,10 @@ public class TestKeyManagerUnit {
         testDir.toString());
     containerClient = Mockito.mock(StorageContainerLocationProtocol.class);
     blockClient = Mockito.mock(ScmBlockLocationProtocol.class);
-
+    ScmInfo scmInfo = Mockito.mock(ScmInfo.class);
+    when(scmInfo.getClusterId()).thenReturn("omtest");
+    PowerMockito.mockStatic(HAUtils.class);
+    when(HAUtils.getScmContainerClient(Mockito.any(OzoneConfiguration.class))).thenAnswer((Answer<StorageContainerLocationProtocol>) invocation -> containerClient);
     OMStorage omStorage = new OMStorage(configuration);
     omStorage.setClusterId("omtest");
     omStorage.setOmId("omtest");
