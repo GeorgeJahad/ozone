@@ -42,15 +42,25 @@ import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.scm.HddsWhiteboxTestUtils;
+import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.ha.MockSCMHAManager;
+import org.apache.hadoop.hdds.scm.ha.SCMContext;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
+import org.apache.hadoop.hdds.scm.net.NetworkTopologyImpl;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.MockPipeline;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
 import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -71,6 +81,12 @@ import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.ozone.test.GenericTestUtils;
+import org.apache.hadoop.hdds.scm.net.NodeSchema;
+import org.apache.hadoop.hdds.scm.net.NodeSchemaManager;
+import org.apache.hadoop.hdds.scm.container.MockNodeManager;
+import static org.apache.hadoop.hdds.scm.net.NetConstants.LEAF_SCHEMA;
+import static org.apache.hadoop.hdds.scm.net.NetConstants.RACK_SCHEMA;
+import static org.apache.hadoop.hdds.scm.net.NetConstants.ROOT_SCHEMA;
 
 import org.apache.hadoop.util.Time;
 import org.junit.After;
@@ -83,8 +99,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toList;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * Unit test key manager.
@@ -102,22 +117,52 @@ public class TestKeyManagerUnit {
 
   private static OzoneManagerProtocol writeClient;
   private static OzoneManager om;
+  private static NodeManager nodeManager;
+  private static StorageContainerManager scm;
+  private static ScmBlockLocationProtocol mockScmBlockLocationProtocol;
+  private static StorageContainerLocationProtocol mockScmContainerClient;
   
   @Before
   public void setup() throws Exception {
+    DefaultMetricsSystem.setMiniClusterMode(true);
     configuration = new OzoneConfiguration();
     testDir = GenericTestUtils.getRandomizedTestDir();
-    configuration.set(HddsConfigKeys.OZONE_METADATA_DIRS,
-        testDir.toString());
-    containerClient = Mockito.mock(StorageContainerLocationProtocol.class);
-    blockClient = Mockito.mock(ScmBlockLocationProtocol.class);
+    configuration.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.toString());
+    configuration.set(OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY, "true");
+    mockScmBlockLocationProtocol = mock(ScmBlockLocationProtocol.class);
+    nodeManager = new MockNodeManager(true, 10);
+    NodeSchema[] schemas = new NodeSchema[]
+        {ROOT_SCHEMA, RACK_SCHEMA, LEAF_SCHEMA};
+    NodeSchemaManager schemaManager = NodeSchemaManager.getInstance();
+    schemaManager.init(schemas, false);
+    NetworkTopology clusterMap = new NetworkTopologyImpl(schemaManager);
+    nodeManager.getAllNodes().stream().forEach(node -> {
+      node.setNetworkName(node.getUuidString());
+      clusterMap.add(node);
+    });
+    ((MockNodeManager)nodeManager).setNetworkTopology(clusterMap);
+    SCMConfigurator configurator = new SCMConfigurator();
+    configurator.setScmNodeManager(nodeManager);
+    configurator.setNetworkTopology(clusterMap);
+    configurator.setSCMHAManager(MockSCMHAManager.getInstance(true));
+    configurator.setScmContext(SCMContext.emptyContext());
+    scm = TestUtils.getScm(configuration, configurator);
+    scm.start();
+    scm.exitSafeMode();
 
+    mockScmContainerClient =
+        mock(StorageContainerLocationProtocol.class);
+    // Create an OM and connect writeClient to it
     OMStorage omStorage = new OMStorage(configuration);
-    omStorage.setClusterId("omtest");
-    omStorage.setOmId("omtest");
+    omStorage.setClusterId(scm.getClientProtocolServer().getScmInfo().getClusterId());
+    omStorage.setOmId("om1");
     omStorage.initialize();
 
     om = OzoneManager.createOm(configuration);
+
+    containerClient = mock(StorageContainerLocationProtocol.class);
+    blockClient = mock(ScmBlockLocationProtocol.class);
+
     metadataManager = (OmMetadataManagerImpl) HddsWhiteboxTestUtils.getInternalState(
         om, "metadataManager");
 
@@ -126,7 +171,7 @@ public class TestKeyManagerUnit {
     HddsWhiteboxTestUtils.setInternalState(keyManager,
         "scmClient", scmClient);
     HddsWhiteboxTestUtils.setInternalState(keyManager,
-        "secretManager", Mockito.mock(OzoneBlockTokenSecretManager.class));
+        "secretManager", mock(OzoneBlockTokenSecretManager.class));
 
     om.start();
     writeClient = OzoneClientFactory.getRpcClient(configuration).getObjectStore().getClientProxy().getOzoneManagerClient();
@@ -385,7 +430,7 @@ public class TestKeyManagerUnit {
     containerIDs.add(1L);
 
     List<ContainerWithPipeline> cps = new ArrayList<>();
-    ContainerInfo ci = Mockito.mock(ContainerInfo.class);
+    ContainerInfo ci = mock(ContainerInfo.class);
     when(ci.getContainerID()).thenReturn(1L);
     cps.add(new ContainerWithPipeline(ci, pipelineTwo));
 
