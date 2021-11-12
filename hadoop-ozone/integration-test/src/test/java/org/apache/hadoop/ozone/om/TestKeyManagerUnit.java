@@ -128,25 +128,7 @@ public class TestKeyManagerUnit {
     configuration = new OzoneConfiguration();
     testDir = GenericTestUtils.getRandomizedTestDir();
     configuration.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.toString());
-    configuration.set(OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY, "true");
-    mockScmBlockLocationProtocol = mock(ScmBlockLocationProtocol.class);
-    nodeManager = new MockNodeManager(true, 10);
-    NodeSchema[] schemas = new NodeSchema[]
-        {ROOT_SCHEMA, RACK_SCHEMA, LEAF_SCHEMA};
-    NodeSchemaManager schemaManager = NodeSchemaManager.getInstance();
-    schemaManager.init(schemas, false);
-    NetworkTopology clusterMap = new NetworkTopologyImpl(schemaManager);
-    nodeManager.getAllNodes().stream().forEach(node -> {
-      node.setNetworkName(node.getUuidString());
-      clusterMap.add(node);
-    });
-    ((MockNodeManager)nodeManager).setNetworkTopology(clusterMap);
-    SCMConfigurator configurator = new SCMConfigurator();
-    configurator.setScmNodeManager(nodeManager);
-    configurator.setNetworkTopology(clusterMap);
-    configurator.setSCMHAManager(MockSCMHAManager.getInstance(true));
-    configurator.setScmContext(SCMContext.emptyContext());
-    scm = TestUtils.getScm(configuration, configurator);
+    scm = TestUtils.getScm(configuration);
     scm.start();
     scm.exitSafeMode();
 
@@ -181,6 +163,7 @@ public class TestKeyManagerUnit {
   @After
   public void cleanup() throws Exception {
     om.stop();
+    scm.stop();
     FileUtils.deleteDirectory(testDir);
   }
 
