@@ -41,6 +41,9 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.text.ParseException;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -252,19 +255,35 @@ public class ObjectEndpoint extends EndpointBase {
         return listParts(bucketName, keyPath, uploadId,
             partMarker, maxParts);
       }
+      String hostname = InetAddress.getLocalHost().getHostName();
+      if (hostname.endsWith("3")) {
+        OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+            .setVolumeName(getVolume().getName())
+            .setBucketName(bucketName)
+            .setKeyName(keyPath)
+            .setRefreshPipeline(true)
+            .setSortDatanodesInPipeline(true)
+            .setLatestVersionLocation(true)
+            .setHeadOp(false)
+            .build();
+        OmKeyInfo keyInfo = getClient().getObjectStore().getClientProxy()
+            .getOzoneManagerClient()
+            .lookupKey(keyArgs);
+        LOG.info("gbj got arg: ", keyArgs.getKeyName());
+        String rack = keyInfo.getKeyLocationVersions().get(0).getLocationList().get(0).getPipeline().getNodes().get(0).getNetworkLocation();
+        LOG.info("gbj rack is: " + rack);
+        URI uri = null;
+        try {
+          InetAddress inetAddress = InetAddress.getByName("s3g-0.s3g");
+         // uri = new URI("s3g-"+rack.substring(6) + "/" + bucketName + "/" + keyPath);
+          uri = new URI("http://" + inetAddress.getHostAddress() + ":9878/" + bucketName + "/" + keyPath);
+          LOG.info("gbj redirecting to " + uri);
+          return Response.temporaryRedirect(uri).build();
+        } catch (URISyntaxException e) {
+          e.printStackTrace();
+        }
 
-      OmKeyArgs keyArgs = new OmKeyArgs.Builder()
-          .setVolumeName(getVolume().getName())
-          .setBucketName(bucketName)
-          .setKeyName(keyPath)
-          .setRefreshPipeline(true)
-          .setSortDatanodesInPipeline(true)
-          .setLatestVersionLocation(true)
-          .setHeadOp(false)
-          .build();
-      OmKeyInfo keyInfo = getClient().getObjectStore().getClientProxy().getOzoneManagerClient()
-          .lookupKey(keyArgs);
-      LOG.info("gbj got arg: ", keyArgs.getKeyName());
+      }
       OzoneBucket bucket = getBucket(bucketName);
 
       OzoneKeyDetails keyDetails = bucket.getKey(keyPath);
