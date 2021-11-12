@@ -65,9 +65,7 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.ozone.s3.HeaderPreprocessor;
 import org.apache.hadoop.ozone.s3.SignedChunksInputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
@@ -255,6 +253,18 @@ public class ObjectEndpoint extends EndpointBase {
             partMarker, maxParts);
       }
 
+      OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+          .setVolumeName(getVolume().getName())
+          .setBucketName(bucketName)
+          .setKeyName(keyPath)
+          .setRefreshPipeline(true)
+          .setSortDatanodesInPipeline(true)
+          .setLatestVersionLocation(true)
+          .setHeadOp(false)
+          .build();
+      OmKeyInfo keyInfo = getClient().getObjectStore().getClientProxy().getOzoneManagerClient()
+          .lookupKey(keyArgs);
+      LOG.info("gbj got arg: ", keyArgs.getKeyName());
       OzoneBucket bucket = getBucket(bucketName);
 
       OzoneKeyDetails keyDetails = bucket.getKey(keyPath);

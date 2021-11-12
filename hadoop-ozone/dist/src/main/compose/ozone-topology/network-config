@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-10.5.0.4	/rack1
-10.5.0.5	/rack1
-10.5.0.6	/rack1
-10.5.0.7	/rack2
-10.5.0.8	/rack2
-10.5.0.9	/rack2
+
+datanode-0.datanode	/rack0
+datanode-1.datanode	/rack1
+datanode-2.datanode	/rack2
+datanode-0.datanode.default.svc.cluster.local /rack0
+datanode-1.datanode.default.svc.cluster.local /rack0
+datanode-2.datanode.default.svc.cluster.local /rack0
