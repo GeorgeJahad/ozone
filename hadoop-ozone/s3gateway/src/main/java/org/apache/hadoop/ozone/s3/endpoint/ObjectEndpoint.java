@@ -278,7 +278,7 @@ public class ObjectEndpoint extends EndpointBase {
          // uri = new URI("s3g-"+rack.substring(6) + "/" + bucketName + "/" + keyPath);
           uri = new URI("http://" + inetAddress.getHostAddress() + ":9878/" + bucketName + "/" + keyPath);
           LOG.info("gbj redirecting to " + uri);
-          return Response.temporaryRedirect(uri).build();
+          return Response.temporaryRedirect(uri).header("x-amz-bucket-region", "us-east-1").build();
         } catch (URISyntaxException e) {
           e.printStackTrace();
         }
