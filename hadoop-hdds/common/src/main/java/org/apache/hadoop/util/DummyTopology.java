@@ -9,8 +9,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class DummyTopology implements DNSToSwitchMapping {
-  private Map<InetAddress, String> getCurrentDatanodes() {
-    Map<InetAddress, String> currDatanodes = new HashMap<>();
+  private Map<String, String> getCurrentDatanodes() {
+    Map<String, String> currDatanodes = new HashMap<>();
     for (int i = 0; i < 3; i++) {
       InetAddress addr = null;
       try {
@@ -18,28 +18,17 @@ public class DummyTopology implements DNSToSwitchMapping {
       } catch (UnknownHostException e) {
         e.printStackTrace();
       }
-      currDatanodes.put(addr, "/rack-" + i);
+      currDatanodes.put(addr.getHostAddress(), "/rack-" + i);
     }
     return currDatanodes;
   }
   @Override
   public List<String> resolve(List<String> list) {
-    List<String> results = new ArrayList(list.size());
-    Map<InetAddress, String> currDatanodes = getCurrentDatanodes();
+    List<String> results = new ArrayList<>(list.size());
+    Map<String, String> currDatanodes = getCurrentDatanodes();
     for (String addr: list) {
-      try {
-        InetAddress inetAddress = InetAddress.getByName(addr);
-        if (currDatanodes.containsKey(inetAddress)) {
-          results.add(currDatanodes.get(inetAddress));
-        } else {
-          results.add(NetworkTopology.DEFAULT_RACK);
-        }
-      } catch (UnknownHostException e) {
-        e.printStackTrace();
-        results.add(NetworkTopology.DEFAULT_RACK);
-      }
+      results.add(currDatanodes.getOrDefault(addr, NetworkTopology.DEFAULT_RACK));
     }
-
     return results;
   }
 

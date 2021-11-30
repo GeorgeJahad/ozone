@@ -269,16 +269,16 @@ public class ObjectEndpoint extends EndpointBase {
         OmKeyInfo keyInfo = getClient().getObjectStore().getClientProxy()
             .getOzoneManagerClient()
             .lookupKey(keyArgs);
-        LOG.info("gbj got arg: ", keyArgs.getKeyName());
+        LOG.info("gbj got arg: " + keyArgs.getKeyName());
         String rack = keyInfo.getKeyLocationVersions().get(0).getLocationList().get(0).getPipeline().getNodes().get(0).getNetworkLocation();
         LOG.info("gbj rack is: " + rack);
         URI uri = null;
         try {
-          InetAddress inetAddress = InetAddress.getByName("s3g-0.s3g");
-         // uri = new URI("s3g-"+rack.substring(6) + "/" + bucketName + "/" + keyPath);
-          uri = new URI("http://" + inetAddress.getHostAddress() + ":9878/" + bucketName + "/" + keyPath);
+          // InetAddress inetAddress = InetAddress.getByName("s3g-0.s3g");
+          uri = new URI("s3g-"+rack.substring(6) + "/" + bucketName + "/" + keyPath);
+          // uri = new URI("http://" + inetAddress.getHostAddress() + ":9878/" + bucketName + "/" + keyPath);
           LOG.info("gbj redirecting to " + uri);
-          return Response.temporaryRedirect(uri).header("x-amz-bucket-region", "us-east-1").build();
+          return Response.temporaryRedirect(uri).build();
         } catch (URISyntaxException e) {
           e.printStackTrace();
         }
