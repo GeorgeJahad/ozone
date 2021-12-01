@@ -54,11 +54,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalLong;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
@@ -270,13 +272,14 @@ public class ObjectEndpoint extends EndpointBase {
             .getOzoneManagerClient()
             .lookupKey(keyArgs);
         LOG.info("gbj got arg: " + keyArgs.getKeyName());
-        String rack = keyInfo.getKeyLocationVersions().get(0).getLocationList().get(0).getPipeline().getNodes().get(0).getNetworkLocation();
+        List<DatanodeDetails> nodes = keyInfo.getKeyLocationVersions().get(0).getLocationList().get(0).getPipeline().getNodes();
+        int randomNode = ThreadLocalRandom.current().nextInt(0, nodes.size() + 1);
+        String rack = nodes.get(randomNode).getNetworkLocation();
         LOG.info("gbj rack is: " + rack);
         URI uri = null;
         try {
-          // InetAddress inetAddress = InetAddress.getByName("s3g-0.s3g");
-          uri = new URI("s3g-"+rack.substring(6) + "/" + bucketName + "/" + keyPath);
-          // uri = new URI("http://" + inetAddress.getHostAddress() + ":9878/" + bucketName + "/" + keyPath);
+          InetAddress inetAddress = InetAddress.getByName("s3g-" + rack.substring(6) +".s3g");
+          uri = new URI("http://" + inetAddress.getHostAddress() + ":9878/" + bucketName + "/" + keyPath);
           LOG.info("gbj redirecting to " + uri);
           return Response.temporaryRedirect(uri).build();
         } catch (URISyntaxException e) {
