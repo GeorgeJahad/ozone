@@ -56,11 +56,13 @@ import java.util.Map;
 import java.util.OptionalLong;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.hadoop.hdds.DFSConfigKeysLegacy;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.net.TableMapping;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
@@ -71,6 +73,7 @@ import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.*;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.s3.HeaderPreprocessor;
 import org.apache.hadoop.ozone.s3.SignedChunksInputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
@@ -80,6 +83,7 @@ import org.apache.hadoop.ozone.s3.util.RangeHeader;
 import org.apache.hadoop.ozone.s3.util.RangeHeaderParserUtil;
 import org.apache.hadoop.ozone.s3.util.S3StorageType;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -109,6 +113,10 @@ import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.net.CachedDNSToSwitchMapping;
+import org.apache.hadoop.net.DNSToSwitchMapping;
+
+
 /**
  * Key level rest endpoints.
  */
@@ -124,7 +132,11 @@ public class ObjectEndpoint extends EndpointBase {
 
   private List<String> customizableGetHeaders = new ArrayList<>();
   private int bufferSize;
-
+  private DNSToSwitchMapping dnsToSwitchMapping;
+  private static final String S3_REGISTRY_BUCKET_NAME = "s3-registry-bucket";
+  private String registryBucket;
+  private OzoneManagerProtocol omClient;
+  
   public ObjectEndpoint() {
     customizableGetHeaders.add("Content-Type");
     customizableGetHeaders.add("Content-Language");
@@ -132,6 +144,7 @@ public class ObjectEndpoint extends EndpointBase {
     customizableGetHeaders.add("Cache-Control");
     customizableGetHeaders.add("Content-Disposition");
     customizableGetHeaders.add("Content-Encoding");
+
   }
 
   @Inject
@@ -142,7 +155,28 @@ public class ObjectEndpoint extends EndpointBase {
     bufferSize = (int) ozoneConfiguration.getStorageSize(
         OZONE_S3G_CLIENT_BUFFER_SIZE_KEY,
         OZONE_S3G_CLIENT_BUFFER_SIZE_DEFAULT, StorageUnit.BYTES);
+    Class<? extends DNSToSwitchMapping> dnsToSwitchMappingClass =
+        ozoneConfiguration.getClass(
+            DFSConfigKeysLegacy.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            TableMapping.class, DNSToSwitchMapping.class);
+    DNSToSwitchMapping newInstance = ReflectionUtils.newInstance(
+        dnsToSwitchMappingClass, ozoneConfiguration);
+    this.dnsToSwitchMapping =
+        ((newInstance instanceof CachedDNSToSwitchMapping) ? newInstance
+            : new CachedDNSToSwitchMapping(newInstance));
+    omClient = getClient().getObjectStore()
+      .getClientProxy()
+      .getOzoneManagerClient();
+
+    try {
+      registryBucket = createS3Bucket(S3_REGISTRY_BUCKET_NAME);
+    } catch (IOException | OS3Exception e) {
+      LOG.error("S3 registry creation failed: " + e.getMessage());
+    }
+
   }
+
+
 
   /**
    * Rest endpoint to upload object to a bucket.
@@ -249,6 +283,16 @@ public class ObjectEndpoint extends EndpointBase {
       @QueryParam("max-parts") @DefaultValue("1000") int maxParts,
       @QueryParam("part-number-marker") String partNumberMarker,
       InputStream body) throws IOException, OS3Exception {
+    try {
+      LOG.info("gbj addr: " + InetAddress.getLocalHost().getHostAddress());
+      String[] addr = InetAddress.getLocalHost().getHostAddress().split("/");
+      OzoneBucket bucket = getBucket(S3_REGISTRY_BUCKET_NAME);
+      OzoneOutputStream output = bucket.createKey(addr[addr.length - 1], 0);
+      output.close();
+    } catch (IOException | OS3Exception e) {
+      LOG.error("S3 registry entry creation failed: " + e.getMessage());
+    }
+
     try {
 
       if (uploadId != null) {
