@@ -73,6 +73,7 @@ import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.s3.HeaderPreprocessor;
+import org.apache.hadoop.ozone.s3.RegistryService;
 import org.apache.hadoop.ozone.s3.SignedChunksInputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
@@ -132,12 +133,6 @@ public class ObjectEndpoint extends EndpointBase {
 
   private List<String> customizableGetHeaders = new ArrayList<>();
   private int bufferSize;
-  private DNSToSwitchMapping dnsToSwitchMapping;
-  private static final String S3_REGISTRY_BUCKET_NAME = "s3-registry-bucket";
-  private String registryBucket;
-  private OzoneManagerProtocol omClient;
-  private volatile Map<String, List<String>> registry;
-  
   public ObjectEndpoint() {
     customizableGetHeaders.add("Content-Type");
     customizableGetHeaders.add("Content-Language");
@@ -151,71 +146,15 @@ public class ObjectEndpoint extends EndpointBase {
   @Inject
   private OzoneConfiguration ozoneConfiguration;
 
+  @Inject
+  private RegistryService registryService;
+
   @PostConstruct
   public void init() {
     bufferSize = (int) ozoneConfiguration.getStorageSize(
         OZONE_S3G_CLIENT_BUFFER_SIZE_KEY,
         OZONE_S3G_CLIENT_BUFFER_SIZE_DEFAULT, StorageUnit.BYTES);
-    Class<? extends DNSToSwitchMapping> dnsToSwitchMappingClass =
-        ozoneConfiguration.getClass(
-            DFSConfigKeysLegacy.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
-            TableMapping.class, DNSToSwitchMapping.class);
-    DNSToSwitchMapping newInstance = ReflectionUtils.newInstance(
-        dnsToSwitchMappingClass, ozoneConfiguration);
-    this.dnsToSwitchMapping =
-        ((newInstance instanceof CachedDNSToSwitchMapping) ? newInstance
-            : new CachedDNSToSwitchMapping(newInstance));
-    omClient = getClient().getObjectStore()
-      .getClientProxy()
-      .getOzoneManagerClient();
 
-    try {
-      registryBucket = createS3Bucket(S3_REGISTRY_BUCKET_NAME);
-    } catch (IOException | OS3Exception e) {
-      LOG.error("S3 registry creation failed: " + e.getMessage());
-    }
-    try {
-      LOG.info("gbj addr: " + InetAddress.getLocalHost().getHostAddress());
-      String[] addr = InetAddress.getLocalHost().getHostAddress().split("/");
-      OzoneBucket bucket = getBucket(S3_REGISTRY_BUCKET_NAME);
-      OzoneOutputStream output = bucket.createKey(addr[addr.length - 1], 0);
-      output.close();
-    } catch (IOException | OS3Exception e) {
-      LOG.error("S3 registry entry creation failed: " + e.getMessage());
-    }
-    new Thread(this::updateRegistryTask).start();
-  }
-
-  private Map<String, List<String>> getRegistry() {
-    Map<String, List<String>> registry = new HashMap<>();
-    OzoneBucket bucket = null;
-    try {
-      bucket = getBucket(S3_REGISTRY_BUCKET_NAME);
-      Iterator<? extends OzoneKey> ozoneKeyIterator;
-      ozoneKeyIterator = bucket.listKeys(null);
-      registry = Streams.stream(ozoneKeyIterator)
-          .map(k -> k.getName())
-          .collect(
-              groupingBy(k -> dnsToSwitchMapping.resolve(
-                   Arrays.asList(k)).get(0)));
-    } catch (OS3Exception | IOException e) {
-      LOG.error("getRegistry failed: " + e.getMessage());
-      return null;
-    }
-    return registry;
-
-
-  }
-  private void updateRegistryTask() {
-    while (true) {
-      //      registry = getRegistry();
-      try {
-        Thread.sleep(10000);
-      } catch (InterruptedException e) {
-        LOG.error("registry task exiting.");
-        break;
-      }
-    }
   }
 
 
@@ -325,8 +264,8 @@ public class ObjectEndpoint extends EndpointBase {
       @QueryParam("part-number-marker") String partNumberMarker,
       InputStream body) throws IOException, OS3Exception {
     try {
-      registry = getRegistry();
-
+      Map<String, List<String>> registry = registryService.getRegistry();
+      System.out.println(registry.keySet().toArray()[0]);
       if (uploadId != null) {
         // When we have uploadId, this is the request for list Parts.
         int partMarker = parsePartNumberMarker(partNumberMarker);
