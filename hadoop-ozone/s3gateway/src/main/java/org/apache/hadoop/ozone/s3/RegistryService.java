@@ -35,7 +35,7 @@ public class RegistryService {
 
   private static OzoneConfiguration ozoneConfiguration;
   private static OzoneClient ozoneClient;
-
+  private static boolean entryCreated;
   private RegistryService(){
     try {
       ozoneClient = OzoneClientFactory.getRpcClient(ozoneConfiguration);
@@ -103,6 +103,7 @@ public class RegistryService {
 
   private void updateRegistryTask() {
     while (true) {
+      createEntry();
       registry = getRegistry();
       try {
         Thread.sleep(10000);
@@ -113,6 +114,19 @@ public class RegistryService {
     }
   }
 
-
-
+  private void createEntry() {
+    if (entryCreated) {
+      return;
+    }
+    try {
+      LOG.info("gbj addr: " + InetAddress.getLocalHost().getHostAddress());
+      String[] addr = InetAddress.getLocalHost().getHostAddress().split("/");
+      OzoneOutputStream output =
+          registryBucket.createKey(addr[addr.length - 1], 0);
+      output.close();
+      entryCreated = true;
+    } catch (IOException e) {
+      LOG.info("S3 registry entry creation failed: " + e.getMessage());
+    }
+  }
 }
