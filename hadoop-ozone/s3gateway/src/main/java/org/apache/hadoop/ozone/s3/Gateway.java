@@ -64,6 +64,7 @@ public class Gateway extends GenericCli {
     UserGroupInformation.setConfiguration(ozoneConfiguration);
     loginS3GUser(ozoneConfiguration);
     httpServer = new S3GatewayHttpServer(ozoneConfiguration, "s3gateway");
+    RegistryService.getRegistryService(ozoneConfiguration).init();
     start();
 
     ShutdownHookManager.get().addShutdownHook(() -> {
@@ -84,7 +85,6 @@ public class Gateway extends GenericCli {
 
     LOG.info("Starting Ozone S3 gateway");
     httpServer.start();
-    RegistryService.getRegistryService().init();
   }
 
   public void stop() throws Exception {
