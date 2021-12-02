@@ -1,3 +1,4 @@
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -48,14 +49,11 @@ import java.text.ParseException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.OptionalLong;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
+import com.google.common.collect.Streams;
 import org.apache.hadoop.hdds.DFSConfigKeysLegacy;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -87,6 +85,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import static java.util.stream.Collectors.groupingBy;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
 import static javax.ws.rs.core.HttpHeaders.LAST_MODIFIED;
 import org.apache.commons.io.IOUtils;
@@ -136,6 +136,7 @@ public class ObjectEndpoint extends EndpointBase {
   private static final String S3_REGISTRY_BUCKET_NAME = "s3-registry-bucket";
   private String registryBucket;
   private OzoneManagerProtocol omClient;
+  private volatile Map<String, List<String>> registry;
   
   public ObjectEndpoint() {
     customizableGetHeaders.add("Content-Type");
@@ -173,9 +174,49 @@ public class ObjectEndpoint extends EndpointBase {
     } catch (IOException | OS3Exception e) {
       LOG.error("S3 registry creation failed: " + e.getMessage());
     }
-
+    try {
+      LOG.info("gbj addr: " + InetAddress.getLocalHost().getHostAddress());
+      String[] addr = InetAddress.getLocalHost().getHostAddress().split("/");
+      OzoneBucket bucket = getBucket(S3_REGISTRY_BUCKET_NAME);
+      OzoneOutputStream output = bucket.createKey(addr[addr.length - 1], 0);
+      output.close();
+    } catch (IOException | OS3Exception e) {
+      LOG.error("S3 registry entry creation failed: " + e.getMessage());
+    }
+    new Thread(this::updateRegistryTask).start();
   }
 
+  private Map<String, List<String>> getRegistry() {
+    Map<String, List<String>> registry = new HashMap<>();
+    OzoneBucket bucket = null;
+    try {
+      bucket = getBucket(S3_REGISTRY_BUCKET_NAME);
+      Iterator<? extends OzoneKey> ozoneKeyIterator;
+      ozoneKeyIterator = bucket.listKeys(null);
+      registry = Streams.stream(ozoneKeyIterator)
+          .map(k -> k.getName())
+          .collect(
+              groupingBy(k -> dnsToSwitchMapping.resolve(
+                   Arrays.asList(k)).get(0)));
+    } catch (OS3Exception | IOException e) {
+      LOG.error("getRegistry failed: " + e.getMessage());
+      return null;
+    }
+    return registry;
+
+
+  }
+  private void updateRegistryTask() {
+    while (true) {
+      //      registry = getRegistry();
+      try {
+        Thread.sleep(10000);
+      } catch (InterruptedException e) {
+        LOG.error("registry task exiting.");
+        break;
+      }
+    }
+  }
 
 
   /**
@@ -284,16 +325,7 @@ public class ObjectEndpoint extends EndpointBase {
       @QueryParam("part-number-marker") String partNumberMarker,
       InputStream body) throws IOException, OS3Exception {
     try {
-      LOG.info("gbj addr: " + InetAddress.getLocalHost().getHostAddress());
-      String[] addr = InetAddress.getLocalHost().getHostAddress().split("/");
-      OzoneBucket bucket = getBucket(S3_REGISTRY_BUCKET_NAME);
-      OzoneOutputStream output = bucket.createKey(addr[addr.length - 1], 0);
-      output.close();
-    } catch (IOException | OS3Exception e) {
-      LOG.error("S3 registry entry creation failed: " + e.getMessage());
-    }
-
-    try {
+      registry = getRegistry();
 
       if (uploadId != null) {
         // When we have uploadId, this is the request for list Parts.
