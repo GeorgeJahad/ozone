@@ -4,6 +4,7 @@ import com.google.common.collect.Streams;
 import org.apache.hadoop.hdds.DFSConfigKeysLegacy;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.TableMapping;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
@@ -15,12 +16,18 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
+import javax.enterprise.inject.InjectionException;
+import javax.enterprise.inject.Produces;
+import javax.enterprise.inject.Vetoed;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
-
+@Vetoed
 public class RegistryService {
   private DNSToSwitchMapping dnsToSwitchMapping;
   private static final String S3_REGISTRY_BUCKET_NAME = "s3-registry-bucket";
@@ -52,6 +59,13 @@ public class RegistryService {
     }
     return singleton;
   }
+  public static RegistryService getRegistryService() {
+    if (singleton == null) {
+      throw new InjectionException("Registry service does not exist yet.");
+    } else {
+      return singleton;
+    }
+  }
 
   public void init() {
     if (!initializionDone) {
@@ -78,7 +92,7 @@ public class RegistryService {
     }
     new Thread(this::updateRegistryTask).start();
   }
-  public Map<String, List<String>> getRegistry() {
+  private Map<String, List<String>> updateRegistry() {
     Map<String, List<String>> registry;
     try {
       Iterator<? extends OzoneKey> ozoneKeyIterator;
@@ -88,7 +102,7 @@ public class RegistryService {
           // group ip addresses by rack
           .collect(groupingBy(this::getRack));
     } catch (IOException e) {
-      LOG.error("getRegistry failed: " + e.getMessage());
+      LOG.error("updateRegistry failed: " + e.getMessage());
       return null;
     }
     return registry;
@@ -97,14 +111,14 @@ public class RegistryService {
   }
 
   @NotNull
-  private String getRack(String addr) {
+  public String getRack(String addr) {
     return dnsToSwitchMapping.resolve(Arrays.asList(addr)).get(0);
   }
 
   private void updateRegistryTask() {
     while (true) {
       createEntry();
-      registry = getRegistry();
+      registry = updateRegistry();
       try {
         Thread.sleep(10000);
       } catch (InterruptedException e) {
@@ -128,5 +142,20 @@ public class RegistryService {
     } catch (IOException e) {
       LOG.info("S3 registry entry creation failed: " + e.getMessage());
     }
+  }
+  public List<String> getS3GNodes(@Nullable String rack) {
+    List<String> l = new ArrayList<>();
+    if (rack != null) {
+      return registry.getOrDefault(rack, l);
+    }
+    for (String k : registry.keySet()) {
+      if (!k.equals(NetworkTopology.DEFAULT_RACK)) {
+        for (String n : registry.get(k)) {
+          l.add(n);
+        }
+      }
+    }
+    Collections.shuffle(l);
+    return l;
   }
 }

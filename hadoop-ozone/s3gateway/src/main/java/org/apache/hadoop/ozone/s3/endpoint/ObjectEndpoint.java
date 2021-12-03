@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.ozone.s3.endpoint;
 
+import javax.annotation.Nullable;
 import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -42,9 +43,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.*;
 import java.text.ParseException;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -60,6 +59,7 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.TableMapping;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneBucket;
@@ -264,44 +264,17 @@ public class ObjectEndpoint extends EndpointBase {
       @QueryParam("part-number-marker") String partNumberMarker,
       InputStream body) throws IOException, OS3Exception {
     try {
-      Map<String, List<String>> registry = registryService.getRegistry();
-      System.out.println(registry.keySet().toArray()[0]);
       if (uploadId != null) {
         // When we have uploadId, this is the request for list Parts.
         int partMarker = parsePartNumberMarker(partNumberMarker);
         return listParts(bucketName, keyPath, uploadId,
             partMarker, maxParts);
       }
-      String hostname = InetAddress.getLocalHost().getHostName();
-      if (hostname.endsWith("3")) {
-        OmKeyArgs keyArgs = new OmKeyArgs.Builder()
-            .setVolumeName(getVolume().getName())
-            .setBucketName(bucketName)
-            .setKeyName(keyPath)
-            .setRefreshPipeline(true)
-            .setSortDatanodesInPipeline(true)
-            .setLatestVersionLocation(true)
-            .setHeadOp(false)
-            .build();
-        OmKeyInfo keyInfo = getClient().getObjectStore().getClientProxy()
-            .getOzoneManagerClient()
-            .lookupKey(keyArgs);
-        LOG.info("gbj got arg: " + keyArgs.getKeyName());
-        List<DatanodeDetails> nodes = keyInfo.getKeyLocationVersions().get(0).getLocationList().get(0).getPipeline().getNodes();
-        int randomNode = ThreadLocalRandom.current().nextInt(0, nodes.size() + 1);
-        String rack = nodes.get(randomNode).getNetworkLocation();
-        LOG.info("gbj rack is: " + rack);
-        URI uri = null;
-        try {
-          InetAddress inetAddress = InetAddress.getByName("s3g-" + rack.substring(6) +".s3g");
-          uri = new URI("http://" + inetAddress.getHostAddress() + ":9878/" + bucketName + "/" + keyPath);
-          LOG.info("gbj redirecting to " + uri);
-          return Response.temporaryRedirect(uri).build();
-        } catch (URISyntaxException e) {
-          e.printStackTrace();
-        }
-
+      URI redirectURI = getRedirectURI(bucketName, keyPath);
+      if (redirectURI != null) {
+        return Response.temporaryRedirect(redirectURI).build();
       }
+
       OzoneBucket bucket = getBucket(bucketName);
 
       OzoneKeyDetails keyDetails = bucket.getKey(keyPath);
@@ -381,6 +354,103 @@ public class ObjectEndpoint extends EndpointBase {
       }
     }
   }
+
+  @Nullable
+  private URI getRedirectURI(String bucketName, String keyPath) {
+    URI uri;
+    List<DatanodeDetails> nodes = getDatanodes(bucketName, keyPath);
+    if (nodes.size() == 0) {
+      return null;
+    }
+    InetAddress localHost;
+    try {
+      localHost = InetAddress.getLocalHost();
+    } catch (UnknownHostException e) {
+      LOG.error("couldn't get local ip addr: " + e.getMessage());
+      return null;
+    }
+    // see if the data is on this host
+    for (DatanodeDetails n : nodes) {
+      if (n.getIpAddress().equals(localHost.getHostAddress())) {
+        return null;
+      }
+    }
+    //randomize nodes
+    Collections.shuffle(nodes);
+
+    // see if the data is on any s3g node
+    for (DatanodeDetails n : nodes) {
+      for (String g : registryService.getS3GNodes(null)) {
+        if (n.getIpAddress().equals(g)) {
+          return createRedirectUri(bucketName, keyPath, g);
+        }
+      }
+    }
+    // see if the data is on the same rack as this host
+    for (DatanodeDetails n: nodes) {
+      if (n.getNetworkLocation().equals(
+          registryService.getRack(localHost.getHostAddress()))) {
+        LOG.info("gbj rack is: " + n.getNetworkLocation());
+        return null;
+      }
+    }
+    // see if the data is on a rack with any s3g node
+    for (DatanodeDetails n: nodes) {
+      String rack = n.getNetworkLocation();
+      if (rack == NetworkTopology.DEFAULT_RACK) {
+        continue;
+      }
+      List<String> s3gNodes = registryService.getS3GNodes(rack);
+      if (s3gNodes.size() == 0) {
+        continue;
+      }
+      // List<String> shuffledS3gNodes = new ArrayList<>();
+      // Collections.copy(shuffledS3gNodes, s3gNodes);
+      Collections.shuffle(s3gNodes);
+      return createRedirectUri(bucketName, keyPath, s3gNodes.get(0));
+    }
+    // no better s3g found
+    return null;
+  }
+
+
+  private List<DatanodeDetails> getDatanodes(String bucketName, String keyPath) {
+    OmKeyInfo keyInfo;
+    try {
+      OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+          .setVolumeName(getVolume().getName())
+          .setBucketName(bucketName)
+          .setKeyName(keyPath)
+          .setRefreshPipeline(true)
+          .setSortDatanodesInPipeline(true)
+          .setLatestVersionLocation(true)
+          .setHeadOp(false)
+          .build();
+
+      keyInfo = getClient().getObjectStore().getClientProxy()
+        .getOzoneManagerClient()
+        .lookupKey(keyArgs);
+    LOG.info("gbj got arg: " + keyArgs.getKeyName());
+    } catch (IOException e) {
+      LOG.error("failed to get datanodes: " + e.getMessage());
+      return new ArrayList<>();
+    }
+    return keyInfo.getKeyLocationVersions().get(0).getLocationList().get(0).getPipeline().getNodes();
+
+  }
+
+  URI createRedirectUri(String bucketName, String keyPath, String addr) {
+    URI uri;
+    try {
+      uri = new URI("http://" + addr + ":9878/" + bucketName + "/" + keyPath);
+      LOG.info("gbj redirecting to " + uri);
+    } catch (URISyntaxException e) {
+      LOG.error("redirect uri creation failed: " + e.getMessage());
+      return null;
+    }
+    return uri;
+  }
+
 
   private void addLastModifiedDate(
       ResponseBuilder responseBuilder, OzoneKey key) {
