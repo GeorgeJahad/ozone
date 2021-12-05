@@ -61,6 +61,17 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
+      - name: s3g
+        image: '@docker.image@'
+        args:
+        - ozone
+        - s3g
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
   volumeClaimTemplates:
   - metadata:
       name: data

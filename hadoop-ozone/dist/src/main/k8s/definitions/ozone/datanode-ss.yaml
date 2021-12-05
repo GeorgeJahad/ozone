@@ -52,3 +52,6 @@ spec:
       - name: datanode
         image: "@docker.image@"
         args: ["ozone","datanode"]
+      - name: s3g
+        image: "@docker.image@"
+        args: ["ozone","s3g"]
