@@ -272,7 +272,10 @@ public class ObjectEndpoint extends EndpointBase {
       }
       URI redirectURI = getRedirectURI(bucketName, keyPath);
       if (redirectURI != null) {
+        LOG.info("S3POC: redirecting request to: " +redirectURI.toASCIIString());
         return Response.temporaryRedirect(redirectURI).build();
+      } else {
+        LOG.info("S3POC: handling request locally, key: " + keyPath);
       }
 
       OzoneBucket bucket = getBucket(bucketName);
