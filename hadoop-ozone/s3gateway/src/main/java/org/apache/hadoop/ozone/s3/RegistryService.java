@@ -23,6 +23,7 @@ import javax.enterprise.inject.Vetoed;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -158,4 +159,5 @@ public class RegistryService {
     Collections.shuffle(l);
     return l;
   }
+
 }

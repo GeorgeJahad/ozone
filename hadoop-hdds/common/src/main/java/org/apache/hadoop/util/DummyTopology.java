@@ -11,20 +11,20 @@ import java.util.stream.Collectors;
 public class DummyTopology implements DNSToSwitchMapping {
   private Map<String, String> getCurrentRacks() {
     Map<String, String> currRacks = new HashMap<>();
-    for (int i = 0; i < 3; i++) {
-      InetAddress addr = null;
+    for (int i = 0; i < 4; i++) {
+      InetAddress addr;
       try {
         addr = InetAddress.getByName("datanode-" + i + ".datanode");
+        currRacks.put(addr.getHostAddress(), "/rack-" + i);
       } catch (UnknownHostException e) {
-        e.printStackTrace();
+        //e.printStackTrace();
       }
-      currRacks.put(addr.getHostAddress(), "/rack-" + i);
       try {
         addr = InetAddress.getByName("s3g-" + i + ".s3g");
+        currRacks.put(addr.getHostAddress(), "/rack-" + i);
       } catch (UnknownHostException e) {
-        e.printStackTrace();
+        //e.printStackTrace();
       }
-      currRacks.put(addr.getHostAddress(), "/rack-" + i);
     }
     return currRacks;
   }

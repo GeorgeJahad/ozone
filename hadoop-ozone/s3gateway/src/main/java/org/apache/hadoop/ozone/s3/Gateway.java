@@ -18,6 +18,8 @@
 package org.apache.hadoop.ozone.s3;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import org.apache.hadoop.hdds.StringUtils;
 import org.apache.hadoop.hdds.cli.GenericCli;
@@ -53,6 +55,7 @@ public class Gateway extends GenericCli {
   private S3GatewayHttpServer httpServer;
 
   public static void main(String[] args) throws Exception {
+    waitForOm();
     new Gateway().run(args);
   }
 
@@ -114,5 +117,22 @@ public class Gateway extends GenericCli {
       LOG.info("S3Gateway login successful.");
     }
   }
-
+  private static void waitForOm() {
+    while (true) {
+      try {
+        InetAddress.getByName("om-0.om");
+        try {
+          Thread.sleep(15000);
+        } catch (InterruptedException interruptedException) {
+        }
+        return;
+      } catch (UnknownHostException e) {
+        LOG.error("om not ready");
+        try {
+          Thread.sleep(5000);
+        } catch (InterruptedException interruptedException) {
+        }
+      }
+    }
+  }
 }
