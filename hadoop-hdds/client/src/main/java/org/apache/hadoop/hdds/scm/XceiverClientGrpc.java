@@ -141,7 +141,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     DatanodeDetails dn = topologyAwareRead ? this.pipeline.getClosestNode() :
         this.pipeline.getFirstNode();
     // just make a connection to the picked datanode at the beginning
-    LOG.info("S3POC: reading from datanode: " + dn.getHostName());
+    LOG.info("S3POC: connecting to datanode: " + dn.getHostName());
     connectToDatanode(dn);
   }
 

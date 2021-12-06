@@ -260,6 +260,7 @@ public class ObjectEndpoint extends EndpointBase {
       @PathParam("bucket") String bucketName,
       @PathParam("path") String keyPath,
       @QueryParam("uploadId") String uploadId,
+      //      @QueryParam("redirectParam") String redirectParam,
       @QueryParam("max-parts") @DefaultValue("1000") int maxParts,
       @QueryParam("part-number-marker") String partNumberMarker,
       InputStream body) throws IOException, OS3Exception {
@@ -270,9 +271,9 @@ public class ObjectEndpoint extends EndpointBase {
         return listParts(bucketName, keyPath, uploadId,
             partMarker, maxParts);
       }
+      //      LOG.info("redirect param is: " + partNumberMarker);
       URI redirectURI = getRedirectURI(bucketName, keyPath);
       if (redirectURI != null) {
-        LOG.info("S3POC: redirecting request to: " +redirectURI.toASCIIString());
         return Response.temporaryRedirect(redirectURI).build();
       } else {
         LOG.info("S3POC: handling request locally, key: " + keyPath);
@@ -444,9 +445,16 @@ public class ObjectEndpoint extends EndpointBase {
 
   URI createRedirectUri(String bucketName, String keyPath, String addr) {
     URI uri;
+    String hostname = "";
+    try {
+      InetAddress inetAddress = InetAddress.getByName(addr);
+      hostname = inetAddress.getHostName();
+    } catch (UnknownHostException e) {
+
+    }
     try {
       uri = new URI("http://" + addr + ":9878/" + bucketName + "/" + keyPath);
-      LOG.info("gbj redirecting to " + uri);
+      LOG.info("S3POC: redirecting to " + hostname);
     } catch (URISyntaxException e) {
       LOG.error("redirect uri creation failed: " + e.getMessage());
       return null;

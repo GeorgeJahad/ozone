@@ -709,7 +709,7 @@ public class NetworkTopologyImpl implements NetworkTopology{
         list = Lists.newArrayListWithExpectedSize(1);
         tree.put(cost, list);
       }
-      LOG.info("S3POC: node " + node.getNetworkFullPath() + " has cost: " + cost);
+      LOG.info("S3POC: " + node.getNetworkLocation() + " has cost: " + cost);
       list.add(node);
     }
 
