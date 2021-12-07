@@ -6,9 +6,25 @@ import org.apache.hadoop.net.NetworkTopology;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
-import java.util.stream.Collectors;
 
-public class DummyTopology implements DNSToSwitchMapping {
+// Implements interface that resolves rack location of each node
+// The topology creates 4 racks, /rack-0 to /rack-3
+// The first 3 will contain two node, datanode-x, and s3g-x
+// Since there are 4 s3g nodes and only 3 data nodes, the final
+// rack only has s3g-3
+public class RackawareS3PocTopology implements DNSToSwitchMapping {
+
+  // resolves a list of ip addresses into a list of racks
+  @Override
+  public List<String> resolve(List<String> list) {
+    List<String> results = new ArrayList<>(list.size());
+    Map<String, String> currRacks = getCurrentRacks();
+    for (String addr: list) {
+      results.add(currRacks.getOrDefault(addr, NetworkTopology.DEFAULT_RACK));
+    }
+    return results;
+  }
+
   private Map<String, String> getCurrentRacks() {
     Map<String, String> currRacks = new HashMap<>();
     for (int i = 0; i < 4; i++) {
@@ -28,15 +44,6 @@ public class DummyTopology implements DNSToSwitchMapping {
     }
     return currRacks;
   }
-  @Override
-  public List<String> resolve(List<String> list) {
-    List<String> results = new ArrayList<>(list.size());
-    Map<String, String> currRacks = getCurrentRacks();
-    for (String addr: list) {
-      results.add(currRacks.getOrDefault(addr, NetworkTopology.DEFAULT_RACK));
-    }
-    return results;
-  }
 
   @Override
   public void reloadCachedMappings() {
@@ -46,14 +53,5 @@ public class DummyTopology implements DNSToSwitchMapping {
   @Override
   public void reloadCachedMappings(List<String> list) {
 
-  }
-  public static void main(String[] args) {
-
-    DummyTopology dt = new DummyTopology();
-    List<String> datanodes = Arrays
-        .asList("10.42.0.172", "10.42.0.178", "10.42.0.180", "10.42.0.182");
-    List<String> results = dt.resolve(datanodes);
-    String r = results.stream().collect(Collectors.joining());
-    System.out.println("results are: " + r);
   }
 }

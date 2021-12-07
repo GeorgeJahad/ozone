@@ -52,15 +52,12 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
-import com.google.common.collect.Streams;
-import org.apache.hadoop.hdds.DFSConfigKeysLegacy;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.net.TableMapping;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
@@ -74,6 +71,7 @@ import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.s3.HeaderPreprocessor;
 import org.apache.hadoop.ozone.s3.RegistryService;
+import org.apache.hadoop.ozone.s3.S3GatewayConfigKeys;
 import org.apache.hadoop.ozone.s3.SignedChunksInputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
@@ -82,12 +80,9 @@ import org.apache.hadoop.ozone.s3.util.RangeHeader;
 import org.apache.hadoop.ozone.s3.util.RangeHeaderParserUtil;
 import org.apache.hadoop.ozone.s3.util.S3StorageType;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
-
-import static java.util.stream.Collectors.groupingBy;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_LENGTH;
 import static javax.ws.rs.core.HttpHeaders.LAST_MODIFIED;
 import org.apache.commons.io.IOUtils;
@@ -114,10 +109,6 @@ import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.net.CachedDNSToSwitchMapping;
-import org.apache.hadoop.net.DNSToSwitchMapping;
-
-
 /**
  * Key level rest endpoints.
  */
@@ -133,6 +124,7 @@ public class ObjectEndpoint extends EndpointBase {
 
   private List<String> customizableGetHeaders = new ArrayList<>();
   private int bufferSize;
+
   public ObjectEndpoint() {
     customizableGetHeaders.add("Content-Type");
     customizableGetHeaders.add("Content-Language");
@@ -140,7 +132,6 @@ public class ObjectEndpoint extends EndpointBase {
     customizableGetHeaders.add("Cache-Control");
     customizableGetHeaders.add("Content-Disposition");
     customizableGetHeaders.add("Content-Encoding");
-
   }
 
   @Inject
@@ -154,9 +145,7 @@ public class ObjectEndpoint extends EndpointBase {
     bufferSize = (int) ozoneConfiguration.getStorageSize(
         OZONE_S3G_CLIENT_BUFFER_SIZE_KEY,
         OZONE_S3G_CLIENT_BUFFER_SIZE_DEFAULT, StorageUnit.BYTES);
-
   }
-
 
   /**
    * Rest endpoint to upload object to a bucket.
@@ -265,6 +254,7 @@ public class ObjectEndpoint extends EndpointBase {
       @QueryParam("part-number-marker") String partNumberMarker,
       InputStream body) throws IOException, OS3Exception {
     try {
+
       if (uploadId != null) {
         // When we have uploadId, this is the request for list Parts.
         int partMarker = parsePartNumberMarker(partNumberMarker);
@@ -362,6 +352,7 @@ public class ObjectEndpoint extends EndpointBase {
   @Nullable
   private URI getRedirectURI(String bucketName, String keyPath) {
     URI uri;
+    // see where the data is
     List<DatanodeDetails> nodes = getDatanodes(bucketName, keyPath);
     if (nodes.size() == 0) {
       return null;
@@ -379,7 +370,8 @@ public class ObjectEndpoint extends EndpointBase {
         return null;
       }
     }
-    //randomize nodes
+    //randomize data nodes so that we don't always pick the same
+    // s3g node to redirect to
     Collections.shuffle(nodes);
 
     // see if the data is on any s3g node
@@ -390,11 +382,11 @@ public class ObjectEndpoint extends EndpointBase {
         }
       }
     }
+
     // see if the data is on the same rack as this host
     for (DatanodeDetails n: nodes) {
       if (n.getNetworkLocation().equals(
           registryService.getRack(localHost.getHostAddress()))) {
-        LOG.info("gbj rack is: " + n.getNetworkLocation());
         return null;
       }
     }
@@ -408,8 +400,8 @@ public class ObjectEndpoint extends EndpointBase {
       if (s3gNodes.size() == 0) {
         continue;
       }
-      // List<String> shuffledS3gNodes = new ArrayList<>();
-      // Collections.copy(shuffledS3gNodes, s3gNodes);
+
+      // Dont always redirect to the same s3 node
       Collections.shuffle(s3gNodes);
       return createRedirectUri(bucketName, keyPath, s3gNodes.get(0));
     }
@@ -434,12 +426,12 @@ public class ObjectEndpoint extends EndpointBase {
       keyInfo = getClient().getObjectStore().getClientProxy()
         .getOzoneManagerClient()
         .lookupKey(keyArgs);
-    LOG.info("gbj got arg: " + keyArgs.getKeyName());
     } catch (IOException e) {
       LOG.error("failed to get datanodes: " + e.getMessage());
       return new ArrayList<>();
     }
-    return keyInfo.getKeyLocationVersions().get(0).getLocationList().get(0).getPipeline().getNodes();
+    return keyInfo.getKeyLocationVersions().get(0)
+        .getLocationList().get(0).getPipeline().getNodes();
 
   }
 
@@ -453,7 +445,9 @@ public class ObjectEndpoint extends EndpointBase {
 
     }
     try {
-      uri = new URI("http://" + addr + ":9878/" + bucketName + "/" + keyPath);
+      uri = new URI("http://" + addr + ":" +
+          S3GatewayConfigKeys.OZONE_S3G_HTTP_BIND_PORT_DEFAULT +
+          "/" + bucketName + "/" + keyPath);
       LOG.info("S3POC: redirecting to " + hostname);
     } catch (URISyntaxException e) {
       LOG.error("redirect uri creation failed: " + e.getMessage());

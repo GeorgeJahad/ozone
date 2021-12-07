@@ -68,24 +68,28 @@ public class RegistryService {
     }
   }
 
-  public void init() {
-    if (!initializionDone) {
-      start();
+  public void start() {
+    if (initializionDone) {
+      return;
     }
     initializionDone = true;
-  }
-  public void start() {
+
+    // set up rackawareness mapping
     Class<? extends DNSToSwitchMapping> dnsToSwitchMappingClass =
         ozoneConfiguration.getClass(
             DFSConfigKeysLegacy.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
             TableMapping.class, DNSToSwitchMapping.class);
     this.dnsToSwitchMapping = ReflectionUtils.newInstance(
         dnsToSwitchMappingClass, ozoneConfiguration);
+
+    // create the registry bucket
     try {
       ozoneClient.getObjectStore().createS3Bucket(S3_REGISTRY_BUCKET_NAME);
     } catch (IOException e) {
       LOG.info("S3 registry creation failed: " + e.getMessage());
     }
+
+    // Start updating the registry
     try {
       registryBucket = ozoneClient.getObjectStore().getS3Bucket(S3_REGISTRY_BUCKET_NAME);
     } catch (IOException e) {
@@ -93,11 +97,16 @@ public class RegistryService {
     }
     new Thread(this::updateRegistryTask).start();
   }
+
   private Map<String, List<String>> updateRegistry() {
     Map<String, List<String>> registry;
     try {
       Iterator<? extends OzoneKey> ozoneKeyIterator;
+
+      // read all the entries
       ozoneKeyIterator = registryBucket.listKeys(null);
+
+      // convert into a map of s3g ip addresses per rack
       registry = Streams.stream(ozoneKeyIterator)
           .map(OzoneKey::getName)
           // group ip addresses by rack
@@ -129,12 +138,12 @@ public class RegistryService {
     }
   }
 
+  //  Create the key in the registry bucket
   private void createEntry() {
     if (entryCreated) {
       return;
     }
     try {
-      LOG.info("gbj addr: " + InetAddress.getLocalHost().getHostAddress());
       String[] addr = InetAddress.getLocalHost().getHostAddress().split("/");
       OzoneOutputStream output =
           registryBucket.createKey(addr[addr.length - 1], 0);
@@ -144,6 +153,8 @@ public class RegistryService {
       LOG.info("S3 registry entry creation failed: " + e.getMessage());
     }
   }
+
+  // Get the list of s3g nodes on the rack, (or all if rack is null)
   public List<String> getS3GNodes(@Nullable String rack) {
     List<String> l = new ArrayList<>();
     if (rack != null) {
