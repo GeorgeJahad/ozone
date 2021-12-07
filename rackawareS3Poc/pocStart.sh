@@ -4,14 +4,12 @@ SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )/.." &> /dev/null && pw
 export OZONE_ROOT=$SCRIPT_DIR/hadoop-ozone/dist/target/ozone-1.3.0-SNAPSHOT
 echo OZONE_ROOT is $OZONE_ROOT
 DIST_DIR=$OZONE_ROOT/kubernetes/examples/ozone
-echo DIST_DIR is $DIST_DIR
 DUMMY_BUCKET=dummy-bucket
 DUMMY_FILE=dummy-file
 
 initK() {
-cd $DIST_DIR;echo flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image=apache/ozone-runner:20200420-1 -t ozone/onenode
 cd $DIST_DIR;flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image=apache/ozone-runner:20200420-1 -t ozone/onenode
-cd $DIST_DIR;kubectl apply -f .; kubectl scale --replicas=4 statefulset/s3g
+cd $DIST_DIR;kubectl apply -f .;
 }
 
 restartPorts() {
@@ -30,9 +28,15 @@ kubectl port-forward s3g-3 7007:7007 &
 }
 
 startK() {
-sleep 35
+echo
+echo WAITING for pods to be ready
+echo
+cd $DIST_DIR;kubectl wait pod --for=condition=ready -l 'component in (s3g, datanode, om, scm)'
+echo
+echo PODS ready
+echo
 restartPorts
-sleep 5
+sleep 20
 mc alias set s0 http://localhost:7000 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
 mc alias set s1 http://localhost:7001 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
 mc alias set s2 http://localhost:7002 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
@@ -49,4 +53,4 @@ mc ls  d0/$DUMMY_BUCKET
 }
 
 initK
-#startK
+startK
