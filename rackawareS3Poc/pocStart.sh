@@ -31,6 +31,11 @@ startK() {
 echo
 echo WAITING for pods to be ready
 echo
+while (true); do
+  kubectl get pods | grep s3g-3 | grep Running;
+  if [[ "$?" == "0" ]] ; then break; fi
+  sleep 3
+done
 cd $DIST_DIR;kubectl wait pod --for=condition=ready -l 'component in (s3g, datanode, om, scm)'
 echo
 echo PODS ready
