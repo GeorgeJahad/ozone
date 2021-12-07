@@ -23,12 +23,10 @@ import javax.enterprise.inject.Vetoed;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
-@Vetoed
+
 public class RegistryService {
   private DNSToSwitchMapping dnsToSwitchMapping;
   private static final String S3_REGISTRY_BUCKET_NAME = "s3-registry-bucket";
@@ -52,7 +50,7 @@ public class RegistryService {
     }
   }
 
-  public static RegistryService getRegistryService(
+  public static RegistryService getService(
       OzoneConfiguration conf) {
     if (singleton == null) {
       ozoneConfiguration = conf;
@@ -60,7 +58,7 @@ public class RegistryService {
     }
     return singleton;
   }
-  public static RegistryService getRegistryService() {
+  public static RegistryService getService() {
     if (singleton == null) {
       throw new InjectionException("Registry service does not exist yet.");
     } else {
@@ -169,6 +167,11 @@ public class RegistryService {
     }
     Collections.shuffle(l);
     return l;
+  }
+
+  @Produces
+  RegistryService getRegistryService() {
+    return RegistryService.getService();
   }
 
 }

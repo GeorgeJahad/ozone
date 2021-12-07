@@ -67,7 +67,7 @@ public class Gateway extends GenericCli {
     UserGroupInformation.setConfiguration(ozoneConfiguration);
     loginS3GUser(ozoneConfiguration);
     httpServer = new S3GatewayHttpServer(ozoneConfiguration, "s3gateway");
-    RegistryService.getRegistryService(ozoneConfiguration).start();
+    RegistryService.getService(ozoneConfiguration).start();
     start();
 
     ShutdownHookManager.get().addShutdownHook(() -> {
@@ -117,6 +117,9 @@ public class Gateway extends GenericCli {
       LOG.info("S3Gateway login successful.");
     }
   }
+
+  // TODO:  switch to k8s init container:
+  //  https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
   private static void waitForOm() {
     while (true) {
       try {
