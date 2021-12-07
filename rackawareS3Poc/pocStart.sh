@@ -1,7 +1,7 @@
 #!/bin/bash
 
-SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-export OZONE_ROOT=$SCRIPT_DIR/../hadoop-ozone/dist/target/ozone-1.3.0-SNAPSHOT
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
+export OZONE_ROOT=$SCRIPT_DIR/hadoop-ozone/dist/target/ozone-1.3.0-SNAPSHOT
 echo OZONE_ROOT is $OZONE_ROOT
 DIST_DIR=$OZONE_ROOT/kubernetes/examples/ozone
 echo DIST_DIR is $DIST_DIR
