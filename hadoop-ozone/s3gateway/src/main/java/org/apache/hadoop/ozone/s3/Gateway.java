@@ -117,6 +117,8 @@ public class Gateway extends GenericCli {
       LOG.info("S3Gateway login successful.");
     }
   }
+  // TODO:  switch to k8s init container:
+  //  https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
   private static void waitForOm() {
     while (true) {
       try {
