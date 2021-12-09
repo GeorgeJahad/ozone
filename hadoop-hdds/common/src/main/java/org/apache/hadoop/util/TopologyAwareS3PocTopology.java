@@ -12,7 +12,7 @@ import java.util.*;
 // The first 3 will contain two node, datanode-x, and s3g-x
 // Since there are 4 s3g nodes and only 3 data nodes, the final
 // rack only has s3g-3
-public class RackawareS3PocTopology implements DNSToSwitchMapping {
+public class TopologyAwareS3PocTopology implements DNSToSwitchMapping {
 
   // resolves a list of ip addresses into a list of racks
   @Override
