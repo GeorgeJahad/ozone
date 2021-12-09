@@ -11,6 +11,11 @@ wget https://github.com/elek/flekszible/releases/download/v2.3.0/flekszible_2.3.
 tar -xvf flekszible_2.3.0_Linux_x86_64.tar.gz
 CWD=`pwd`
 export PATH=$PATH:$CWD
+cd ..
+echo building poc. build output at: `pwd`/topologyAwareS3Poc/pocBuild.txt
+mvn clean install -DskipShade -DskipTests >& topologyAwareS3Poc/pocBuild.txt
+echo starting kubernetes
 pocStart.sh
 pocLog.sh
+
 
