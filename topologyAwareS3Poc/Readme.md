@@ -7,13 +7,17 @@ This proof of concept consists of the following parts:
 4. An ozone "network topology" that defines virtual racks for the datanodes and S3Gs
 
 
-The diffs from ozone master are [here](https://github.com/GeorgeJahad/ozone/compare/3012cd138ee4436b1d03dc151e5fef1b60c7f82d...topologyAwareS3Poc#files_bucket)
+The diffs from ozone master are [here](https://github.com/GeorgeJahad/ozone/compare/3012cd138ee4436b1d03dc151e5fef1b60c7f82d...topologyAwareS3Poc#files_bucket).
 
 The design doc is [here](./topologyAwareS3G.docx).
 
 ## Topology of the demo cluster
 
-The k8s cluster created by this demo looks like ![this](./topology.png).
+The k8s cluster created by this demo looks like this:
+
+![this](./topology.png)
+
+
 There are 3 datanode pods, each containing both the datanode app and the s3g app.  In addition, there are 4 dedicated s3g pods, for a total of 7 s3g's in the cluster.  (The individual s3g's are referred to below as: s0-s3, and d0-d2.)
 
 Racks 0-2 have both a datanode and an s3g, (corresponding to datanode's 0-2 and s3g's 0-2 respectively.  On rack-3, there is only a single node, s3g-3.
