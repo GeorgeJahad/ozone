@@ -16,6 +16,6 @@ echo building poc. build output at: `pwd`/topologyAwareS3Poc/pocBuild.txt
 mvn clean install -DskipShade -DskipTests >& topologyAwareS3Poc/pocBuild.txt
 echo starting kubernetes
 pocStart.sh
-pocLog.sh &
+
 
 
