@@ -3,7 +3,7 @@
 SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 source $SCRIPT_DIR/vars.sh
 initK() {
-cd $KUBERNETES_DIR;flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image=apache/ozone-runner:20200420-1 -t ozone/onenode
+cd $KUBERNETES_DIR;$SCRIPT_DIR/flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image=apache/ozone-runner:20200420-1 -t ozone/onenode
 cd $KUBERNETES_DIR;kubectl apply -f .;
 }
 
@@ -37,19 +37,19 @@ echo PODS ready
 echo
 restartPorts
 sleep 20
-mc alias set s0 http://localhost:7000 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
-mc alias set s1 http://localhost:7001 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
-mc alias set s2 http://localhost:7002 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
-mc alias set s3 http://localhost:7003 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
+$SCRIPT_DIR/mc alias set s0 http://localhost:7000 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
+$SCRIPT_DIR/mc alias set s1 http://localhost:7001 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
+$SCRIPT_DIR/mc alias set s2 http://localhost:7002 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
+$SCRIPT_DIR/mc alias set s3 http://localhost:7003 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
 
-mc alias set d0 http://localhost:8000 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
-mc alias set d1 http://localhost:8001 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
-mc alias set d2 http://localhost:8002 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
+$SCRIPT_DIR/mc alias set d0 http://localhost:8000 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
+$SCRIPT_DIR/mc alias set d1 http://localhost:8001 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
+$SCRIPT_DIR/mc alias set d2 http://localhost:8002 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
 
-mc mb  d0/$DUMMY_BUCKET
+$SCRIPT_DIR/mc mb  d0/$DUMMY_BUCKET
 echo s3 poc > /tmp/$DUMMY_FILE
-mc cp /tmp/$DUMMY_FILE d0/$DUMMY_BUCKET
-mc ls  d0/$DUMMY_BUCKET
+$SCRIPT_DIR/mc cp /tmp/$DUMMY_FILE d0/$DUMMY_BUCKET
+$SCRIPT_DIR/mc ls  d0/$DUMMY_BUCKET
 }
 
 initK
