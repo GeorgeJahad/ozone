@@ -1,9 +1,9 @@
 #!/bin/bash
 
-SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
-source $SCRIPT_DIR/topologyAwareS3Poc/vars.sh
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source $SCRIPT_DIR/vars.sh
 killK() {
-cd $DIST_DIR; kubectl delete -f .
+cd $KUBERNETES_DIR; kubectl delete -f .
 pkill -9  kubectl
 sleep 5
 

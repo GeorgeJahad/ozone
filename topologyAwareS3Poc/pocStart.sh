@@ -1,10 +1,10 @@
 #!/bin/bash
 
-SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )/.." &> /dev/null && pwd )"
-source $SCRIPT_DIR/topologyAwareS3Poc/vars.sh
+SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source $SCRIPT_DIR/vars.sh
 initK() {
-cd $DIST_DIR;flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image=apache/ozone-runner:20200420-1 -t ozone/onenode
-cd $DIST_DIR;kubectl apply -f .;
+cd $KUBERNETES_DIR;flekszible generate -t mount:hostPath="$OZONE_ROOT",path=/opt/hadoop -t image:image=apache/ozone-runner:20200420-1 -t ozone/onenode
+cd $KUBERNETES_DIR;kubectl apply -f .;
 }
 
 restartPorts() {
@@ -31,7 +31,7 @@ while (true); do
   if [[ "$?" == "0" ]] ; then break; fi
   sleep 3
 done
-cd $DIST_DIR;kubectl wait pod --for=condition=ready -l 'component in (s3g, datanode, om, scm)'
+cd $KUBERNETES_DIR;kubectl wait pod --for=condition=ready -l 'component in (s3g, datanode, om, scm)'
 echo
 echo PODS ready
 echo
