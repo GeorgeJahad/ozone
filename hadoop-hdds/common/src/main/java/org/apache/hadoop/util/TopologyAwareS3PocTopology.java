@@ -26,13 +26,24 @@ public class TopologyAwareS3PocTopology implements DNSToSwitchMapping {
   }
 
   private Map<String, String> getCurrentRacks() {
+    String hostname;
+    try {
+      hostname = InetAddress.getLocalHost().getHostName();
+    } catch (UnknownHostException e) {
+      hostname = null;
+    }
     Map<String, String> currRacks = new HashMap<>();
     for (int i = 0; i < 4; i++) {
       InetAddress addr;
       try {
+        // workaround slow kubernetes name resolver
+        //  Scm only calls this when new datanode is added
+        if (hostname != null && hostname.startsWith("scm")) {
+          Thread.sleep(5000);
+        }
         addr = InetAddress.getByName("datanode-" + i + ".datanode");
         currRacks.put(addr.getHostAddress(), "/rack-" + i);
-      } catch (UnknownHostException e) {
+      } catch (InterruptedException | UnknownHostException e) {
         //e.printStackTrace();
       }
       try {

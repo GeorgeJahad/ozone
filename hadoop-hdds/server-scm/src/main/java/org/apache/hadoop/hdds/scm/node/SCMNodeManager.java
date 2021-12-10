@@ -375,6 +375,7 @@ public class SCMNodeManager implements NodeManager {
         }
         networkLocation = nodeResolve(dnsName);
         if (networkLocation != null) {
+          LOG.info("S3POC dns: " + dnsName + " nl: " + networkLocation);
           datanodeDetails.setNetworkLocation(networkLocation);
         }
 
