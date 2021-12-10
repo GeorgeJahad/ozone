@@ -1,8 +1,5 @@
 #!/bin/bash
 set -e
-mkdir topologyAwareS3Poc
-cd topologyAwareS3Poc
-git clone https://github.com/GeorgeJahad/ozone.git --branch topologyAwareS3Poc
 cd ozone/topologyAwareS3Poc
 chmod 755 *.sh
 
