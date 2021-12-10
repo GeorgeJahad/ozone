@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-cd ozone/topologyAwareS3Poc
 chmod 755 *.sh
 
 if [[ `uname -s` == "Linux" ]] ; then
