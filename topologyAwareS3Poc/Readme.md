@@ -18,9 +18,9 @@ The k8s cluster created by this demo looks like this:
 ![this](./topology.png)
 
 
-There are 3 datanode pods, each containing both the datanode app and the s3g app.  In addition, there are 4 dedicated s3g pods, for a total of 7 s3g's in the cluster.  (The individual s3g's are referred to below as: s0-s3, and d0-d2.)
+There are 3 datanode pods, each containing both the datanode app and the s3g app, (in red).  In addition, there are 4 dedicated s3g pods, (in blue), for a total of 7 s3g's in the cluster.  (The individual s3g's are referred to below as: s0-s3, and d0-d2.)
 
-Racks 0-2 have both a datanode and an s3g, (corresponding to datanode's 0-2 and s3g's 0-2 respectively.  On rack-3, there is only a single node, s3g-3.
+Racks 0-2 have both a datanode and an s3g, (corresponding to datanode's 0-2 and s3g's 0-2 respectively).  On rack-3, there is only a single node, s3g-3.
 
 
 ## Starting the demo cluster
@@ -53,7 +53,7 @@ The purpose of the demo is generate s3 read traffic to different endpoints and w
 
 There are 3 datanodes and a replication factor of three so all files exist on all 3 datanodes.
 
-Note all commands below are to be run from the *topologyAwareS3Poc/ozone/topologyAwareS3Poc* directory.
+Note all commands below are to be run from the "<poc install directory>/topologyAwareS3Poc/ozone/topologyAwareS3Poc" directory.
 
 To run the demo, first start the logging:
 ```
@@ -73,13 +73,13 @@ You should see something like:
 
 ```
 
-The first line shows s2 receiving the command and redirecting to the s3g on d0.  The second line shows d0 handling it locally.  The third line shows which datanode, (not S3G,) is receiving the actual request.
+The first line shows s2 receiving the command and redirecting to the s3g on d0.  The second line shows d0 handling it locally.  The third line shows which datanode the s3g is connecting to to read the data.
 
-If the same command is run multiple times it will randomly redirect to the S3G's on d0-2 because each is on a datanode and each datanode has all files.
+If that same s3read is run multiple times it will randomly redirect to the S3G's on d0-2 because each is on a datanode and each datanode has all files.
 
 If the commands are run in quick succession sometimes you will only see the first two lines because the connection listed in the 3rd line is reused, (and so not logged.)
 
-## Removing nodes from the registry
+### Removing nodes from the registry
 
 An S3G can be removed from the registry like so:
 ```
@@ -88,9 +88,11 @@ An S3G can be removed from the registry like so:
 
 That will remove the s3g on d0 from the registry so that requests will no longer be redirected to it.  (Note that it takes 5 seconds for the registry to refresh.)
 
-If 2 of the datanodes are unregistered, then all traffic from s0-s3 will be redirected to the remaining one.  If all three are removed, then all traffic from s3 will go to s0-s2, (each of which is on a rack with a datanode.)
+### Data locality problem in Ozone
+If 2 of the datanodes are unregistered, then all traffic from s0-s3 will be redirected to the remaining one.  If all three are removed, then all traffic from s3 will go to s0-s2. (Each of those is on a rack with a datanode, while s3 is not.)
 
-Note that in this case, due to the datalocality read bug in ozone that I mentioned in our meeting, the data won't necessarily be read from the correct datanode.  For example, this command:
+
+Note that this is the example I mentioned in the sync-up, where an S3G is read not on the same node as the datanode. Due to the datalocality read bug in ozone that I mentioned in the syncup, the data won't necessarily be read from the correct datanode.  For example, this command:
 ```
 ./pocRead.sh s3
 ```
@@ -104,6 +106,18 @@ could return these results:
 S3G-3 redirected to s0, which has a datanode on rack-0, but instead of reading from that datanode, it read from datanode-1.
 
 I hope to submit a PR for this bug in the next few weeks.
+
+### Stopping the demo cluster
+
+To shut down the cluster:
+```
+./pocStop.sh
+```
+
+To restart it:
+```
+./pocStart.sh
+```
 
 
 
