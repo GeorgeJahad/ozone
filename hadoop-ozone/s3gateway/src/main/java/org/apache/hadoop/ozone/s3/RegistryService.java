@@ -130,7 +130,7 @@ public class RegistryService {
       createEntry();
       registry = updateRegistry();
       try {
-        Thread.sleep(10000);
+        Thread.sleep(5000);
       } catch (InterruptedException e) {
         LOG.error("registry task exiting.");
         break;
