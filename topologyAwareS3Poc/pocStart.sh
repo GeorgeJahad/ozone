@@ -35,8 +35,9 @@ cd $KUBERNETES_DIR;kubectl wait pod --for=condition=ready -l 'component in (s3g,
 echo
 echo PODS ready
 echo
+sleep 25
 restartPorts
-sleep 20
+sleep 5
 $SCRIPT_DIR/mc alias set s0 http://localhost:7000 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
 $SCRIPT_DIR/mc alias set s1 http://localhost:7001 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
 $SCRIPT_DIR/mc alias set s2 http://localhost:7002 dummy duS0g/affs2Bss8A0C7A5UIveM9p4KmBfSfIcQB7
@@ -48,6 +49,8 @@ $SCRIPT_DIR/mc alias set d2 http://localhost:8002 dummy duS0g/affs2Bss8A0C7A5UIv
 
 $SCRIPT_DIR/mc mb  d0/$DUMMY_BUCKET
 echo s3 poc > /tmp/$DUMMY_FILE
+# let the bucket become available
+sleep 5
 $SCRIPT_DIR/mc cp /tmp/$DUMMY_FILE d0/$DUMMY_BUCKET
 $SCRIPT_DIR/mc ls  d0/$DUMMY_BUCKET
 }

@@ -83,7 +83,7 @@ If the commands are run in quick succession sometimes you will only see the firs
 
 An S3G can be removed from the registry like so:
 ```
-./pocRead.sh d0
+./pocUnregister.sh d0
 ```
 
 That will remove the s3g on d0 from the registry so that requests will no longer be redirected to it.  (Note that it takes 5 seconds for the registry to refresh.)
