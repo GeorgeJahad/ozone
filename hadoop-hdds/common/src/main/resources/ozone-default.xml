@@ -2949,7 +2949,6 @@
       containers.
     </description>
   </property>
-
   <property>
     <name>hadoop.http.idle_timeout.ms</name>
     <value>60000</value>
@@ -2986,6 +2985,14 @@
       FILE_SYSTEM_OPTIMIZED: This layout allows the bucket to support atomic rename/delete operations and
       also allows interoperability between S3 and FS APIs. Keys written via S3 API with a "/" delimiter
       will create intermediate directories.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.grpc.maximum.response.length</name>
+    <value>134217728</value>
+    <tag>OZONE, OM, S3GATEWAY</tag>
+    <description>
+      OM/S3GATEWAY OMRequest, OMResponse over grpc max message length (bytes).
     </description>
   </property>
 </configuration>

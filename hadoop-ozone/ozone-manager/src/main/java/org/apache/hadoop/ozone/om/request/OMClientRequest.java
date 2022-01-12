@@ -138,6 +138,11 @@ public abstract class OMClientRequest implements RequestAuditor {
       userInfo.setUserName(user.getUserName());
     }
 
+    // for gRPC s3g omRequests that contain user name
+    if (user == null && omRequest.hasUserInfo()) {
+      userInfo.setUserName(omRequest.getUserInfo().getUserName());
+    }
+
     if (remoteAddress != null) {
       userInfo.setHostName(remoteAddress.getHostName());
       userInfo.setRemoteAddress(remoteAddress.getHostAddress()).build();
@@ -353,7 +358,6 @@ public abstract class OMClientRequest implements RequestAuditor {
     if (userGroupInformation != null) {
       return userGroupInformation;
     }
-
     if (omRequest.hasUserInfo() &&
         !StringUtils.isBlank(omRequest.getUserInfo().getUserName())) {
       userGroupInformation = UserGroupInformation.createRemoteUser(

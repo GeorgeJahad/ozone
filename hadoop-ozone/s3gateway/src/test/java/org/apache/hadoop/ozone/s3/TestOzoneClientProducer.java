@@ -52,37 +52,16 @@ import org.mockito.Mockito;
 public class TestOzoneClientProducer {
 
   private OzoneClientProducer producer;
-  private MultivaluedMap<String, String> headerMap;
-  private MultivaluedMap<String, String> queryMap;
-  private String authHeader;
-  private String contentMd5;
-  private String host;
-  private String amzContentSha256;
-  private String date;
-  private String contentType;
-  private ContainerRequestContext context;
-  private UriInfo uriInfo;
 
   public TestOzoneClientProducer(
       String authHeader, String contentMd5,
       String host, String amzContentSha256, String date, String contentType
   )
       throws Exception {
-    this.authHeader = authHeader;
-    this.contentMd5 = contentMd5;
-    this.host = host;
-    this.amzContentSha256 = amzContentSha256;
-    this.date = date;
-    this.contentType = contentType;
     producer = new OzoneClientProducer();
-    headerMap = new MultivaluedHashMap<>();
-    queryMap = new MultivaluedHashMap<>();
-    uriInfo = Mockito.mock(UriInfo.class);
-    context = Mockito.mock(ContainerRequestContext.class);
     OzoneConfiguration config = new OzoneConfiguration();
     config.setBoolean(OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY, true);
     config.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "");
-    setupContext();
     producer.setOzoneConfiguration(config);
   }
 
@@ -130,30 +109,6 @@ public class TestOzoneClientProducer {
     } catch (Exception ex) {
       Assert.assertTrue(ex instanceof IOException);
     }
-  }
-
-  private void setupContext() throws Exception {
-    headerMap.putSingle(AUTHORIZATION_HEADER, authHeader);
-    headerMap.putSingle(CONTENT_MD5, contentMd5);
-    headerMap.putSingle(HOST_HEADER, host);
-    headerMap.putSingle(X_AMZ_CONTENT_SHA256, amzContentSha256);
-    headerMap.putSingle(X_AMAZ_DATE, date);
-    headerMap.putSingle(CONTENT_TYPE, contentType);
-
-    Mockito.when(uriInfo.getQueryParameters()).thenReturn(queryMap);
-    Mockito.when(uriInfo.getRequestUri()).thenReturn(new URI(""));
-
-    Mockito.when(context.getUriInfo()).thenReturn(uriInfo);
-    Mockito.when(context.getHeaders()).thenReturn(headerMap);
-    Mockito.when(context.getHeaderString(AUTHORIZATION_HEADER))
-        .thenReturn(authHeader);
-    Mockito.when(context.getUriInfo().getQueryParameters())
-        .thenReturn(queryMap);
-
-    AWSSignatureProcessor awsSignatureProcessor = new AWSSignatureProcessor();
-    awsSignatureProcessor.setContext(context);
-
-    producer.setSignatureParser(awsSignatureProcessor);
   }
 
 }

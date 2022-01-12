@@ -58,6 +58,12 @@ public abstract class EndpointBase {
     } catch (OMException ex) {
       if (ex.getResult() == ResultCodes.KEY_NOT_FOUND) {
         throw S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, bucketName);
+      } else if (ex.getResult() == ResultCodes.S3_SECRET_NOT_FOUND) {
+        throw S3ErrorTable.newError(S3ErrorTable.ACCESS_DENIED,
+            UserGroupInformation.getCurrentUser().getUserName());
+      } else if (ex.getResult() == ResultCodes.TIMEOUT ||
+          ex.getResult() == ResultCodes.INTERNAL_ERROR) {
+        throw S3ErrorTable.newError(S3ErrorTable.INTERNAL_ERROR, bucketName);
       } else {
         throw ex;
       }
@@ -89,8 +95,14 @@ public abstract class EndpointBase {
       if (ex.getResult() == ResultCodes.BUCKET_NOT_FOUND
           || ex.getResult() == ResultCodes.VOLUME_NOT_FOUND) {
         throw S3ErrorTable.newError(S3ErrorTable.NO_SUCH_BUCKET, bucketName);
+      } else if (ex.getResult() == ResultCodes.S3_SECRET_NOT_FOUND) {
+        throw S3ErrorTable.newError(S3ErrorTable.ACCESS_DENIED,
+            UserGroupInformation.getCurrentUser().getUserName());
       } else if (ex.getResult() == ResultCodes.PERMISSION_DENIED) {
         throw S3ErrorTable.newError(S3ErrorTable.ACCESS_DENIED, bucketName);
+      } else if (ex.getResult() == ResultCodes.TIMEOUT ||
+          ex.getResult() == ResultCodes.INTERNAL_ERROR) {
+        throw S3ErrorTable.newError(S3ErrorTable.INTERNAL_ERROR, bucketName);
       } else {
         throw ex;
       }
@@ -118,6 +130,12 @@ public abstract class EndpointBase {
     } catch (OMException ex) {
       if (ex.getResult() == ResultCodes.PERMISSION_DENIED) {
         throw S3ErrorTable.newError(S3ErrorTable.ACCESS_DENIED, bucketName);
+      } else if (ex.getResult() == ResultCodes.S3_SECRET_NOT_FOUND) {
+        throw S3ErrorTable.newError(S3ErrorTable.ACCESS_DENIED,
+            UserGroupInformation.getCurrentUser().getUserName());
+      } else if (ex.getResult() == ResultCodes.TIMEOUT ||
+          ex.getResult() == ResultCodes.INTERNAL_ERROR) {
+        throw S3ErrorTable.newError(S3ErrorTable.INTERNAL_ERROR, bucketName);
       } else if (ex.getResult() != ResultCodes.BUCKET_ALREADY_EXISTS) {
         // S3 does not return error for bucket already exists, it just
         // returns the location.
@@ -140,8 +158,15 @@ public abstract class EndpointBase {
       if (ex.getResult() == ResultCodes.PERMISSION_DENIED) {
         throw S3ErrorTable.newError(S3ErrorTable.ACCESS_DENIED,
             s3BucketName);
+      } else if (ex.getResult() == ResultCodes.S3_SECRET_NOT_FOUND) {
+        throw S3ErrorTable.newError(S3ErrorTable.ACCESS_DENIED,
+            UserGroupInformation.getCurrentUser().getUserName());
+      } else if (ex.getResult() == ResultCodes.TIMEOUT ||
+          ex.getResult() == ResultCodes.INTERNAL_ERROR) {
+        throw S3ErrorTable.newError(S3ErrorTable.INTERNAL_ERROR, s3BucketName);
+      } else {
+        throw ex;
       }
-      throw ex;
     }
   }
 
@@ -183,6 +208,13 @@ public abstract class EndpointBase {
         return Collections.emptyIterator();
       } else  if (e.getResult() == ResultCodes.PERMISSION_DENIED) {
         throw S3ErrorTable.newError(S3ErrorTable.ACCESS_DENIED,
+            "listBuckets");
+      } else if (e.getResult() == ResultCodes.S3_SECRET_NOT_FOUND) {
+        throw S3ErrorTable.newError(S3ErrorTable.ACCESS_DENIED,
+            UserGroupInformation.getCurrentUser().getUserName());
+      } else if (e.getResult() == ResultCodes.TIMEOUT ||
+          e.getResult() == ResultCodes.INTERNAL_ERROR) {
+        throw S3ErrorTable.newError(S3ErrorTable.INTERNAL_ERROR,
             "listBuckets");
       } else {
         throw e;

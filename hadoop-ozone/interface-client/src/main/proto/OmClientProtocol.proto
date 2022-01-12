@@ -1357,6 +1357,15 @@ message S3Authentication {
 }
 
 /**
+  This will be used by OM to authenicate S3 gateway requests on a per request basis.
+*/
+message S3Authentication {
+    required string stringToSign = 1;
+    required string signature = 2;
+    required string accessId = 3;
+}
+
+/**
  The OM service that takes care of Ozone namespace.
 */
 service OzoneManagerService {
