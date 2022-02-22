@@ -194,3 +194,76 @@ IntelliJ may not pick up protoc generated classes as they can be very huge. If t
 
 ## CI
 The Ozone project uses Github Actions for its CI system.  The configuration is described in detail [here](.github/ci.md).
+
+## Debugging
+
+### Setup Ozone and Kubernetes
+
+Install a local server(k3s is recommended) and the Kubernetes command-line tool, kubectl. After setting up k3s and kubectl, build the project so that a SNAPSHOT image is created.
+
+1. Build the project `mvn clean install -DskipShade -DskipTests`
+2. `cd ozone/hadoop-ozone/dist/target/ozone-X.X..`
+3. Build the image `docker build -t apache/ozone:X.X-SNAPSHOT .`
+
+### Attach the debugger in IntelliJ
+
+Configure the debugger to attach to ports 5005, 6006, 7007.
+
+1. `Run -> Edit Configurations... -> Add New Configuration -> Remote JVM Debug`
+2. Name: `om-0`, Debugger mode: `Attach to remote JVM`, Host: `localhost`, Port: `5005`
+3. Name: `scm-0`, Debugger mode: `Attach to remote JVM`, Host: `localhost`, Port: `6006`
+4. Name: `s3g-0`, Debugger mode: `Attach to remote JVM`, Host: `localhost`, Port: `7007`
+
+Add the field `Command line arguments for remote JVM:` to running configurations so that it will be used as an argument
+when initializing ozone-manager, hdds-server-scm and ozone-s3gateway classes.
+
+In the file `ozone/hadoop-ozone/dist/target/ozone-X.X../bin/ozone.sh` 
+
+1. Where `OZONE_RUN_ARTIFACT_NAME="ozone-manager"` replace `OZONE_OM_OPTS="${RATIS_OPTS} ${OZONE_OM_OPTS}"` with `OZONE_OM_OPTS="${RATIS_OPTS} ${OZONE_OM_OPTS} -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"`
+2. Where `OZONE_RUN_ARTIFACT_NAME="hdds-server-scm"` replace `OZONE_SCM_OPTS="${RATIS_OPTS} ${OZONE_SCM_OPTS}"` with `OZONE_SCM_OPTS="${RATIS_OPTS} ${OZONE_SCM_OPTS}  -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:6006"`
+3. Where `OZONE_RUN_ARTIFACT_NAME="ozone-s3gateway"` add `OZONE_S3G_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:7007"`
+
+### Start Ozone in Kubernetes
+
+1. Start the k3s server `sudo k3s server`
+2. In a new terminal `cd ozone/hadoop-ozone/dist/target/ozone-X.X../kubernetes/examples/ozone`
+3. `kubectl apply -f .`
+4. Check if the pods are running `kubectl get pods`
+5. Start port-forwarding in the background
+   ```
+      kubectl port-forward om-0 5005:5005 &
+      kubectl port-forward scm-0 6006:6006 &
+      kubectl port-forward s3g-0 7007:7007 &
+   ```
+
+### Connect IntelliJ to Kubernetes cluster
+
+1. Go over the code and set breakpoints for the parts you want to debug
+2. Start in Debug mode the Remote JVM Debug configurations that we created earlier in IntelliJ
+3. In a new terminal `cd ozone/hadoop-ozone/dist/target/ozone-X.X../kubernetes/examples/ozone`
+4. Check again if the pods are running `kubectl get pods`
+5. Execute the StorageContainerManager in bash `kubectl exec -it scm-0 -- bash`
+6. Read and write objects in the bash and check the output in the Debugger in IntelliJ
+
+
+### Common issues
+
+Kubernetes might not be able to start more than one datanode per cluster node. To override the affinity rules of the `datanode-statefulset.yalm` file
+in the `kubernetes/examples/ozone` dir, run: 
+
+1. `cd kubernetes/examples/ozone`
+2. `flekszible generate -t mount:hostPath=$(realpath ../../..),path=/opt/hadoop -t image:image=apache/ozone-runner:XY -t ozone/onenode`
+
+Where `XY` is the image found in `datanode-statefulset.yalm`
+```
+    spec:
+      containers:
+      - name: datanode
+        image: apache/ozone-runner:XY
+```
+
+In bash when trying to put a key in a bucket, you might get a `SCM_IN_SAFE_MODE` error. To fix it, in `kubernetes/examples/ozone` dir:
+
+1. `source ../testlib.sh`
+2. `start_k8s_env`
+
