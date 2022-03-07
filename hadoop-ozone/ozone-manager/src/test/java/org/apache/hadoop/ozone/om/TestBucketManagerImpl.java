@@ -210,7 +210,11 @@ public class TestBucketManagerImpl {
     final String volumeName = "sample-vol";
     final String bucketName = "bucket-one";
 
-    createSampleVol();
+    OzoneConfiguration conf = createNewTestPath();
+    omTestManagers = new OmTestManagers(conf);
+    om = omTestManagers.getOzoneManager();
+    writeClient = omTestManagers.getWriteClient();
+
     OMMetadataManager metaMgr = omTestManagers.getMetadataManager();
     BucketManager bucketManager = omTestManagers.getBucketManager();
     // Check exception thrown when volume does not exist
@@ -236,7 +240,8 @@ public class TestBucketManagerImpl {
             .setAdminName("bilbo")
             .setOwnerName("bilbo")
             .build();
-    OMRequestTestUtils.addVolumeToOM(metaMgr, args);
+    writeClient.createVolume(args);
+
     // Create bucket
     createBucket(metaMgr, bucketInfo);
     // Check exception thrown when bucket does not exist
