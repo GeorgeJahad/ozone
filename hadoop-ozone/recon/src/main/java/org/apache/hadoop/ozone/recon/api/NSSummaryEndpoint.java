@@ -119,68 +119,7 @@ public class NSSummaryEndpoint {
     String[] names = parseRequestPath(normalizedPath);
 
     EntityType type = getEntityType(normalizedPath, names);
-
-    switch (type) {
-    case ROOT:
-      namespaceSummaryResponse = new NamespaceSummaryResponse(EntityType.ROOT);
-      List<OmVolumeArgs> volumes = listVolumes();
-      namespaceSummaryResponse.setNumVolume(volumes.size());
-      List<OmBucketInfo> allBuckets = listBucketsUnderVolume(null);
-      namespaceSummaryResponse.setNumBucket(allBuckets.size());
-      int totalNumDir = 0;
-      long totalNumKey = 0L;
-      for (OmBucketInfo bucket : allBuckets) {
-        long bucketObjectId = bucket.getObjectID();
-        totalNumDir += getTotalDirCount(bucketObjectId);
-        totalNumKey += getTotalKeyCount(bucketObjectId);
-      }
-      namespaceSummaryResponse.setNumTotalDir(totalNumDir);
-      namespaceSummaryResponse.setNumTotalKey(totalNumKey);
-      break;
-    case VOLUME:
-      namespaceSummaryResponse =
-          new NamespaceSummaryResponse(EntityType.VOLUME);
-      List<OmBucketInfo> buckets = listBucketsUnderVolume(names[0]);
-      namespaceSummaryResponse.setNumBucket(buckets.size());
-      int totalDir = 0;
-      long totalKey = 0L;
-
-      // iterate all buckets to collect the total object count.
-      for (OmBucketInfo bucket : buckets) {
-        long bucketObjectId = bucket.getObjectID();
-        totalDir += getTotalDirCount(bucketObjectId);
-        totalKey += getTotalKeyCount(bucketObjectId);
-      }
-      namespaceSummaryResponse.setNumTotalDir(totalDir);
-      namespaceSummaryResponse.setNumTotalKey(totalKey);
-      break;
-    case BUCKET:
-      namespaceSummaryResponse =
-          new NamespaceSummaryResponse(EntityType.BUCKET);
-      assert (names.length == 2);
-      long bucketObjectId = getBucketObjectId(names);
-      namespaceSummaryResponse.setNumTotalDir(getTotalDirCount(bucketObjectId));
-      namespaceSummaryResponse.setNumTotalKey(getTotalKeyCount(bucketObjectId));
-      break;
-    case DIRECTORY:
-      // path should exist so we don't need any extra verification/null check
-      long dirObjectId = getDirObjectId(names);
-      namespaceSummaryResponse =
-          new NamespaceSummaryResponse(EntityType.DIRECTORY);
-      namespaceSummaryResponse.setNumTotalDir(getTotalDirCount(dirObjectId));
-      namespaceSummaryResponse.setNumTotalKey(getTotalKeyCount(dirObjectId));
-      break;
-    case KEY:
-      namespaceSummaryResponse = new NamespaceSummaryResponse(EntityType.KEY);
-      break;
-    case UNKNOWN:
-      namespaceSummaryResponse =
-          new NamespaceSummaryResponse(EntityType.UNKNOWN);
-      namespaceSummaryResponse.setStatus(ResponseStatus.PATH_NOT_FOUND);
-      break;
-    default:
-      break;
-    }
+    namespaceSummaryResponse = type.getSummaryResponse();
     return Response.ok(namespaceSummaryResponse).build();
   }
 
