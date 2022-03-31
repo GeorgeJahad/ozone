@@ -119,7 +119,7 @@ public class NSSummaryEndpoint {
     String[] names = parseRequestPath(normalizedPath);
 
     EntityType type = getEntityType(normalizedPath, names);
-    namespaceSummaryResponse = type.getSummaryResponse();
+    namespaceSummaryResponse = type.getSummaryResponse(names);
     return Response.ok(namespaceSummaryResponse).build();
   }
 

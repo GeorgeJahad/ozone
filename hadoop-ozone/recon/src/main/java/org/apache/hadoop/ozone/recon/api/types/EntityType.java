@@ -30,7 +30,7 @@ public enum EntityType {
 
   ROOT {
     @Override
-    public NamespaceSummaryResponse getSummaryResponse(){
+    public NamespaceSummaryResponse getSummaryResponse(String[] names){
       NamespaceSummaryResponse namespaceSummaryResponse = new NamespaceSummaryResponse(EntityType.ROOT);
       List<OmVolumeArgs> volumes = listVolumes();
       namespaceSummaryResponse.setNumVolume(volumes.size());
@@ -51,30 +51,30 @@ public enum EntityType {
   },
   VOLUME {
     @Override
-    public NamespaceSummaryResponse getSummaryResponse(){
+    public NamespaceSummaryResponse getSummaryResponse(String[] names){
     }
   },
   BUCKET {
     @Override
-    public NamespaceSummaryResponse getSummaryResponse(){
+    public NamespaceSummaryResponse getSummaryResponse(String[] names){
     }
   },
   DIRECTORY {
     @Override
-    public NamespaceSummaryResponse getSummaryResponse(){
+    public NamespaceSummaryResponse getSummaryResponse(String[] names){
     }
   },
   KEY {
     @Override
-    public NamespaceSummaryResponse getSummaryResponse(){
+    public NamespaceSummaryResponse getSummaryResponse(String[] names){
     }
   },
   UNKNOWN { // if path is invalid
     @Override
-    public NamespaceSummaryResponse getSummaryResponse(){
+    public NamespaceSummaryResponse getSummaryResponse(String[] names){
     }
   };
-  abstract public NamespaceSummaryResponse getSummaryResponse();
+  abstract public NamespaceSummaryResponse getSummaryResponse(String[] names);
   abstract public DUResponse getDuResponse(String path, String[] names);
   abstract public QuotaUsageResponse getQuotaResponse();
   abstract public FileSizeDistributionResponse getDistResponse();
