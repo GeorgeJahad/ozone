@@ -36,6 +36,8 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.recon.ReconConstants;
 import org.apache.hadoop.ozone.recon.ReconTestInjector;
+import org.apache.hadoop.ozone.recon.api.handlers.BucketHandler;
+import org.apache.hadoop.ozone.recon.api.handlers.EntityHandler;
 import org.apache.hadoop.ozone.recon.api.types.NamespaceSummaryResponse;
 import org.apache.hadoop.ozone.recon.api.types.DUResponse;
 import org.apache.hadoop.ozone.recon.api.types.EntityType;
@@ -48,7 +50,7 @@ import org.apache.hadoop.ozone.recon.spi.ReconNamespaceSummaryManager;
 import org.apache.hadoop.ozone.recon.spi.StorageContainerServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.impl.OzoneManagerServiceProviderImpl;
 import org.apache.hadoop.ozone.recon.spi.impl.StorageContainerServiceProviderImpl;
-import org.apache.hadoop.ozone.recon.tasks.NSSummaryTask;
+import org.apache.hadoop.ozone.recon.tasks.FSOTaskHandler;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -231,50 +233,59 @@ public class TestNSSummaryEndpoint {
 
     // populate OM DB and reprocess into Recon RocksDB
     populateOMDB();
-    NSSummaryTask nsSummaryTask =
-            new NSSummaryTask(reconNamespaceSummaryManager);
-    nsSummaryTask.reprocess(reconOMMetadataManager);
+    FSOTaskHandler fsoTaskHandler = new FSOTaskHandler(
+        reconNamespaceSummaryManager);
+    fsoTaskHandler.reprocess(reconOMMetadataManager);
   }
 
   @Test
   public void testUtility() {
-    String[] names = NSSummaryEndpoint.parseRequestPath(TEST_PATH_UTILITY);
+    String[] names = EntityHandler.parseRequestPath(TEST_PATH_UTILITY);
     Assert.assertArrayEquals(TEST_NAMES, names);
-    String keyName = NSSummaryEndpoint.getKeyName(names);
+    String keyName = BucketHandler.getKeyName(names);
     Assert.assertEquals(TEST_KEY_NAMES, keyName);
-    String subpath = NSSummaryEndpoint.buildSubpath(PARENT_DIR, "file1.txt");
+    String subpath = BucketHandler.buildSubpath(PARENT_DIR, "file1.txt");
     Assert.assertEquals(TEST_PATH_UTILITY, subpath);
   }
 
   @Test
-  public void testBasic() throws Exception {
+  public void testGetBasicInfoVol() throws Exception {
     // Test volume basics
     Response volResponse = nsSummaryEndpoint.getBasicInfo(VOL_PATH);
     NamespaceSummaryResponse volResponseObj =
-            (NamespaceSummaryResponse) volResponse.getEntity();
+        (NamespaceSummaryResponse) volResponse.getEntity();
     Assert.assertEquals(EntityType.VOLUME, volResponseObj.getEntityType());
     Assert.assertEquals(2, volResponseObj.getNumBucket());
     Assert.assertEquals(4, volResponseObj.getNumTotalDir());
     Assert.assertEquals(6, volResponseObj.getNumTotalKey());
+  }
 
+  @Test
+  public void testGetBasicInfoBucketOne() throws Exception {
     // Test bucket 1's basics
     Response bucketOneResponse =
-            nsSummaryEndpoint.getBasicInfo(BUCKET_ONE_PATH);
+        nsSummaryEndpoint.getBasicInfo(BUCKET_ONE_PATH);
     NamespaceSummaryResponse bucketOneObj =
-            (NamespaceSummaryResponse) bucketOneResponse.getEntity();
+        (NamespaceSummaryResponse) bucketOneResponse.getEntity();
     Assert.assertEquals(EntityType.BUCKET, bucketOneObj.getEntityType());
     Assert.assertEquals(4, bucketOneObj.getNumTotalDir());
     Assert.assertEquals(4, bucketOneObj.getNumTotalKey());
+  }
 
+  @Test
+  public void testGetBasicInfoBucketTwo() throws Exception {
     // Test bucket 2's basics
     Response bucketTwoResponse =
-            nsSummaryEndpoint.getBasicInfo(BUCKET_TWO_PATH);
+        nsSummaryEndpoint.getBasicInfo(BUCKET_TWO_PATH);
     NamespaceSummaryResponse bucketTwoObj =
-            (NamespaceSummaryResponse) bucketTwoResponse.getEntity();
+        (NamespaceSummaryResponse) bucketTwoResponse.getEntity();
     Assert.assertEquals(EntityType.BUCKET, bucketTwoObj.getEntityType());
     Assert.assertEquals(0, bucketTwoObj.getNumTotalDir());
     Assert.assertEquals(2, bucketTwoObj.getNumTotalKey());
+  }
 
+  @Test
+  public void testGetBasicInfoDir() throws Exception {
     // Test intermediate directory basics
     Response dirOneResponse = nsSummaryEndpoint.getBasicInfo(DIR_ONE_PATH);
     NamespaceSummaryResponse dirOneObj =
@@ -282,19 +293,25 @@ public class TestNSSummaryEndpoint {
     Assert.assertEquals(EntityType.DIRECTORY, dirOneObj.getEntityType());
     Assert.assertEquals(3, dirOneObj.getNumTotalDir());
     Assert.assertEquals(3, dirOneObj.getNumTotalKey());
+  }
 
-    // Test invalid path
-    Response invalidResponse = nsSummaryEndpoint.getBasicInfo(INVALID_PATH);
-    NamespaceSummaryResponse invalidObj =
-            (NamespaceSummaryResponse) invalidResponse.getEntity();
-    Assert.assertEquals(ResponseStatus.PATH_NOT_FOUND,
-            invalidObj.getStatus());
-
+  @Test
+  public void testGetBasicInfoKey() throws Exception {
     // Test key
     Response keyResponse = nsSummaryEndpoint.getBasicInfo(KEY_PATH);
     NamespaceSummaryResponse keyResObj =
-            (NamespaceSummaryResponse) keyResponse.getEntity();
+        (NamespaceSummaryResponse) keyResponse.getEntity();
     Assert.assertEquals(EntityType.KEY, keyResObj.getEntityType());
+  }
+
+  @Test
+  public void testGetBasicInfoNoPath() throws Exception {
+    // Test invalid path
+    Response invalidResponse = nsSummaryEndpoint.getBasicInfo(INVALID_PATH);
+    NamespaceSummaryResponse invalidObj =
+        (NamespaceSummaryResponse) invalidResponse.getEntity();
+    Assert.assertEquals(ResponseStatus.PATH_NOT_FOUND,
+        invalidObj.getStatus());
   }
 
   @Test

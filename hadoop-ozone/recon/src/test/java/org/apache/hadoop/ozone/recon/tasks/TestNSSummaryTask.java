@@ -137,9 +137,9 @@ public class TestNSSummaryTask {
     // write a NSSummary prior to reprocess and verify it got cleaned up after.
     NSSummary staleNSSummary = new NSSummary();
     reconNamespaceSummaryManager.storeNSSummary(-1L, staleNSSummary);
-    NSSummaryTask nsSummaryTask = new NSSummaryTask(
+    FSOTaskHandler fsoTaskHandler = new FSOTaskHandler(
             reconNamespaceSummaryManager);
-    nsSummaryTask.reprocess(reconOMMetadataManager);
+    fsoTaskHandler.reprocess(reconOMMetadataManager);
 
     Assert.assertNull(reconNamespaceSummaryManager.getNSSummary(-1L));
     NSSummary nsSummaryForBucket1 =
@@ -330,10 +330,10 @@ public class TestNSSummaryTask {
               add(keyEvent7);
           }});
 
-    NSSummaryTask nsSummaryTask = new NSSummaryTask(
-            reconNamespaceSummaryManager);
-    nsSummaryTask.reprocess(reconOMMetadataManager);
-    nsSummaryTask.process(omUpdateEventBatch);
+    FSOTaskHandler fsoTaskHandler = new FSOTaskHandler(
+        reconNamespaceSummaryManager);
+    fsoTaskHandler.reprocess(reconOMMetadataManager);
+    fsoTaskHandler.process(omUpdateEventBatch);
 
     // file 5 is added under bucket 2, so bucket 2 has 3 keys now
     // file 1 is gone, so bucket 1 is empty now
