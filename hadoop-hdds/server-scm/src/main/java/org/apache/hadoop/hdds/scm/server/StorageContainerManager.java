@@ -414,6 +414,9 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
     NewNodeHandler newNodeHandler = new NewNodeHandler(pipelineManager,
         scmDecommissionManager, configuration, serviceManager);
+    NodeIpOrHostnameUpdateHandler nodeIpOrHostnameUpdateHandler =
+            new NodeIpOrHostnameUpdateHandler(pipelineManager,
+                    scmDecommissionManager, serviceManager);
     StaleNodeHandler staleNodeHandler =
         new StaleNodeHandler(scmNodeManager, pipelineManager, configuration);
     DeadNodeHandler deadNodeHandler = new DeadNodeHandler(scmNodeManager,
@@ -477,6 +480,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     eventQueue.addHandler(SCMEvents.CONTAINER_ACTIONS, actionsHandler);
     eventQueue.addHandler(SCMEvents.CLOSE_CONTAINER, closeContainerHandler);
     eventQueue.addHandler(SCMEvents.NEW_NODE, newNodeHandler);
+    eventQueue.addHandler(SCMEvents.NODE_IP_OR_HOSTNAME_UPDATE,
+            nodeIpOrHostnameUpdateHandler);
     eventQueue.addHandler(SCMEvents.STALE_NODE, staleNodeHandler);
     eventQueue.addHandler(SCMEvents.HEALTHY_READONLY_TO_HEALTHY_NODE,
         readOnlyHealthyToHealthyNodeHandler);

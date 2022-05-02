@@ -172,6 +172,11 @@ public class MockPipelineManager implements PipelineManager {
   }
 
   @Override
+  public void closeStalePipelines(DatanodeDetails datanodeDetails) {
+
+  }
+
+  @Override
   public void addContainerToPipeline(final PipelineID pipelineID,
                                      final ContainerID containerID)
       throws IOException {
