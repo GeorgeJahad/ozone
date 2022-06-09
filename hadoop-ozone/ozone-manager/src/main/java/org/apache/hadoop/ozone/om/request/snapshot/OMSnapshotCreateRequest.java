@@ -76,6 +76,8 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
   }
   @Override
   public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
+
+    //TODO  Access checks
     return getOmRequest();
   }
 
@@ -88,6 +90,9 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     omMetrics.incNumBucketCreates();
     Exception exception = null;
 
+
+    // TODO update snapshot metadata table cache
+    
     CreateSnapshotRequest createSnapshotRequest = getOmRequest()
         .getCreateSnapshotRequest();
     String mask = createSnapshotRequest.getMask();
@@ -115,8 +120,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
       LOG.info("gbj snapshot validateAndUpdateCache() finished");
       return omClientResponse;
     } else {
-      LOG.error("Snapshot creation failed for:{}",
-          mask);
+      LOG.error("gbj Snapshot creation failed for:{}", mask);
       return omClientResponse;
     }
   }
