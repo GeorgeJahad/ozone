@@ -84,7 +84,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
       long transactionLogIndex,
       OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
     OMMetrics omMetrics = ozoneManager.getMetrics();
-    //TODO add metrics
+    //TODO change to use snapshot metrics
     omMetrics.incNumBucketCreates();
     Exception exception = null;
 
