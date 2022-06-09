@@ -102,7 +102,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     try {
       omResponse.setCreateSnapshotResponse(
           CreateSnapshotResponse.newBuilder().build());
-      omClientResponse = new OMSnapshotCreateResponse(omResponse.build());
+      omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), mask);
     } catch (Exception ex) {
       exception = ex;
       omClientResponse = new OMSnapshotCreateResponse(
