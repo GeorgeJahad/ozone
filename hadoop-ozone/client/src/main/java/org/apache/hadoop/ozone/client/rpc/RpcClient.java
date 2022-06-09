@@ -906,6 +906,18 @@ public class RpcClient implements ClientProtocol {
   }
 
   /**
+   * Create Snapshot
+   * @param mask mask to use
+   * @throws IOException
+   */
+  @Override
+  public void createSnapshot(String mask) throws IOException {
+    Preconditions.checkArgument(Strings.isNotBlank(mask),
+        "mask can't be null or empty.");
+    ozoneManagerClient.createSnapshot(mask);
+  }
+
+  /**
    * Assign admin role to an accessId in a tenant.
    * @param accessId access ID.
    * @param tenantId tenant name.
