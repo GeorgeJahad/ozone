@@ -88,8 +88,6 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     omMetrics.incNumBucketCreates();
     Exception exception = null;
 
-    OMMetadataManager metadataManager = ozoneManager.getMetadataManager();
-
     CreateSnapshotRequest createSnapshotRequest = getOmRequest()
         .getCreateSnapshotRequest();
     String mask = createSnapshotRequest.getMask();
@@ -101,7 +99,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
 
     try {
       omResponse.setCreateSnapshotResponse(
-          CreateSnapshotResponse.newBuilder().build());
+        CreateSnapshotResponse.newBuilder().setMask(mask));
       omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), mask);
     } catch (Exception ex) {
       exception = ex;
@@ -114,7 +112,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
 
     // return response.
     if (exception == null) {
-      LOG.info("created snapshot");
+      LOG.info("gbj snapshot validateAndUpdateCache() finished");
       return omClientResponse;
     } else {
       LOG.error("Snapshot creation failed for:{}",

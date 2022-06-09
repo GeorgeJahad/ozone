@@ -175,10 +175,6 @@ function ozonecmd_case
       OZONE_CLASSNAME=org.apache.hadoop.ozone.shell.tenant.TenantShell
       OZONE_RUN_ARTIFACT_NAME="ozone-tools"
     ;;
-    tenant)
-      OZONE_CLASSNAME=org.apache.hadoop.ozone.shell.snapshot.SnapshotShell
-      OZONE_RUN_ARTIFACT_NAME="ozone-tools"
-    ;;
     csi)
       OZONE_SUBCMD_SUPPORTDAEMONIZATION="true"
       OZONE_CLASSNAME='org.apache.hadoop.ozone.csi.CsiServer'
