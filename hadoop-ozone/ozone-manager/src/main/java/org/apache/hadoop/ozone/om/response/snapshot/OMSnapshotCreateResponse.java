@@ -18,22 +18,31 @@
  */
 package org.apache.hadoop.ozone.om.response.snapshot;
 
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.RDBCheckpointManager;
+import org.apache.hadoop.hdds.utils.db.RDBStore;
+import org.apache.hadoop.hdds.utils.db.RocksDBCheckpoint;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmDBUserPrincipalInfo;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
+import java.util.UUID;
 
 /**
  * Response for OMSnapshotCreateResponse.
  */
+@CleanupTableInfo(cleanupTables = {})
 public class OMSnapshotCreateResponse extends OMClientResponse {
 
+  private String mask;
   @SuppressWarnings("checkstyle:parameternumber")
   public OMSnapshotCreateResponse(@Nonnull OMResponse omResponse,
       @Nonnull String mask
@@ -53,6 +62,21 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
   @Override
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
+    final Logger LOG =
+        LoggerFactory.getLogger(OMSnapshotCreateResponse.class);
 
+
+    // flushWal
+    RDBStore store = (RDBStore) omMetadataManager.getStore();
+    store.flushLog(true);
+
+    UUID uuid = UUID.randomUUID();
+    RDBCheckpointManager checkpointManager = new RDBCheckpointManager(store.getDb(), mask);
+    RocksDBCheckpoint checkpoint = checkpointManager.createCheckpoint("/tmp/");
+    if (checkpoint == null) {
+      LOG.error("gbj checkpoint create failed");
+    } else {
+      LOG.info("gbj checkpoint create succeeded " + checkpoint.getCheckpointLocation());
+    }
   }
 }
