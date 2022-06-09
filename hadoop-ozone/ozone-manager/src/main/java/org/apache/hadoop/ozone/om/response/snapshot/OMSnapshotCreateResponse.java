@@ -48,6 +48,7 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
       @Nonnull String mask
   ) {
     super(omResponse);
+    this.mask = mask;
   }
 
   /**
