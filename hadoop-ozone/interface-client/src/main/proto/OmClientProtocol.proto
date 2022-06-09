@@ -1613,6 +1613,7 @@ message SetRangerServiceVersionResponse {
 }
 
 message CreateSnapshotResponse {
+  required string mask = 1;
 }
 
 message DeleteTenantResponse {
