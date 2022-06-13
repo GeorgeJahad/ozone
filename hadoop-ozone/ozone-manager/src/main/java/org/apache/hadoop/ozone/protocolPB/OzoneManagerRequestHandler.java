@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import com.google.protobuf.ServiceException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -475,19 +474,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     LookupKeyResponse.Builder resp =
         LookupKeyResponse.newBuilder();
     KeyArgs keyArgs = request.getKeyArgs();
-    SnapshotManager sm = null;
     String keyname = keyArgs.getKeyName();
-    String[] keyParts = keyArgs.getKeyName().split("/");
-    List<String> fixedKeynameList = null;
-    if ((keyParts.length > 1) &&keyParts[0].compareTo("snapshot") == 0) {
-      sm = SnapshotManager.createSnapshotManager(getOzoneManager(), getOzoneManager().getConfiguration(), keyParts[1]);
-      fixedKeynameList  = IntStream
-          .range(0, keyParts.length)
-          .filter(i -> i != 0 && i != 1)
-          .mapToObj(i -> keyParts[i])
-          .collect(Collectors.toList());
-      keyname = String.join("/", fixedKeynameList);
-    }
+    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager().getConfiguration(), keyname);
+    keyname = SnapshotManager.fixKeyname(keyname);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())

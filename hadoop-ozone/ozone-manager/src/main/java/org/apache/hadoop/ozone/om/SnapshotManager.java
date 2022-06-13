@@ -7,6 +7,7 @@ import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.audit.*;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -22,10 +23,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
+import static org.apache.hadoop.hdds.server.ServerUtils.getRemoteUserName;
 import static org.apache.hadoop.hdds.utils.HAUtils.getScmBlockClient;
 import static org.apache.hadoop.hdds.utils.HAUtils.getScmContainerClient;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
@@ -46,25 +46,27 @@ public class SnapshotManager {
   private OzoneConfiguration configuration;
   private boolean isAclEnabled;
   private IAccessAuthorizer accessAuthorizer;
-  private OzoneManager ozoneManager;
   private boolean allowListAllVolumes;
 
   public static final Logger LOG =
       LoggerFactory.getLogger(SnapshotManager.class);
+
+  private static final AuditLogger AUDIT = new AuditLogger(
+      AuditLoggerType.OMLOGGER);
+
+  private static final Map<String, SnapshotManager> snapshotManagerCache = new HashMap<>();
 
   private SnapshotManager(KeyManagerImpl keyManager,
                           PrefixManagerImpl prefixManager,
                           VolumeManagerImpl volumeManager,
                           BucketManagerImpl bucketManager,
                           OmMetadataManagerImpl smMetadataManager,
-                          OzoneManager ozoneManager,
                           OzoneConfiguration conf) {
     this.keyManager = keyManager;
     this.bucketManager = bucketManager;
     this.volumeManager = volumeManager;
     this.prefixManager = prefixManager;
     this.smMetadataManager = smMetadataManager;
-    this.ozoneManager = ozoneManager;
     this.configuration = conf;
     this.isAclEnabled = configuration.getBoolean(OZONE_ACL_ENABLED,
         OZONE_ACL_ENABLED_DEFAULT);
@@ -81,7 +83,7 @@ public class SnapshotManager {
         authorizer.setKeyManager(keyManager);
         authorizer.setPrefixManager(prefixManager);
         try {
-          authorizer.setOzoneAdmins(ozoneManager.getOzoneAdminsFromConfig(configuration));
+          authorizer.setOzoneAdmins(OzoneManager.getOzoneAdminsFromConfig(configuration));
         } catch (IOException e) {
           // handle this
           e.printStackTrace();
@@ -92,12 +94,11 @@ public class SnapshotManager {
       accessAuthorizer = null;
     }
   }
-  private static SnapshotManager sm;
-  public static SnapshotManager createSnapshotManager(OzoneManager om, OzoneConfiguration conf, String snapshotName){
+  public static SnapshotManager createSnapshotManager(OzoneConfiguration conf, String snapshotName){
     OmMetadataManagerImpl smm = null;
-    //add cache
-    if (sm != null)
-      return sm;
+    if (snapshotManagerCache.containsKey(snapshotName)) {
+      return snapshotManagerCache.get(snapshotName);
+    }
     try {
       smm = OmMetadataManagerImpl.createSnapshotMetadataManager(conf, snapshotName + "_checkpoint_");
     } catch (IOException e) {
@@ -114,9 +115,28 @@ public class SnapshotManager {
     ScmClient scmClient = new ScmClient(scmBlockClient, scmContainerClient);
 
     KeyManagerImpl km = new KeyManagerImpl(null, scmClient, smm, conf, null, null, null, pm );
-    sm = new SnapshotManager(km, pm, vm, bm, smm, om, conf);
+    SnapshotManager sm = new SnapshotManager(km, pm, vm, bm, smm, conf);
+    snapshotManagerCache.put(snapshotName, sm);
     return sm;
   }
+
+  public static SnapshotManager getSnapshotManager(OzoneConfiguration conf,  String keyname) {
+    SnapshotManager sm = null;
+    String[] keyParts = keyname.split("/");
+    if ((keyParts.length > 1) &&keyParts[0].compareTo(".snapshot") == 0) {
+      sm = SnapshotManager.createSnapshotManager(conf, keyParts[1]);
+    }
+    return sm;
+  }
+
+  public static String fixKeyname(String keyname) {
+    String[] keyParts = keyname.split("/");
+    if ((keyParts.length > 2) && (keyParts[0].compareTo(".snapshot") == 0)) {
+      return String.join("/", Arrays.copyOfRange(keyParts, 2, keyParts.length));
+    }
+    return keyname;
+  }
+
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
     ResolvedBucket bucket = resolveBucketLink(args);
 
@@ -136,13 +156,13 @@ public class SnapshotManager {
     } catch (Exception ex) {
       //metrics.incNumKeyLookupFails();
       auditSuccess = false;
-      // AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_KEY,
-      //     auditMap, ex));
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_KEY,
+           auditMap, ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        // AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_KEY,
-        //     auditMap));
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_KEY,
+             auditMap));
       }
     }
   }
@@ -398,4 +418,28 @@ public class SnapshotManager {
     return ReflectionUtils.newInstance(clazz, conf);
   }
 
+  public AuditMessage buildAuditMessageForSuccess(AuditAction op,
+                                                  Map<String, String> auditMap) {
+
+    return new AuditMessage.Builder()
+        .setUser(getRemoteUserName())
+        .atIp(Server.getRemoteAddress())
+        .forOperation(op)
+        .withParams(auditMap)
+        .withResult(AuditEventStatus.SUCCESS)
+        .build();
+  }
+
+  public AuditMessage buildAuditMessageForFailure(AuditAction op,
+      Map<String, String> auditMap, Throwable throwable) {
+
+    return new AuditMessage.Builder()
+        .setUser(getRemoteUserName())
+        .atIp(Server.getRemoteAddress())
+        .forOperation(op)
+        .withParams(auditMap)
+        .withResult(AuditEventStatus.FAILURE)
+        .withException(throwable)
+        .build();
+  }
 }
