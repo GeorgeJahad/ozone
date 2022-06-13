@@ -64,10 +64,16 @@ public final class OMLockMetrics implements MetricsSource {
    *
    * @return OMLockMetrics object
    */
+  private static boolean first = true;
   public static OMLockMetrics create() {
-    MetricsSystem ms = DefaultMetricsSystem.instance();
-    return ms.register(SOURCE_NAME, "Ozone Manager Lock Metrics",
-        new OMLockMetrics());
+    if (first) {
+      first = false;
+      MetricsSystem ms = DefaultMetricsSystem.instance();
+      return ms.register(SOURCE_NAME, "Ozone Manager Lock Metrics",
+                         new OMLockMetrics());
+    } else {
+      return new OMLockMetrics();
+    }
   }
 
   /**

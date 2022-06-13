@@ -2,6 +2,8 @@ package org.apache.hadoop.ozone.om;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -24,6 +26,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static org.apache.hadoop.hdds.utils.HAUtils.getScmBlockClient;
+import static org.apache.hadoop.hdds.utils.HAUtils.getScmContainerClient;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
 import static org.apache.hadoop.ozone.om.KeyManagerImpl.getRemoteUser;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_VOLUME_LISTALL_ALLOWED;
@@ -87,18 +91,28 @@ public class SnapshotManager {
       accessAuthorizer = null;
     }
   }
+  private static SnapshotManager sm;
   public static SnapshotManager createSnapshotManager(OzoneManager om, OzoneConfiguration conf, String snapshotName){
     OmMetadataManagerImpl smm = null;
-    SnapshotManager sm;
+    //add cache
+    if (sm != null)
+      return sm;
     try {
-      smm = OmMetadataManagerImpl.createSnapshotMetadataManager(conf, snapshotName);
+      smm = OmMetadataManagerImpl.createSnapshotMetadataManager(conf, snapshotName + "_checkpoint_");
     } catch (IOException e) {
       e.printStackTrace();
     }
     PrefixManagerImpl pm = new PrefixManagerImpl(smm, false);
     VolumeManagerImpl vm = new VolumeManagerImpl(smm, conf);
     BucketManagerImpl bm = new BucketManagerImpl(smm);
-    KeyManagerImpl km = new KeyManagerImpl(null, null, smm, conf, null, null, null, pm );
+    StorageContainerLocationProtocol
+        scmContainerClient = getScmContainerClient(conf);
+    // verifies that the SCM info in the OM Version file is correct.
+    ScmBlockLocationProtocol
+        scmBlockClient = getScmBlockClient(conf);
+    ScmClient scmClient = new ScmClient(scmBlockClient, scmContainerClient);
+
+    KeyManagerImpl km = new KeyManagerImpl(null, scmClient, smm, conf, null, null, null, pm );
     sm = new SnapshotManager(km, pm, vm, bm, smm, om, conf);
     return sm;
   }
