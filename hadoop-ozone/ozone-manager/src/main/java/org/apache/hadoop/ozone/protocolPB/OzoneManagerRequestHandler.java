@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.google.protobuf.ServiceException;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hdds.utils.db.SequenceNumberNotFoundException;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.OzoneManagerPrepareState;
+import org.apache.hadoop.ozone.om.SnapshotManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.DBUpdates;
@@ -473,15 +475,28 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     LookupKeyResponse.Builder resp =
         LookupKeyResponse.newBuilder();
     KeyArgs keyArgs = request.getKeyArgs();
+    SnapshotManager sm = null;
+    String keyname = keyArgs.getKeyName();
+    String[] keyParts = keyArgs.getKeyName().split("/");
+    List<String> fixedKeynameList = null;
+    if (keyParts[2].compareTo("snapshot") == 0) {
+      sm = SnapshotManager.createSnapshotManager(getOzoneManager(), getOzoneManager().getConfiguration(), keyParts[3]);
+      fixedKeynameList  = IntStream
+          .range(0, keyParts.length)
+          .filter(i -> i != 2 && i != 3)
+          .mapToObj(i -> keyParts[i])
+          .collect(Collectors.toList());
+      keyname = String.join("/", fixedKeynameList);
+    }
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-        .setKeyName(keyArgs.getKeyName())
+        .setKeyName(keyname)
         .setLatestVersionLocation(keyArgs.getLatestVersionLocation())
         .setSortDatanodesInPipeline(keyArgs.getSortDatanodes())
         .setHeadOp(keyArgs.getHeadOp())
         .build();
-    OmKeyInfo keyInfo = impl.lookupKey(omKeyArgs);
+    OmKeyInfo keyInfo = (sm != null) ? sm.lookupKey(omKeyArgs) : impl.lookupKey(omKeyArgs);
 
     resp.setKeyInfo(keyInfo.getProtobuf(keyArgs.getHeadOp(), clientVersion));
 

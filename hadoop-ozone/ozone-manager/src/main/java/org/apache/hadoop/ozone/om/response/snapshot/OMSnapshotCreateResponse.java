@@ -73,7 +73,7 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
 
     UUID uuid = UUID.randomUUID();
     RDBCheckpointManager checkpointManager = new RDBCheckpointManager(store.getDb(), mask);
-    RocksDBCheckpoint checkpoint = checkpointManager.createCheckpoint("/tmp/");
+    RocksDBCheckpoint checkpoint = checkpointManager.createCheckpoint("/data/metadata/");
     if (checkpoint == null) {
       LOG.error("gbj checkpoint create failed");
     } else {
