@@ -279,10 +279,16 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     this.omEpoch = 0;
   }
 
+ private OmMetadataManagerImpl(OzoneConfiguration conf, String snapshotName) throws IOException {
+    lock = new OzoneManagerLock(conf);
+    omEpoch = 0;
+    setStore(loadDB(conf, new File("/data/metadata"), snapshotName));
+    initializeOmTables();
+  }
+
   // Factor method for creating snapshot metadata manager
   public static OmMetadataManagerImpl createSnapshotMetadataManager(OzoneConfiguration conf, String snapshotName) throws IOException {
-    OmMetadataManagerImpl smm = new OmMetadataManagerImpl(conf);
-    smm.setStore(loadDB(conf, new File("/data/metadata"), snapshotName));
+    OmMetadataManagerImpl smm = new OmMetadataManagerImpl(conf, snapshotName);
     return smm;
   }
 
