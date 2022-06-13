@@ -83,6 +83,7 @@ public class SnapshotManager {
         try {
           authorizer.setOzoneAdmins(ozoneManager.getOzoneAdminsFromConfig(configuration));
         } catch (IOException e) {
+          // handle this
           e.printStackTrace();
         }
         authorizer.setAllowListAllVolumes(allowListAllVolumes);
@@ -100,6 +101,7 @@ public class SnapshotManager {
     try {
       smm = OmMetadataManagerImpl.createSnapshotMetadataManager(conf, snapshotName + "_checkpoint_");
     } catch (IOException e) {
+      // handle this
       e.printStackTrace();
     }
     PrefixManagerImpl pm = new PrefixManagerImpl(smm, false);
@@ -146,32 +148,10 @@ public class SnapshotManager {
     }
   }
 
-  public ResolvedBucket resolveBucketLink(
-      OzoneManagerProtocolProtos.KeyArgs args,
-      OMClientRequest omClientRequest) throws IOException {
-    return resolveBucketLink(
-        Pair.of(args.getVolumeName(), args.getBucketName()), omClientRequest);
-  }
-
   public ResolvedBucket resolveBucketLink(OmKeyArgs args)
       throws IOException {
     return resolveBucketLink(
         Pair.of(args.getVolumeName(), args.getBucketName()));
-  }
-
-  public ResolvedBucket resolveBucketLink(Pair<String, String> requested,
-                                          OMClientRequest omClientRequest)
-      throws IOException {
-    Pair<String, String> resolved;
-    if (isAclEnabled) {
-      resolved = resolveBucketLink(requested, new HashSet<>(),
-          omClientRequest.createUGI(), omClientRequest.getRemoteAddress(),
-          omClientRequest.getHostName());
-    } else {
-      resolved = resolveBucketLink(requested, new HashSet<>(),
-          null, null, null);
-    }
-    return new ResolvedBucket(requested, resolved);
   }
 
   public ResolvedBucket resolveBucketLink(Pair<String, String> requested)
