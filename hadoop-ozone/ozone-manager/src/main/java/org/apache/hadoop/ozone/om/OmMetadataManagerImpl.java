@@ -279,6 +279,13 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     this.omEpoch = 0;
   }
 
+  // Factor method for creating snapshot metadata manager
+  public static OmMetadataManagerImpl createSnapshotMetadataManager(OzoneConfiguration conf, String snapshotName) throws IOException {
+    OmMetadataManagerImpl smm = new OmMetadataManagerImpl(conf);
+    smm.setStore(loadDB(conf, new File("/data/metadata"), snapshotName));
+    return smm;
+  }
+
   @Override
   public Table<String, PersistedUserVolumeInfo> getUserTable() {
     return userTable;
