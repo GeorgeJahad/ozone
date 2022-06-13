@@ -286,7 +286,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     initializeOmTables();
   }
 
-  // Factor method for creating snapshot metadata manager
+  // Factory method for creating snapshot metadata manager
   public static OmMetadataManagerImpl createSnapshotMetadataManager(OzoneConfiguration conf, String snapshotName) throws IOException {
     OmMetadataManagerImpl smm = new OmMetadataManagerImpl(conf, snapshotName);
     return smm;

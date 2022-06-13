@@ -109,7 +109,6 @@ public class SnapshotManager {
     BucketManagerImpl bm = new BucketManagerImpl(smm);
     StorageContainerLocationProtocol
         scmContainerClient = getScmContainerClient(conf);
-    // verifies that the SCM info in the OM Version file is correct.
     ScmBlockLocationProtocol
         scmBlockClient = getScmBlockClient(conf);
     ScmClient scmClient = new ScmClient(scmBlockClient, scmContainerClient);

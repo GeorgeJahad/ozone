@@ -67,7 +67,8 @@ public class RDBCheckpointManager {
       if (StringUtils.isNotEmpty(checkpointNamePrefix)) {
         checkpointDir += checkpointNamePrefix;
       }
-      checkpointDir += "_" + RDB_CHECKPOINT_DIR_PREFIX;
+      checkpointDir += "_" + RDB_CHECKPOINT_DIR_PREFIX + currentTime;
+      //checkpointDir += "_" + RDB_CHECKPOINT_DIR_PREFIX;
 
       Path checkpointPath = Paths.get(parentDir, checkpointDir);
       Instant start = Instant.now();
