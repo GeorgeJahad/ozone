@@ -479,11 +479,11 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     String keyname = keyArgs.getKeyName();
     String[] keyParts = keyArgs.getKeyName().split("/");
     List<String> fixedKeynameList = null;
-    if (keyParts[2].compareTo("snapshot") == 0) {
-      sm = SnapshotManager.createSnapshotManager(getOzoneManager(), getOzoneManager().getConfiguration(), keyParts[3]);
+    if ((keyParts.length > 1) &&keyParts[0].compareTo("snapshot") == 0) {
+      sm = SnapshotManager.createSnapshotManager(getOzoneManager(), getOzoneManager().getConfiguration(), keyParts[1]);
       fixedKeynameList  = IntStream
           .range(0, keyParts.length)
-          .filter(i -> i != 2 && i != 3)
+          .filter(i -> i != 0 && i != 1)
           .mapToObj(i -> keyParts[i])
           .collect(Collectors.toList());
       keyname = String.join("/", fixedKeynameList);
