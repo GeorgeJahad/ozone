@@ -64,6 +64,7 @@ public final class OMLockMetrics implements MetricsSource {
    *
    * @return OMLockMetrics object
    */
+  // Temp hack until I fix the snapshot manager metrics
   private static boolean first = true;
   public static OMLockMetrics create() {
     if (first) {
