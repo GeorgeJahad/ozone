@@ -71,6 +71,10 @@ public class SnapshotManager {
     this.isAclEnabled = configuration.getBoolean(OZONE_ACL_ENABLED,
         OZONE_ACL_ENABLED_DEFAULT);
   }
+
+  // Create the snapshot manager by finding the corresponding RocksDB instance,
+  //  creating an OmMetadataManagerImpl instance based on that
+  //  and creating the other manager instances based on that metadataManager
   public static SnapshotManager createSnapshotManager(OzoneConfiguration conf, String snapshotName){
     OmMetadataManagerImpl smm = null;
     if (snapshotManagerCache.containsKey(snapshotName)) {
@@ -97,6 +101,7 @@ public class SnapshotManager {
     return sm;
   }
 
+  // Get SnapshotManager based on keyname
   public static SnapshotManager getSnapshotManager(OzoneConfiguration conf,  String keyname) {
     SnapshotManager sm = null;
     String[] keyParts = keyname.split("/");
@@ -106,6 +111,7 @@ public class SnapshotManager {
     return sm;
   }
 
+  // Remove snapshot indicator from keyname
   public static String fixKeyname(String keyname) {
     String[] keyParts = keyname.split("/");
     if ((keyParts.length > 2) && (keyParts[0].compareTo(".snapshot") == 0)) {
@@ -114,7 +120,7 @@ public class SnapshotManager {
     return keyname;
   }
 
-  // lookupKey() is copied from OzoneManager.java
+  // This is a copy of lookupKey() from OzoneManager.java
   // ACL's and metrics are commented out because they aren't working yet
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
     ResolvedBucket bucket = resolveBucketLink(args);
@@ -150,6 +156,7 @@ public class SnapshotManager {
 
 
   // Temp hack because ACL's not working yet.
+  // It doesn't actually resolve the link, just returns the original
   public ResolvedBucket resolveBucketLink(OmKeyArgs args)
       throws IOException {
     return new ResolvedBucket(

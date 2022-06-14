@@ -63,6 +63,7 @@ public class RDBCheckpointManager {
     return createCheckpoint(parentDir, true);
   }
 
+  // Temp Hack: for now, don't append the time to the snapshot name
   public RocksDBCheckpoint createCheckpoint(String parentDir, boolean appendTime) {
     try {
       long currentTime = System.currentTimeMillis();
