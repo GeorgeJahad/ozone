@@ -217,6 +217,12 @@ public class MockPipelineManager implements PipelineManager {
         HddsProtos.PipelineState.PIPELINE_CLOSED);
   }
 
+  public void allocatePipeline(final Pipeline pipeline, final boolean onTimeout)
+      throws IOException {
+    stateManager.updatePipelineState(pipeline.getId().getProtobuf(),
+        HddsProtos.PipelineState.PIPELINE_ALLOCATED);
+  }
+
   @Override
   public void closeStalePipelines(DatanodeDetails datanodeDetails) {
 

@@ -92,11 +92,13 @@ public class TestWritableRatisContainerProvider {
     nodeManager = new MockNodeManager(true, 10);
     pipelineManager =
         new MockPipelineManager(dbStore, scmhaManager, nodeManager);
-    pipelineManager = spy(pipelineManager);
+    PipelineManager pipelineManagerSpy = spy(pipelineManager);
     doThrow(new SCMException(SCMException.ResultCodes.IO_EXCEPTION))
-        .when(pipelineManager).waitPipelineReady(any(), anyLong());
+        .when(pipelineManagerSpy).waitPipelineReady(any(), anyLong());
     provider = new WritableRatisContainerProvider(
-        conf, pipelineManager, containerManager, pipelineChoosingPolicy);
+        conf, pipelineManagerSpy, containerManager, pipelineChoosingPolicy);
+    Pipeline allocatedPipeline = pipelineManager.createPipeline(repConfig);
+    ((MockPipelineManager)pipelineManager).allocatePipeline(allocatedPipeline, false);
 
     Mockito.doAnswer(call -> {
       Pipeline pipeline = (Pipeline)call.getArguments()[2];
@@ -112,7 +114,6 @@ public class TestWritableRatisContainerProvider {
     Mockito.doAnswer(call ->
         containers.get((ContainerID)call.getArguments()[0]))
         .when(containerManager).getContainer(Matchers.any(ContainerID.class));
-
   }
 
   @Test
