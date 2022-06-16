@@ -74,10 +74,11 @@ public class TestWritableRatisContainerProvider {
   private ReplicationConfig repConfig;
   private int minPipelines;
   private Pipeline allocatedPipeline;
-
-  private Map<ContainerID, ContainerInfo> containers;
+  private ContainerInfo container;
 
   public void setup() throws IOException {
+
+    // Init the mock pipeline manager
     repConfig = RatisReplicationConfig.getInstance(HddsProtos.ReplicationFactor.ONE);
     conf = new OzoneConfiguration();
     File testDir = GenericTestUtils.getTestDir(
@@ -90,16 +91,21 @@ public class TestWritableRatisContainerProvider {
     pipelineManager =
         new MockPipelineManager(dbStore, scmhaManager, nodeManager);
     pipelineManagerSpy = spy(pipelineManager);
+
+    // Throw on all pipeline creates, so no new pipelines can be created
     doThrow(SCMException.class).when(pipelineManagerSpy).createPipeline(any(), any(), anyList());
     provider = new WritableRatisContainerProvider(
         conf, pipelineManagerSpy, containerManager, pipelineChoosingPolicy);
+
+    // Add a single pipeline to manager, (in the allocated state)
     allocatedPipeline = pipelineManager.createPipeline(repConfig);
     ((MockPipelineManager)pipelineManager).allocatePipeline(allocatedPipeline, false);
-    ContainerInfo container = createContainer(allocatedPipeline,
+
+    // Assign a container to that pipeline
+    container = createContainer(allocatedPipeline,
         repConfig, System.nanoTime());
     pipelineManager.addContainerToPipeline(
         allocatedPipeline.getId(), container.containerID());
-
     doReturn(container).when(containerManager).getMatchingContainer(anyLong(),
         anyString(), eq(allocatedPipeline), any());
 
@@ -109,14 +115,18 @@ public class TestWritableRatisContainerProvider {
   public void testWaitForAllocatedPipeline()
       throws IOException {
     setup();
+
+    // Confirm there are no open pipelines and an allocated one
     assertTrue(pipelineManager.getPipelines(repConfig, OPEN).isEmpty());
     assertTrue(pipelineManager.getPipelines(repConfig, ALLOCATED)
         .contains(allocatedPipeline));
 
-    ContainerInfo container =
+    ContainerInfo c =
         provider.getContainer(1, repConfig, OWNER, new ExcludeList());
-    assertNull(container);
+    // Confirm that no open pipelines were found
+    assertNull(c);
 
+    // reset pipeline manager to the initial state
     setup();
     assertTrue(pipelineManager.getPipelines(repConfig, OPEN).isEmpty());
     assertTrue(pipelineManager.getPipelines(repConfig,  ALLOCATED).contains(allocatedPipeline));
@@ -125,8 +135,8 @@ public class TestWritableRatisContainerProvider {
       pipelineManager.openPipeline(allocatedPipeline.getId());
       return allocatedPipeline;
     }).when(pipelineManagerSpy).waitOnePipelineReady(any(), anyLong());
-    container = provider.getContainer(1, repConfig, OWNER, new ExcludeList());
-    assertNotNull(container);
+    c = provider.getContainer(1, repConfig, OWNER, new ExcludeList());
+    assertEquals(c, container);
 
 
   }
