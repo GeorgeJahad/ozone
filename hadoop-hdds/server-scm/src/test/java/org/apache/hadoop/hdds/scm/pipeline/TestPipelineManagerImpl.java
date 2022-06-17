@@ -922,7 +922,7 @@ public class TestPipelineManagerImpl {
     assertTrue(pipelineManager.getPipelines(repConfig,  OPEN).isEmpty());
     assertTrue(pipelineManager.getPipelines(repConfig,  ALLOCATED).contains(allocatedPipeline));
 
-    // open the pipeline after a bit
+    // Instrument waitOnePipelineReady to open pipeline a bit after it is called
     Runnable r = () -> {
       try {
         Thread.sleep(100);
@@ -934,7 +934,7 @@ public class TestPipelineManagerImpl {
     doAnswer(call -> {
       new Thread(r).start();
       return call.callRealMethod();
-    }).when(pipelineManagerSpy).getPipelines(any(), eq(ALLOCATED), any(), any());
+    }).when(pipelineManagerSpy).waitOnePipelineReady(any(), anyLong());
 
     
     ContainerInfo c = provider.getContainer(1, repConfig, OWNER, new ExcludeList());
