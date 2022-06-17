@@ -70,7 +70,7 @@ public class TestWritableRatisContainerProvider {
   private DBStore dbStore;
   private SCMHAManager scmhaManager;
   private NodeManager nodeManager;
-  private WritableContainerProvider provider;
+  private WritableContainerProvider<ReplicationConfig> provider;
   private ReplicationConfig repConfig;
   private int minPipelines;
   private Pipeline allocatedPipeline;
@@ -89,7 +89,7 @@ public class TestWritableRatisContainerProvider {
     scmhaManager = SCMHAManagerStub.getInstance(true);
     nodeManager = new MockNodeManager(true, 10);
     pipelineManager =
-        new MockPipelineManager(dbStore, scmhaManager, nodeManager);
+        new PipelineManagerImpl(dbStore, scmhaManager, nodeManager);
     pipelineManagerSpy = spy(pipelineManager);
 
     // Throw on all pipeline creates, so no new pipelines can be created
@@ -131,10 +131,21 @@ public class TestWritableRatisContainerProvider {
     assertTrue(pipelineManager.getPipelines(repConfig, OPEN).isEmpty());
     assertTrue(pipelineManager.getPipelines(repConfig,  ALLOCATED).contains(allocatedPipeline));
 
+    // open the pipeline in a second
+    Runnable r = () -> {
+      try {
+        Thread.sleep(100);
+        pipelineManager.openPipeline(allocatedPipeline.getId());
+      } catch (Exception e) {
+        fail("exception on opening pipeline", e);
+      }
+    };
     doAnswer(call -> {
-      pipelineManager.openPipeline(allocatedPipeline.getId());
-      return allocatedPipeline;
-    }).when(pipelineManagerSpy).waitOnePipelineReady(any(), anyLong());
+      new Thread(r).start();
+      List<Pipeline> pipelines = new ArrayList<>();
+      pipelines.add(allocatedPipeline);
+      return pipelines;
+    }).when(pipelineManagerSpy).getPipelines(any(), eq(ALLOCATED), any(), any());
     c = provider.getContainer(1, repConfig, OWNER, new ExcludeList());
     assertEquals(c, container);
 
