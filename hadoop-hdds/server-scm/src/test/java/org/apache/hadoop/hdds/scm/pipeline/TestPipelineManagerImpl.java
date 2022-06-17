@@ -61,17 +61,14 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -942,6 +939,10 @@ public class TestPipelineManagerImpl {
     }).when(pipelineManagerSpy).getPipelines(any(), eq(ALLOCATED), any(), any());
     ContainerInfo c = provider.getContainer(1, repConfig, OWNER, new ExcludeList());
     assertEquals(c, container);
+    ArgumentCaptor<Collection<PipelineID>> captor = ArgumentCaptor.forClass(Collection.class);
+    verify(pipelineManagerSpy, times(1)).waitOnePipelineReady(captor.capture(), anyLong());
+    Collection<PipelineID> coll = captor.getValue();
+    assertTrue(coll.contains(allocatedPipeline.getId()));
 
     
   }
