@@ -23,19 +23,26 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.PipelineChoosePolicy;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.*;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.ha.SCMContext;
 import org.apache.hadoop.hdds.scm.ha.SCMHAManager;
 import org.apache.hadoop.hdds.scm.ha.SCMHAManagerStub;
+import org.apache.hadoop.hdds.scm.ha.SCMServiceManager;
 import org.apache.hadoop.hdds.scm.metadata.SCMDBDefinition;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.pipeline.choose.algorithms.HealthyPipelineChoosePolicy;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.hdds.utils.db.DBStore;
 import org.apache.hadoop.hdds.utils.db.DBStoreBuilder;
+import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.ozone.test.GenericTestUtils;
+import org.apache.ozone.test.TestClock;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Matchers;
@@ -45,6 +52,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.*;
 
 import static org.apache.hadoop.hdds.conf.StorageUnit.BYTES;
@@ -75,21 +84,41 @@ public class TestWritableRatisContainerProvider {
   private int minPipelines;
   private Pipeline allocatedPipeline;
   private ContainerInfo container;
+  private StorageContainerManager scm;
+  private TestClock testClock;
+  private SCMServiceManager serviceManager;
+  private SCMContext scmContext;
+  private File testDir;
 
-  public void setup() throws IOException {
+  public void setup() throws Exception {
 
     // Init the mock pipeline manager
-    repConfig = RatisReplicationConfig.getInstance(HddsProtos.ReplicationFactor.ONE);
-    conf = new OzoneConfiguration();
-    File testDir = GenericTestUtils.getTestDir(
-        TestContainerManagerImpl.class.getSimpleName() + UUID.randomUUID());
+    testClock = new TestClock(Instant.now(), ZoneOffset.UTC);
+    conf = SCMTestUtils.getConf();
+    testDir = GenericTestUtils.getTestDir(
+        TestPipelineManagerImpl.class.getSimpleName() + UUID.randomUUID());
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
+        GenericTestUtils.getRandomizedTempPath());
+    scm = HddsTestUtils.getScm(conf);
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.getAbsolutePath());
-    dbStore = DBStoreBuilder.createDBStore(
-        conf, new SCMDBDefinition());
+    dbStore = DBStoreBuilder.createDBStore(conf, new SCMDBDefinition());
+    nodeManager = new MockNodeManager(true, 20);
+   
+        HddsProtos.ReplicationFactor.THREE.getNumber();
+    scmContext = new SCMContext.Builder().setIsInSafeMode(true)
+        .setLeader(true).setIsPreCheckComplete(true)
+        .setSCM(scm).build();
+    serviceManager = new SCMServiceManager();
+
+    repConfig = RatisReplicationConfig.getInstance(HddsProtos.ReplicationFactor.ONE);
     scmhaManager = SCMHAManagerStub.getInstance(true);
-    nodeManager = new MockNodeManager(true, 10);
     pipelineManager =
-        new PipelineManagerImpl(dbStore, scmhaManager, nodeManager);
+        PipelineManagerImpl.newPipelineManager(conf, scmhaManager, nodeManager,         SCMDBDefinition.PIPELINES.getTable(dbStore),
+            new EventQueue(),
+            SCMContext.emptyContext(),
+            serviceManager,
+            new TestClock(Instant.now(), ZoneOffset.UTC));
+
     pipelineManagerSpy = spy(pipelineManager);
 
     // Throw on all pipeline creates, so no new pipelines can be created
@@ -99,7 +128,8 @@ public class TestWritableRatisContainerProvider {
 
     // Add a single pipeline to manager, (in the allocated state)
     allocatedPipeline = pipelineManager.createPipeline(repConfig);
-    ((MockPipelineManager)pipelineManager).allocatePipeline(allocatedPipeline, false);
+    ((PipelineManagerImpl)pipelineManager).getStateManager().updatePipelineState(allocatedPipeline.getId()
+            .getProtobuf(), HddsProtos.PipelineState.PIPELINE_ALLOCATED);
 
     // Assign a container to that pipeline
     container = createContainer(allocatedPipeline,
@@ -113,18 +143,19 @@ public class TestWritableRatisContainerProvider {
 
   @Test
   public void testWaitForAllocatedPipeline()
-      throws IOException {
-    setup();
+      throws Exception {
+    ContainerInfo c;
+    // setup();
 
-    // Confirm there are no open pipelines and an allocated one
-    assertTrue(pipelineManager.getPipelines(repConfig, OPEN).isEmpty());
-    assertTrue(pipelineManager.getPipelines(repConfig, ALLOCATED)
-        .contains(allocatedPipeline));
+    // // Confirm there are no open pipelines and an allocated one
+    // assertTrue(pipelineManager.getPipelines(repConfig, OPEN).isEmpty());
+    // assertTrue(pipelineManager.getPipelines(repConfig, ALLOCATED)
+    //     .contains(allocatedPipeline));
 
-    ContainerInfo c =
-        provider.getContainer(1, repConfig, OWNER, new ExcludeList());
-    // Confirm that no open pipelines were found
-    assertNull(c);
+    // ContainerInfo c =
+    //     provider.getContainer(1, repConfig, OWNER, new ExcludeList());
+    // // Confirm that no open pipelines were found
+    // assertNull(c);
 
     // reset pipeline manager to the initial state
     setup();
