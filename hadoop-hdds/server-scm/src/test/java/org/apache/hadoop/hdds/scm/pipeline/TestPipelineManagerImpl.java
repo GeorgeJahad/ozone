@@ -919,8 +919,8 @@ public class TestPipelineManagerImpl {
         anyString(), eq(allocatedPipeline), any());
 
 
-    assertTrue(pipelineManager.getPipelines(repConfig,  OPEN).isEmpty());
-    assertTrue(pipelineManager.getPipelines(repConfig,  ALLOCATED).contains(allocatedPipeline));
+    assertTrue(pipelineManager.getPipelines(repConfig,  OPEN).isEmpty(), "No open pipelines exist");
+    assertTrue(pipelineManager.getPipelines(repConfig,  ALLOCATED).contains(allocatedPipeline), "An allocated pipeline exists");
 
     // Instrument waitOnePipelineReady to open pipeline a bit after it is called
     Runnable r = () -> {
@@ -938,15 +938,15 @@ public class TestPipelineManagerImpl {
 
     
     ContainerInfo c = provider.getContainer(1, repConfig, OWNER, new ExcludeList());
-    assertEquals(c, container);
+    assertTrue(c.equals(container), "Expected container was returned");
 
     // Confirm that waitOnePipelineReady was called on allocated pipelines
     ArgumentCaptor<Collection<PipelineID>> captor = ArgumentCaptor.forClass(Collection.class);
     verify(pipelineManagerSpy, times(1)).waitOnePipelineReady(captor.capture(), anyLong());
     Collection<PipelineID> coll = captor.getValue();
-    assertTrue(coll.contains(allocatedPipeline.getId()));
-
-    
+    assertTrue(coll.contains(allocatedPipeline.getId()),
+               "waitOnePipelineReady() was called on allocated pipeline");
+    pipelineManager.close();
   }
 
   public void testCreatePipelineForRead() throws IOException {
