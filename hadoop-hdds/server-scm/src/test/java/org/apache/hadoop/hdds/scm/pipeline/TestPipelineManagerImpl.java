@@ -21,17 +21,20 @@ import com.google.common.base.Supplier;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.client.RatisReplicationConfig;
+import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
+import org.apache.hadoop.hdds.scm.PipelineChoosePolicy;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.ha.SCMHADBTransactionBuffer;
 import org.apache.hadoop.hdds.scm.ha.SCMHADBTransactionBufferStub;
@@ -40,6 +43,7 @@ import org.apache.hadoop.hdds.scm.ha.SCMContext;
 import org.apache.hadoop.hdds.scm.ha.SCMServiceManager;
 import org.apache.hadoop.hdds.scm.metadata.SCMDBDefinition;
 import org.apache.hadoop.hdds.scm.node.NodeStatus;
+import org.apache.hadoop.hdds.scm.pipeline.choose.algorithms.HealthyPipelineChoosePolicy;
 import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
@@ -75,16 +79,13 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_DATANODE_PIPELINE_L
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_DATANODE_PIPELINE_LIMIT_DEFAULT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_PIPELINE_ALLOCATED_TIMEOUT;
 import static org.apache.hadoop.hdds.scm.pipeline.Pipeline.PipelineState.ALLOCATED;
+import static org.apache.hadoop.hdds.scm.pipeline.Pipeline.PipelineState.OPEN;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * Tests for PipelineManagerImpl.
@@ -872,6 +873,77 @@ public class TestPipelineManagerImpl {
             .closePipeline(stalePipelines.get(0), false);
     verify(pipelineManager, times(1))
             .closePipeline(stalePipelines.get(1), false);
+  }
+
+  @Test
+  public void testWaitForAllocatedPipeline() throws IOException {
+    SCMHADBTransactionBuffer buffer =
+            new SCMHADBTransactionBufferStub(dbStore);
+    PipelineManagerImpl pipelineManager =
+            spy(createPipelineManager(true, buffer));
+
+    PipelineManagerImpl pipelineManagerSpy = spy(pipelineManager);
+    ReplicationConfig repConfig = RatisReplicationConfig.getInstance(HddsProtos.ReplicationFactor.ONE);
+    PipelineChoosePolicy pipelineChoosingPolicy
+      = new HealthyPipelineChoosePolicy();
+    ContainerManager containerManager
+      = mock(ContainerManager.class);
+    
+    WritableContainerProvider<ReplicationConfig> provider;
+    String OWNER = "SCM";
+    Pipeline allocatedPipeline;
+
+    // Throw on all pipeline creates, so no new pipelines can be created
+    doThrow(SCMException.class).when(pipelineManagerSpy).createPipeline(any(), any(), anyList());
+    provider = new WritableRatisContainerProvider(
+        conf, pipelineManagerSpy, containerManager, pipelineChoosingPolicy);
+
+    // Add a single pipeline to manager, (in the allocated state)
+    allocatedPipeline = pipelineManager.createPipeline(repConfig);
+    ((PipelineManagerImpl)pipelineManager).getStateManager().updatePipelineState(allocatedPipeline.getId()
+            .getProtobuf(), HddsProtos.PipelineState.PIPELINE_ALLOCATED);
+
+    // Assign a container to that pipeline
+    ContainerInfo container =  new ContainerInfo.Builder()
+        .setContainerID(System.nanoTime())
+        .setOwner(OWNER)
+        .setReplicationConfig(repConfig)
+        .setState(HddsProtos.LifeCycleState.OPEN)
+        .setPipelineID(allocatedPipeline.getId())
+        .setNumberOfKeys(0)
+        .setUsedBytes(0)
+        .setSequenceId(0)
+        .setDeleteTransactionId(0)
+        .build();
+    
+    pipelineManager.addContainerToPipeline(
+        allocatedPipeline.getId(), container.containerID());
+    doReturn(container).when(containerManager).getMatchingContainer(anyLong(),
+        anyString(), eq(allocatedPipeline), any());
+
+
+    assertTrue(pipelineManager.getPipelines(repConfig,  OPEN).isEmpty());
+    assertTrue(pipelineManager.getPipelines(repConfig,  ALLOCATED).contains(allocatedPipeline));
+
+    // open the pipeline in a second
+    Runnable r = () -> {
+      try {
+        Thread.sleep(100);
+        pipelineManager.openPipeline(allocatedPipeline.getId());
+      } catch (Exception e) {
+        fail("exception on opening pipeline", e);
+      }
+    };
+    doAnswer(call -> {
+      new Thread(r).start();
+      List<Pipeline> pipelines = new ArrayList<>();
+      pipelines.add(allocatedPipeline);
+      return pipelines;
+    }).when(pipelineManagerSpy).getPipelines(any(), eq(ALLOCATED), any(), any());
+    ContainerInfo c = provider.getContainer(1, repConfig, OWNER, new ExcludeList());
+    assertEquals(c, container);
+
+    
   }
 
   public void testCreatePipelineForRead() throws IOException {
