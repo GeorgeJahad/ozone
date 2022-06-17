@@ -890,7 +890,7 @@ public class TestPipelineManagerImpl {
     String OWNER = "SCM";
     Pipeline allocatedPipeline;
 
-    // Throw on all pipeline creates, so no new pipelines can be created
+    // Throw on pipeline creates, so no new pipelines can be created
     doThrow(SCMException.class).when(pipelineManagerSpy).createPipeline(any(), any(), anyList());
     provider = new WritableRatisContainerProvider(
         conf, pipelineManagerSpy, containerManager, pipelineChoosingPolicy);
@@ -922,7 +922,7 @@ public class TestPipelineManagerImpl {
     assertTrue(pipelineManager.getPipelines(repConfig,  OPEN).isEmpty());
     assertTrue(pipelineManager.getPipelines(repConfig,  ALLOCATED).contains(allocatedPipeline));
 
-    // open the pipeline in a second
+    // open the pipeline after a bit
     Runnable r = () -> {
       try {
         Thread.sleep(100);
@@ -933,12 +933,14 @@ public class TestPipelineManagerImpl {
     };
     doAnswer(call -> {
       new Thread(r).start();
-      List<Pipeline> pipelines = new ArrayList<>();
-      pipelines.add(allocatedPipeline);
-      return pipelines;
+      return call.callRealMethod();
     }).when(pipelineManagerSpy).getPipelines(any(), eq(ALLOCATED), any(), any());
+
+    
     ContainerInfo c = provider.getContainer(1, repConfig, OWNER, new ExcludeList());
     assertEquals(c, container);
+
+    // Confirm that waitOnePipelineReady was called on allocated pipelines
     ArgumentCaptor<Collection<PipelineID>> captor = ArgumentCaptor.forClass(Collection.class);
     verify(pipelineManagerSpy, times(1)).waitOnePipelineReady(captor.capture(), anyLong());
     Collection<PipelineID> coll = captor.getValue();
