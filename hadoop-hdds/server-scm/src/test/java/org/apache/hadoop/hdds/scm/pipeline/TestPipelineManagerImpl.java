@@ -877,7 +877,7 @@ public class TestPipelineManagerImpl {
     SCMHADBTransactionBuffer buffer =
             new SCMHADBTransactionBufferStub(dbStore);
     PipelineManagerImpl pipelineManager =
-            spy(createPipelineManager(true, buffer));
+      createPipelineManager(true, buffer);
 
     PipelineManagerImpl pipelineManagerSpy = spy(pipelineManager);
     ReplicationConfig repConfig = RatisReplicationConfig.getInstance(HddsProtos.ReplicationFactor.ONE);
