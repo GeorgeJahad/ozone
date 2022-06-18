@@ -127,6 +127,9 @@ public interface ClientProtocol {
   OzoneVolume getVolumeDetails(String volumeName)
       throws IOException;
 
+  OzoneVolume getVolumeDetails(String volumeName, String snapshotName)
+      throws IOException;
+
   /**
    * @return Raw GetS3VolumeContextResponse.
    * S3Auth won't be updated with actual userPrincipal by this call.
@@ -261,6 +264,9 @@ public interface ClientProtocol {
    * @throws IOException
    */
   OzoneBucket getBucketDetails(String volumeName, String bucketName)
+      throws IOException;
+
+  OzoneBucket getBucketDetails(String volumeName, String bucketName, String snapshotName)
       throws IOException;
 
   /**

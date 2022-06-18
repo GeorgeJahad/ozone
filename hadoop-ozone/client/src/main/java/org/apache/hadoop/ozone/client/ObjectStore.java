@@ -160,7 +160,11 @@ public class ObjectStore {
    * @throws IOException
    */
   public OzoneVolume getVolume(String volumeName) throws IOException {
-    return proxy.getVolumeDetails(volumeName);
+    return getVolume(volumeName, "");
+  }
+
+  public OzoneVolume getVolume(String volumeName, String snapshotName) throws IOException {
+    return proxy.getVolumeDetails(volumeName, snapshotName);
   }
 
   public OzoneVolume getS3Volume() throws IOException {

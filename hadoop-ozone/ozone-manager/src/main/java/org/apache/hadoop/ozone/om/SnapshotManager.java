@@ -1,6 +1,7 @@
 package org.apache.hadoop.ozone.om;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.hdds.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
@@ -90,12 +91,7 @@ public class SnapshotManager {
         authorizer.setBucketManager(bucketManager);
         authorizer.setKeyManager(keyManager);
         authorizer.setPrefixManager(prefixManager);
-        try {
-          authorizer.setOzoneAdmins(OzoneManager.getOzoneAdminsFromConfig(configuration));
-        } catch (IOException e) {
-          // handle this
-          e.printStackTrace();
-        }
+        authorizer.setOzoneAdmins(conf.getTrimmedStringCollection(OZONE_ADMINISTRATORS));
         authorizer.setAllowListAllVolumes(allowListAllVolumes);
       }
     } else {
@@ -107,6 +103,9 @@ public class SnapshotManager {
   //  creating an OmMetadataManagerImpl instance based on that
   //  and creating the other manager instances based on that metadataManager
   public static SnapshotManager createSnapshotManager(OzoneManager ozoneManager, String snapshotName){
+    if (snapshotName == null || snapshotName.isEmpty()) {
+      return null;
+    }
     OmMetadataManagerImpl smm = null;
     if (snapshotManagerCache.containsKey(snapshotName)) {
       return snapshotManagerCache.get(snapshotName);
@@ -186,6 +185,58 @@ public class SnapshotManager {
     }
   }
 
+  public OmVolumeArgs getVolumeInfo(String volume) throws IOException {
+    if (isAclEnabled) {
+      checkAcls(OzoneObj.ResourceType.VOLUME, OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.READ, volume,
+          null, null);
+    }
+
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = buildAuditMap(volume);
+    try {
+      // metrics.incNumVolumeInfos();
+      return volumeManager.getVolumeInfo(volume);
+    } catch (Exception ex) {
+      //metrics.incNumVolumeInfoFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_VOLUME,
+          auditMap, ex));
+      throw ex;
+    } finally {
+      if (auditSuccess) {
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_VOLUME,
+            auditMap));
+      }
+    }
+  }
+
+  public OmBucketInfo getBucketInfo(String volume, String bucket)
+      throws IOException {
+    if (isAclEnabled) {
+      checkAcls(OzoneObj.ResourceType.BUCKET, OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.READ, volume,
+          bucket, null);
+    }
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = buildAuditMap(volume);
+    auditMap.put(OzoneConsts.BUCKET, bucket);
+    try {
+      //metrics.incNumBucketInfos();
+      final OmBucketInfo bucketInfo =
+          bucketManager.getBucketInfo(volume, bucket);
+      return bucketInfo;
+    } catch (Exception ex) {
+      //metrics.incNumBucketInfoFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_BUCKET,
+          auditMap, ex));
+      throw ex;
+    } finally {
+      if (auditSuccess) {
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_BUCKET,
+            auditMap));
+      }
+    }
+  }
 
   public ResolvedBucket resolveBucketLink(OmKeyArgs args)
       throws IOException {
@@ -542,4 +593,11 @@ public class SnapshotManager {
   public boolean isNativeAuthorizerEnabled() {
     return isNativeAuthorizerEnabled;
   }
+
+  private Map<String, String> buildAuditMap(String volume) {
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.VOLUME, volume);
+    return auditMap;
+  }
+
 }

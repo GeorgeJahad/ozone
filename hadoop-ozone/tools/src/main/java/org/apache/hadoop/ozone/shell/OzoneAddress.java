@@ -56,6 +56,8 @@ public class OzoneAddress {
 
   private String keyName = "";
 
+  private String snapshotName = "";
+
   private boolean isPrefix = false;
 
   public OzoneAddress() throws OzoneClientException {
@@ -86,6 +88,9 @@ public class OzoneAddress {
         //we have vol/bucket/key/.../...
         bucketName = path.substring(sep1 + 1, sep2);
         keyName = path.substring(sep2 + 1);
+        if (keyName.startsWith(".snapshot")) {
+            snapshotName = keyName.split("/")[1];
+        }
       }
     }
 
@@ -287,6 +292,10 @@ public class OzoneAddress {
 
   public String getVolumeName() {
     return volumeName;
+  }
+
+  public String getSnapshotName() {
+    return snapshotName;
   }
 
   public String getBucketName() {

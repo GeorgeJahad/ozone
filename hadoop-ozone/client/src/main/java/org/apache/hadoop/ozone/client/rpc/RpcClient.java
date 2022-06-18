@@ -498,8 +498,15 @@ public class RpcClient implements ClientProtocol {
   @Override
   public OzoneVolume getVolumeDetails(String volumeName)
       throws IOException {
+    return getVolumeDetails(volumeName, "");
+  }
+
+  @Override
+  public OzoneVolume getVolumeDetails(String volumeName, String snapshotName)
+      throws IOException {
     verifyVolumeName(volumeName);
-    OmVolumeArgs volume = ozoneManagerClient.getVolumeInfo(volumeName);
+    verifySnapshotName(snapshotName);
+    OmVolumeArgs volume = ozoneManagerClient.getVolumeInfo(volumeName, snapshotName);
     return buildOzoneVolume(volume);
   }
 
@@ -669,6 +676,17 @@ public class RpcClient implements ClientProtocol {
         volumeName, bucketName, bucketLayout, owner, isVersionEnabled,
         storageType, bek != null);
     ozoneManagerClient.createBucket(builder.build());
+  }
+
+  private static void verifySnapshotName(String snapshotName) throws OMException {
+    try {
+      if (snapshotName != null && snapshotName.isEmpty())
+        return;
+      HddsClientUtils.verifyResourceName(snapshotName);
+    } catch (IllegalArgumentException e) {
+      throw new OMException(e.getMessage(),
+          OMException.ResultCodes.INVALID_SNAPSHOT_NAME);
+    }
   }
 
   private static void verifyVolumeName(String volumeName) throws OMException {
@@ -1074,10 +1092,15 @@ public class RpcClient implements ClientProtocol {
   @Override
   public OzoneBucket getBucketDetails(
       String volumeName, String bucketName) throws IOException {
+    return getBucketDetails(volumeName, bucketName, "");
+  }
+  public OzoneBucket getBucketDetails(
+      String volumeName, String bucketName, String snapshotName) throws IOException {
     verifyVolumeName(volumeName);
     verifyBucketName(bucketName);
+    verifySnapshotName(snapshotName);
     OmBucketInfo bucketInfo =
-        ozoneManagerClient.getBucketInfo(volumeName, bucketName);
+      ozoneManagerClient.getBucketInfo(volumeName, bucketName, snapshotName);
     return new OzoneBucket(
         conf,
         this,

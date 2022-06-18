@@ -436,6 +436,8 @@ enum Status {
     TENANT_NOT_EMPTY = 85;
 
     FEATURE_NOT_ENABLED = 86;
+
+    INVALID_SNAPSHOT_NAME = 87;
 }
 
 /**
@@ -568,6 +570,7 @@ message CheckVolumeAccessResponse {
 
 message InfoVolumeRequest {
     required string volumeName = 1;
+    optional string snapshotName = 2;
 }
 
 message InfoVolumeResponse {
@@ -802,6 +805,7 @@ message CreateBucketResponse {
 message InfoBucketRequest {
     required string volumeName = 1;
     required string bucketName = 2;
+    optional string snapshotName = 3;
 }
 
 message InfoBucketResponse {

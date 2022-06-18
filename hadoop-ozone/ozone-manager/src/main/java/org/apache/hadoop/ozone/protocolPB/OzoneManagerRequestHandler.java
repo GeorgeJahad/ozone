@@ -387,8 +387,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
       throws IOException {
     InfoVolumeResponse.Builder resp = InfoVolumeResponse.newBuilder();
     String volume = request.getVolumeName();
-
-    OmVolumeArgs ret = impl.getVolumeInfo(volume);
+    String snapshot = request.getSnapshotName();
+    SnapshotManager sm = SnapshotManager.createSnapshotManager(getOzoneManager(), snapshot);
+    OmVolumeArgs ret = (sm != null) ? sm.getVolumeInfo(volume) : impl.getVolumeInfo(volume);
     resp.setVolumeInfo(ret.getProtobuf());
 
     return resp.build();
@@ -462,7 +463,12 @@ public class OzoneManagerRequestHandler implements RequestHandler {
       throws IOException {
     InfoBucketResponse.Builder resp =
         InfoBucketResponse.newBuilder();
-    OmBucketInfo omBucketInfo = impl.getBucketInfo(
+    String snapshot = request.getSnapshotName();
+    SnapshotManager sm = SnapshotManager.createSnapshotManager(getOzoneManager(), snapshot);
+    OmBucketInfo omBucketInfo = (sm != null) ?
+      sm.getBucketInfo(
+        request.getVolumeName(), request.getBucketName()) :
+      impl.getBucketInfo(
         request.getVolumeName(), request.getBucketName());
     resp.setBucketInfo(omBucketInfo.getProtobuf());
 

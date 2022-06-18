@@ -391,9 +391,15 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
    */
   @Override
   public OmVolumeArgs getVolumeInfo(String volume) throws IOException {
+    return getVolumeInfo(volume, null);
+  }
+
+  @Override
+  public OmVolumeArgs getVolumeInfo(String volume, String snapshot) throws IOException {
     InfoVolumeRequest.Builder req = InfoVolumeRequest.newBuilder();
     req.setVolumeName(volume);
-
+    req.setSnapshotName(snapshot);
+    
     OMRequest omRequest = createOMRequest(Type.InfoVolume)
         .setInfoVolumeRequest(req)
         .build();
@@ -525,10 +531,17 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
   @Override
   public OmBucketInfo getBucketInfo(String volume, String bucket)
       throws IOException {
+    return getBucketInfo(volume, bucket, null);
+  }
+
+  @Override
+  public OmBucketInfo getBucketInfo(String volume, String bucket, String snapshot)
+      throws IOException {
     InfoBucketRequest.Builder req =
         InfoBucketRequest.newBuilder();
     req.setVolumeName(volume);
     req.setBucketName(bucket);
+    req.setSnapshotName(snapshot);
 
     OMRequest omRequest = createOMRequest(Type.InfoBucket)
         .setInfoBucketRequest(req)

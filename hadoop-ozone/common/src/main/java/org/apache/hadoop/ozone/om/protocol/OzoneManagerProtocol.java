@@ -139,6 +139,11 @@ public interface OzoneManagerProtocol
    * @throws IOException
    */
   OmVolumeArgs getVolumeInfo(String volume) throws IOException;
+  default OmVolumeArgs getVolumeInfo(String volume, String snapshot) throws IOException {
+    throw new UnsupportedOperationException("OzoneManager does not require " +
+        "this to be implemented.");
+  }
+
 
   /**
    * Deletes an existing empty volume.
@@ -194,6 +199,13 @@ public interface OzoneManagerProtocol
    */
   OmBucketInfo getBucketInfo(String volumeName, String bucketName)
       throws IOException;
+  default OmBucketInfo getBucketInfo(String volumeName, String bucketName, String snapshotName)
+    throws IOException {
+    throw new UnsupportedOperationException("OzoneManager does not require " +
+        "this to be implemented.");
+  }
+    
+
 
   /**
    * Sets bucket property from args.

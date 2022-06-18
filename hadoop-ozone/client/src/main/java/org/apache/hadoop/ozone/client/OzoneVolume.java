@@ -430,7 +430,10 @@ public class OzoneVolume extends WithMetadata {
    * @throws IOException
    */
   public OzoneBucket getBucket(String bucketName) throws IOException {
-    OzoneBucket bucket = proxy.getBucketDetails(name, bucketName);
+    return getBucket(bucketName, "");
+  }
+  public OzoneBucket getBucket(String bucketName, String snapshotName) throws IOException {
+    OzoneBucket bucket = proxy.getBucketDetails(name, bucketName, snapshotName);
     return bucket;
   }
 
