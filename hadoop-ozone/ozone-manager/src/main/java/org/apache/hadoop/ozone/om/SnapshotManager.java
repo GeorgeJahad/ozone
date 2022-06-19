@@ -125,8 +125,8 @@ public class SnapshotManager {
     ScmBlockLocationProtocol
         scmBlockClient = getScmBlockClient(conf);
     ScmClient scmClient = new ScmClient(scmBlockClient, scmContainerClient);
-
-    KeyManagerImpl km = new KeyManagerImpl(null, scmClient, smm, conf, null, null, null, pm );
+    KeyManagerImpl km = new KeyManagerImpl(null, scmClient, smm, conf, null,
+        ozoneManager.getBlockTokenSecretManager(), null, pm );
     SnapshotManager sm = new SnapshotManager(km, pm, vm, bm, smm, conf, ozoneManager.getOmRpcServerAddr());
     snapshotManagerCache.put(snapshotName, sm);
     return sm;
