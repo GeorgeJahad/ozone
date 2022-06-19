@@ -122,11 +122,8 @@ public class SnapshotManager {
     BucketManagerImpl bm = new BucketManagerImpl(smm);
     StorageContainerLocationProtocol
         scmContainerClient = getScmContainerClient(conf);
-    ScmBlockLocationProtocol
-        scmBlockClient = getScmBlockClient(conf);
-    ScmClient scmClient = new ScmClient(scmBlockClient, scmContainerClient);
-    KeyManagerImpl km = new KeyManagerImpl(null, scmClient, smm, conf, null,
-        ozoneManager.getBlockTokenSecretManager(), null, pm );
+    KeyManagerImpl km = new KeyManagerImpl(null, ozoneManager.getScmClient(), smm, conf, null,
+        ozoneManager.getBlockTokenSecretManager(), ozoneManager.getKmsProvider(), pm );
     SnapshotManager sm = new SnapshotManager(km, pm, vm, bm, smm, conf, ozoneManager.getOmRpcServerAddr());
     snapshotManagerCache.put(snapshotName, sm);
     return sm;
