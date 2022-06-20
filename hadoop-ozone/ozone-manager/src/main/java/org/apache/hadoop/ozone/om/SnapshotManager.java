@@ -41,17 +41,17 @@ import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_L
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
 
 public class SnapshotManager {
-  private KeyManagerImpl keyManager;
-  private PrefixManagerImpl prefixManager;
-  private VolumeManagerImpl volumeManager;
-  private BucketManagerImpl bucketManager;
-  private OmMetadataManagerImpl smMetadataManager;
-  private OzoneConfiguration configuration;
-  private boolean isAclEnabled;
-  private IAccessAuthorizer accessAuthorizer;
-  private boolean allowListAllVolumes;
-  private boolean isNativeAuthorizerEnabled;
-  private InetSocketAddress omRpcAddress;
+  private final KeyManagerImpl keyManager;
+  private final PrefixManagerImpl prefixManager;
+  private final VolumeManagerImpl volumeManager;
+  private final BucketManagerImpl bucketManager;
+  private final OmMetadataManagerImpl smMetadataManager;
+  private final OzoneConfiguration configuration;
+  private final boolean isAclEnabled;
+  private final IAccessAuthorizer accessAuthorizer;
+  private final boolean allowListAllVolumes;
+  private final boolean isNativeAuthorizerEnabled;
+  private final InetSocketAddress omRpcAddress;
 
   public static final Logger LOG =
       LoggerFactory.getLogger(SnapshotManager.class);
@@ -93,16 +93,19 @@ public class SnapshotManager {
         authorizer.setPrefixManager(prefixManager);
         authorizer.setOzoneAdmins(conf.getTrimmedStringCollection(OZONE_ADMINISTRATORS));
         authorizer.setAllowListAllVolumes(allowListAllVolumes);
+      } else {
+        isNativeAuthorizerEnabled = false;
       }
     } else {
       accessAuthorizer = null;
+      isNativeAuthorizerEnabled = false;
     }
   }
 
   // Create the snapshot manager by finding the corresponding RocksDB instance,
   //  creating an OmMetadataManagerImpl instance based on that
   //  and creating the other manager instances based on that metadataManager
-  public static SnapshotManager createSnapshotManager(OzoneManager ozoneManager, String snapshotName){
+  public static synchronized SnapshotManager createSnapshotManager(OzoneManager ozoneManager, String snapshotName){
     if (snapshotName == null || snapshotName.isEmpty()) {
       return null;
     }
