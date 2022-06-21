@@ -152,7 +152,7 @@ public class SnapshotManager {
   }
 
   // This is a copy of lookupKey() from OzoneManager.java
-  // ACL's and metrics are commented out because they aren't working yet
+  // metrics are commented out because they aren't working yet
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
     ResolvedBucket bucket = resolveBucketLink(args);
 
@@ -185,6 +185,8 @@ public class SnapshotManager {
     }
   }
 
+  // This is a copy from OzoneManager.java
+  // metrics are commented out because they aren't working yet
   public OmVolumeArgs getVolumeInfo(String volume) throws IOException {
     if (isAclEnabled) {
       checkAcls(OzoneObj.ResourceType.VOLUME, OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.READ, volume,
@@ -210,6 +212,8 @@ public class SnapshotManager {
     }
   }
 
+  // This is a copy from OzoneManager.java
+  // metrics are commented out because they aren't working yet
   public OmBucketInfo getBucketInfo(String volume, String bucket)
       throws IOException {
     if (isAclEnabled) {
@@ -238,12 +242,14 @@ public class SnapshotManager {
     }
   }
 
+  // This is an exact copy from OzoneManager.java
   public ResolvedBucket resolveBucketLink(OmKeyArgs args)
       throws IOException {
     return resolveBucketLink(
         Pair.of(args.getVolumeName(), args.getBucketName()));
   }
 
+  // This is an exact copy from OzoneManager.java
   public ResolvedBucket resolveBucketLink(Pair<String, String> requested)
       throws IOException {
 
@@ -267,20 +273,7 @@ public class SnapshotManager {
     return new ResolvedBucket(requested, resolved);
   }
 
-  /**
-   * Resolves bucket symlinks. Read permission is required for following links.
-   *
-   * @param volumeAndBucket the bucket to be resolved (if it is a link)
-   * @param visited collects link buckets visited during the resolution to
-   *   avoid infinite loops
-   * @param {@link UserGroupInformation}
-   * @param remoteAddress
-   * @param hostName
-   * @return bucket location possibly updated with its actual volume and bucket
-   *   after following bucket links
-   * @throws IOException (most likely OMException) if ACL check fails, bucket is
-   *   not found, loop is detected in the links, etc.
-   */
+  // This is an exact copy from OzoneManager.java
   private Pair<String, String> resolveBucketLink(
       Pair<String, String> volumeAndBucket,
       Set<Pair<String, String>> visited,
@@ -312,6 +305,8 @@ public class SnapshotManager {
         Pair.of(info.getSourceVolume(), info.getSourceBucket()),
         visited, userGroupInformation, remoteAddress, hostName);
   }
+
+  // This is an exact copy from OzoneManager.java
   private void checkAcls(OzoneObj.ResourceType resType, OzoneObj.StoreType store,
                          IAccessAuthorizer.ACLType acl, String vol, String bucket, String key)
       throws IOException {
@@ -335,6 +330,7 @@ public class SnapshotManager {
         remoteIp != null ? remoteIp.getHostName() : omRpcAddress.getHostName());
   }
   
+  // This is an exact copy from OzoneManager.java
   @SuppressWarnings("parameternumber")
   public boolean checkAcls(OzoneObj.ResourceType resType, OzoneObj.StoreType storeType,
                            IAccessAuthorizer.ACLType aclType, String vol, String bucket, String key,
@@ -359,13 +355,7 @@ public class SnapshotManager {
     return checkAcls(obj, context, throwIfPermissionDenied);
   }
 
-  /**
-   * CheckAcls for the ozone object.
-   *
-   * @return true if permission granted, false if permission denied.
-   * @throws OMException ResultCodes.PERMISSION_DENIED if permission denied
-   *                     and throwOnPermissionDenied set to true.
-   */
+  // This is an exact copy from OzoneManager.java
   public boolean checkAcls(OzoneObj obj, RequestContext context,
                            boolean throwIfPermissionDenied)
       throws OMException {
@@ -394,6 +384,7 @@ public class SnapshotManager {
 
 
 
+  // This is an exact copy from OzoneManager.java
   public String getVolumeOwner(String vol, IAccessAuthorizer.ACLType type, OzoneObj.ResourceType resType)
       throws OMException {
     String volOwnerName = null;
@@ -404,6 +395,8 @@ public class SnapshotManager {
     return volOwnerName;
   }
 
+  // This is a copy from OzoneManager.java
+  // but uses the smMetadataManager
   private String getVolumeOwner(String volume) throws OMException {
     Boolean lockAcquired = smMetadataManager.getLock().acquireReadLock(
         VOLUME_LOCK, volume);
@@ -431,11 +424,7 @@ public class SnapshotManager {
     }
   }
 
-  /**
-   * Return the owner of a given bucket.
-   *
-   * @return String
-   */
+  // This is an exact copy from OzoneManager.java
   public String getBucketOwner(String volume, String bucket, IAccessAuthorizer.ACLType type,
        OzoneObj.ResourceType resType) throws OMException {
     String bucketOwner = null;
@@ -446,6 +435,8 @@ public class SnapshotManager {
     return bucketOwner;
   }
 
+  // This is a copy from OzoneManager.java
+  // but uses the smMetadataManager
   private String getBucketOwner(String volume, String bucket)
       throws OMException {
 
@@ -474,6 +465,8 @@ public class SnapshotManager {
       throw new OMException("Bucket not found", OMException.ResultCodes.BUCKET_NOT_FOUND);
     }
   }
+
+  // This is an exact copy from OzoneManager.java
   private IAccessAuthorizer getACLAuthorizerInstance(OzoneConfiguration conf) {
     Class<? extends IAccessAuthorizer> clazz = conf.getClass(
         OZONE_ACL_AUTHORIZER_CLASS, OzoneAccessAuthorizer.class,
@@ -481,6 +474,8 @@ public class SnapshotManager {
     return ReflectionUtils.newInstance(clazz, conf);
   }
 
+  // This is a copy from OzoneAclUtils
+  //  that uses the Snapshotmanager instead of ozoneManager
   @SuppressWarnings("parameternumber")
   private static void checkAllAcls(SnapshotManager snapshotManager,
       OzoneObj.ResourceType resType,
@@ -544,6 +539,7 @@ public class SnapshotManager {
     }
   }
 
+  // This is an exact copy from OzoneAclUtils
   private static boolean isOwner(UserGroupInformation callerUgi,
       String ownerName) {
     if (ownerName == null) {
@@ -556,8 +552,7 @@ public class SnapshotManager {
     return false;
   }
 
-  //  All code below this is an identical copy from OzoneManager.java
-  //   which should be moved into a library shared by both
+  // This is an exact copy from OzoneManager.java
   private static String getClientAddress() {
     String clientMachine = Server.getRemoteAddress();
     if (clientMachine == null) { //not a RPC client
@@ -566,6 +561,7 @@ public class SnapshotManager {
     return clientMachine;
   }
 
+  // This is an exact copy from OzoneManager.java
   public AuditMessage buildAuditMessageForSuccess(AuditAction op,
                                                   Map<String, String> auditMap) {
 
@@ -578,6 +574,7 @@ public class SnapshotManager {
         .build();
   }
 
+  // This is an exact copy from OzoneManager.java
   public AuditMessage buildAuditMessageForFailure(AuditAction op,
       Map<String, String> auditMap, Throwable throwable) {
 
@@ -590,10 +587,12 @@ public class SnapshotManager {
         .withException(throwable)
         .build();
   }
+  // This is an exact copy from OzoneManager.java
   public boolean isNativeAuthorizerEnabled() {
     return isNativeAuthorizerEnabled;
   }
 
+  // This is an exact copy from OzoneManager.java
   private Map<String, String> buildAuditMap(String volume) {
     Map<String, String> auditMap = new LinkedHashMap<>();
     auditMap.put(OzoneConsts.VOLUME, volume);
