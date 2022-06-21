@@ -66,6 +66,7 @@ public class GetKeyHandler extends KeyHandler {
     String volumeName = address.getVolumeName();
     String bucketName = address.getBucketName();
     String keyName = address.getKeyName();
+    String snapshotName = address.getSnapshotName();
 
     File dataFile = new File(fileName);
 
@@ -81,8 +82,9 @@ public class GetKeyHandler extends KeyHandler {
     int chunkSize = (int) getConf().getStorageSize(OZONE_SCM_CHUNK_SIZE_KEY,
         OZONE_SCM_CHUNK_SIZE_DEFAULT, StorageUnit.BYTES);
 
-    OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
-    OzoneBucket bucket = vol.getBucket(bucketName);
+    OzoneVolume vol = client.getObjectStore().getVolume(volumeName, snapshotName);
+    out().printf("gbj vol is: \n" + volumeName + "\n");
+    OzoneBucket bucket = vol.getBucket(bucketName, snapshotName);
     try (InputStream input = bucket.readKey(keyName);
         OutputStream output = new FileOutputStream(dataFile)) {
       IOUtils.copyBytes(input, output, chunkSize);
