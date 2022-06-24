@@ -665,11 +665,12 @@ public class KeyManagerImpl implements KeyManager {
     boolean isTruncated = false;
     int nextPartNumberMarker = 0;
     BucketLayout bucketLayout = BucketLayout.DEFAULT;
-      String buckKey = metadataManager.
+
+    String buckKey = metadataManager.
           getBucketKey(volumeName, bucketName);
-      OmBucketInfo buckInfo =
+    OmBucketInfo buckInfo =
           metadataManager.getBucketTable().get(buckKey);
-      bucketLayout = buckInfo.getBucketLayout();
+    bucketLayout = buckInfo.getBucketLayout();
 
     metadataManager.getLock().acquireReadLock(BUCKET_LOCK, volumeName,
         bucketName);
