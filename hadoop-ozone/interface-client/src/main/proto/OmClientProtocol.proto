@@ -121,8 +121,6 @@ enum Type {
   SetS3Secret = 106;
 
   SetRangerServiceVersion = 107;
-
-  CreateSnapshot = 109;
 }
 
 message OMRequest {
@@ -226,8 +224,6 @@ message OMRequest {
   optional SetS3SecretRequest               SetS3SecretRequest             = 106;
 
   optional SetRangerServiceVersionRequest   SetRangerServiceVersionRequest = 107;
-
-  optional CreateSnapshotRequest             CreateSnapshotRequest           = 109;
 }
 
 message OMResponse {
@@ -324,8 +320,6 @@ message OMResponse {
   optional SetS3SecretResponse               SetS3SecretResponse           = 106;
 
   optional SetRangerServiceVersionResponse   SetRangerServiceVersionResponse = 107;
-
-  optional CreateSnapshotResponse            CreateSnapshotResponse          = 109;
 }
 
 enum Status {
@@ -1571,10 +1565,6 @@ message SetRangerServiceVersionRequest {
     required uint64 rangerServiceVersion = 1;
 }
 
-message CreateSnapshotRequest {
-    required string mask = 1;
-}
-
 message DeleteTenantRequest {
     optional string tenantId = 1;
 }
@@ -1610,10 +1600,6 @@ message CreateTenantResponse {
 }
 
 message SetRangerServiceVersionResponse {
-}
-
-message CreateSnapshotResponse {
-  required string mask = 1;
 }
 
 message DeleteTenantResponse {
