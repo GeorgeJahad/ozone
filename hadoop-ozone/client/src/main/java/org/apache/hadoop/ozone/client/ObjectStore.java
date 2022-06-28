@@ -543,7 +543,7 @@ public class ObjectStore {
    * @throws IOException
    */
   public void createSnapshot(String name, String mask) throws IOException {
-    proxy.createSnapshot(mask);
+    proxy.createSnapshot(name, mask);
   }
 
 
