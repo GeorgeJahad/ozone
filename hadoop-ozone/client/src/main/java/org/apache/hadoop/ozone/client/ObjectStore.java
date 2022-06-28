@@ -536,4 +536,15 @@ public class ObjectStore {
     return proxy.getAcl(obj);
   }
 
+  /**
+   * Create snapshot
+   * @param name name to be used
+   * @param mask mask to be used
+   * @throws IOException
+   */
+  public void createSnapshot(String name, String mask) throws IOException {
+    proxy.createSnapshot(mask);
+  }
+
+
 }
