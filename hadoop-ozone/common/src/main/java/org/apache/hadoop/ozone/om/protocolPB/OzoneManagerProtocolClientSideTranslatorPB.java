@@ -1087,6 +1087,24 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
    * {@inheritDoc}
    */
   @Override
+  public void createSnapshot(String name, String mask)
+      throws IOException {
+
+    final OzoneManagerProtocolProtos.CreateSnapshotRequest.Builder requestBuilder =
+        OzoneManagerProtocolProtos.CreateSnapshotRequest.newBuilder()
+            .setName(name)
+            .setMask(mask);
+    final OMRequest omRequest = createOMRequest(Type.CreateSnapshot)
+        .setCreateSnapshotRequest(requestBuilder)
+        .build();
+    final OMResponse omResponse = submitRequest(omRequest);
+    handleError(omResponse);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
   public void tenantAssignAdmin(String accessId, String tenantId,
       boolean delegated) throws IOException {
 

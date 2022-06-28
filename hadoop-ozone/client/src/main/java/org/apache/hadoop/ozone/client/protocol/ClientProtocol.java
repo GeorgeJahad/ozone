@@ -957,4 +957,13 @@ public interface ClientProtocol {
       Map<DatanodeDetails, OzoneInputStream>> getKeysEveryReplicas(
           String volumeName, String bucketName, String keyName)
       throws IOException;
+
+  /**
+   * Create snapshot
+   * @param name name to be used
+   * @param mask mask to use
+   * @throws IOException
+   */
+  void createSnapshot(String name, String mask) throws IOException;
+  
 }
