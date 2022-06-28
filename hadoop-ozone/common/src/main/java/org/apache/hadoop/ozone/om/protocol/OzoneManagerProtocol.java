@@ -630,16 +630,6 @@ public interface OzoneManagerProtocol
   }
 
   /**
-   * Create snapshot
-   * @param mask mask to use
-   * @throws IOException
-   */
-  default void createSnapshot(String mask) throws IOException {
-    throw new UnsupportedOperationException("OzoneManager does not require " +
-        "this to be implemented, as write requests use a new approach");
-  }
-
-  /**
    * Assign admin role to a user identified by an accessId in a tenant.
    * @param accessId access ID.
    * @param tenantId tenant name.
