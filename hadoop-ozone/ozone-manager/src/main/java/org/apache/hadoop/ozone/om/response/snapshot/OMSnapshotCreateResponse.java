@@ -43,12 +43,14 @@ import java.util.UUID;
 public class OMSnapshotCreateResponse extends OMClientResponse {
 
   private String mask;
+  private String name;
   @SuppressWarnings("checkstyle:parameternumber")
   public OMSnapshotCreateResponse(@Nonnull OMResponse omResponse,
-      @Nonnull String mask
+    @Nonnull String name, @Nonnull String mask
   ) {
     super(omResponse);
     this.mask = mask;
+    this.name = name;
   }
 
   /**

@@ -96,7 +96,8 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     CreateSnapshotRequest createSnapshotRequest = getOmRequest()
         .getCreateSnapshotRequest();
     String mask = createSnapshotRequest.getMask();
-    LOG.info("gbj creating: " + mask);
+    String name = createSnapshotRequest.getName();
+    LOG.info("gbj creating: " + mask + " " + name);
 
     OMResponse.Builder omResponse = OmResponseUtil.getOMResponseBuilder(
         getOmRequest());
@@ -104,8 +105,8 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
 
     try {
       omResponse.setCreateSnapshotResponse(
-        CreateSnapshotResponse.newBuilder().setMask(mask));
-      omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), mask);
+        CreateSnapshotResponse.newBuilder().setMask(mask).setName(name));
+      omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), mask, name);
     } catch (Exception ex) {
       exception = ex;
       omClientResponse = new OMSnapshotCreateResponse(
