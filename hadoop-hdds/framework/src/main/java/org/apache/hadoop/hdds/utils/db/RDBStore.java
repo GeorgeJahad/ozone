@@ -56,6 +56,7 @@ public class RDBStore implements DBStore {
   private ObjectName statMBeanName;
   private final RDBCheckpointManager checkPointManager;
   private final String checkpointsParentDir;
+  private final String snapshotsParentDir;
   private final RDBMetrics rdbMetrics;
 
   @VisibleForTesting
@@ -100,6 +101,17 @@ public class RDBStore implements DBStore {
         boolean success = checkpointsDir.mkdir();
         if (!success) {
           LOG.warn("Unable to create RocksDB checkpoint directory");
+        }
+      }
+
+      //create snapshots directory if not exists.
+      snapshotsParentDir =
+              Paths.get(dbLocation.getParent(), "db.snapshots").toString();
+      File snapshotsDir = new File(snapshotsParentDir);
+      if (!snapshotsDir.exists()) {
+        boolean success = snapshotsDir.mkdir();
+        if (!success) {
+          LOG.warn("Unable to create RocksDB snapshot directory");
         }
       }
 
@@ -243,6 +255,11 @@ public class RDBStore implements DBStore {
       this.flushDB();
     }
     return checkPointManager.createCheckpoint(checkpointsParentDir);
+  }
+
+  public DBCheckpoint getSnapshot(String name) throws IOException {
+    this.flushLog(true);
+    return checkPointManager.createCheckpoint(snapshotsParentDir, name);
   }
 
   @Override

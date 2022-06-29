@@ -97,7 +97,6 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
         .getCreateSnapshotRequest();
     String mask = createSnapshotRequest.getMask();
     String name = createSnapshotRequest.getName();
-    LOG.info("gbj creating: " + mask + " " + name);
 
     OMResponse.Builder omResponse = OmResponseUtil.getOMResponseBuilder(
         getOmRequest());
@@ -106,7 +105,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     try {
       omResponse.setCreateSnapshotResponse(
         CreateSnapshotResponse.newBuilder().setMask(mask).setName(name));
-      omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), mask, name);
+      omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), name, mask);
     } catch (Exception ex) {
       exception = ex;
       omClientResponse = new OMSnapshotCreateResponse(
@@ -117,12 +116,6 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     }
 
     // return response.
-    if (exception == null) {
-      LOG.info("gbj snapshot validateAndUpdateCache() finished");
-      return omClientResponse;
-    } else {
-      LOG.error("gbj Snapshot creation failed for:{}", mask);
-      return omClientResponse;
-    }
+    return omClientResponse;
   }
 }

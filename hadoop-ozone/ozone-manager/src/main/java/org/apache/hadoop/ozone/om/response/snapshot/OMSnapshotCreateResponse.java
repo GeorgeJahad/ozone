@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.utils.db.RDBCheckpointManager;
 import org.apache.hadoop.hdds.utils.db.RDBStore;
 import org.apache.hadoop.hdds.utils.db.RocksDBCheckpoint;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.SnapshotManager;
 import org.apache.hadoop.ozone.om.helpers.OmDBUserPrincipalInfo;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
@@ -69,17 +70,7 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
         LoggerFactory.getLogger(OMSnapshotCreateResponse.class);
 
 
-    // flushWal
-    RDBStore store = (RDBStore) omMetadataManager.getStore();
-    store.flushLog(true);
-
-    UUID uuid = UUID.randomUUID();
-    RDBCheckpointManager checkpointManager = new RDBCheckpointManager(store.getDb(), mask);
-    RocksDBCheckpoint checkpoint = checkpointManager.createCheckpoint("/tmp/");
-    if (checkpoint == null) {
-      LOG.error("gbj checkpoint create failed");
-    } else {
-      LOG.info("gbj checkpoint create succeeded " + checkpoint.getCheckpointLocation());
-    }
+    SnapshotManager.createSnapshot(omMetadataManager, name, mask);
+    // TODO: need to add to db table once that exists.
   }
 }
