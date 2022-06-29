@@ -30,11 +30,6 @@ import java.io.IOException;
     description = "create snapshot")
 public class SnapshotCreateHandler extends BucketHandler {
 
-  @CommandLine.Parameters(index = "0", arity = "1..1",
-      description = "The bucket to be snapshoted.",
-      converter = BucketUri.class)
-  private OzoneAddress bucket;
-
   @CommandLine.Parameters(index = "1", arity = "1..1",
       description = "The name of the snapshot")
   private String name;
@@ -43,7 +38,7 @@ public class SnapshotCreateHandler extends BucketHandler {
   @Override
   protected void execute(OzoneClient client, OzoneAddress address)
       throws IOException {
-    String mask = "/" + bucket.getVolumeName() + "/" + bucket.getBucketName();
+    String mask = "/" + address.getVolumeName() + "/" + address.getBucketName();
     client.getObjectStore().createSnapshot(name, mask);
     if (isVerbose()) {
       out().format("created snapshot '%s %s.%n", name, mask);
