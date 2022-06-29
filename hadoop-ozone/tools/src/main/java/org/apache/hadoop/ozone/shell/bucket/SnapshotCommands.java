@@ -26,7 +26,6 @@ import org.apache.hadoop.hdds.cli.MissingSubcommandException;
 import org.apache.hadoop.hdds.cli.SubcommandWithParent;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.shell.OzoneShell;
-import org.apache.hadoop.ozone.shell.Shell;
 import org.apache.hadoop.ozone.shell.bucket.BucketCommands;
 
 import org.kohsuke.MetaInfServices;
@@ -48,22 +47,21 @@ public class SnapshotCommands implements GenericParentCommand, Callable<Void>,
     SubcommandWithParent {
 
   @ParentCommand
-  private Shell shell;
+  private BucketCommands bucketCommands;
 
   @Override
   public Void call() throws Exception {
-    throw new MissingSubcommandException(
-        this.shell.getCmd().getSubcommands().get("snapshot"));
+    throw new MissingSubcommandException(null);
   }
 
   @Override
   public boolean isVerbose() {
-    return shell.isVerbose();
+    return bucketCommands.isVerbose();
   }
 
   @Override
   public OzoneConfiguration createOzoneConfiguration() {
-    return shell.createOzoneConfiguration();
+    return bucketCommands.createOzoneConfiguration();
   }
 
   @Override

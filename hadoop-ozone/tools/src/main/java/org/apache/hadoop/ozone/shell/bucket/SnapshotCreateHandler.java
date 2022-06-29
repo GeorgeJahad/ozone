@@ -30,12 +30,12 @@ import java.io.IOException;
     description = "create snapshot")
 public class SnapshotCreateHandler extends BucketHandler {
 
-  @Parameters(index = "0", arity = "1..1",
+  @CommandLine.Parameters(index = "0", arity = "1..1",
       description = "The bucket to be snapshoted.",
       converter = BucketUri.class)
   private OzoneAddress bucket;
 
-  @Parameters(index = "1", arity = "1..1",
+  @CommandLine.Parameters(index = "1", arity = "1..1",
       description = "The name of the snapshot")
   private String name;
 
