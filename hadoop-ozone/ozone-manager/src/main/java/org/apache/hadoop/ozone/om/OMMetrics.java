@@ -68,6 +68,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numBucketS3Lists;
   private @Metric MutableCounterLong numInitiateMultipartUploads;
   private @Metric MutableCounterLong numCompleteMultipartUploads;
+  private @Metric MutableCounterLong numSnapshotCreates;
 
   private @Metric MutableCounterLong numGetFileStatus;
   private @Metric MutableCounterLong numCreateDirectory;
@@ -417,6 +418,10 @@ public class OMMetrics {
   public void incNumCompleteMultipartUploads() {
     numKeyOps.incr();
     numCompleteMultipartUploads.incr();
+  }
+
+  public void incNumSnapshotCreates() {
+    numSnapshotCreates.incr();
   }
 
   public void incNumCompleteMultipartUploadFails() {
@@ -1075,6 +1080,10 @@ public class OMMetrics {
 
   public long getNumTenantTenantUserLists() {
     return numTenantTenantUserLists.value();
+  }
+
+  public long getNumSnapshotCreates() {
+    return numSnapshotCreates.value();
   }
 
   public void incNumTrashRenames() {
