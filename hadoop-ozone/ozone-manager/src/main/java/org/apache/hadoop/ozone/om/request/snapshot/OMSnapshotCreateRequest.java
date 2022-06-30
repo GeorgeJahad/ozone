@@ -77,7 +77,8 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
   @Override
   public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
 
-    //TODO  Access checks
+    //TODO: once snapshot table exists in rocksdb
+    // check if snapshot on this mask or if this name already exists
     return getOmRequest();
   }
 
@@ -86,8 +87,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
       long transactionLogIndex,
       OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
     OMMetrics omMetrics = ozoneManager.getMetrics();
-    //TODO change to use snapshot metrics
-    omMetrics.incNumBucketCreates();
+    omMetrics.incNumSnapshotCreates();
     Exception exception = null;
 
 

@@ -43,7 +43,7 @@ import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_L
 
 public class SnapshotManager {
   private static String getSnapshotDirName(String name, String mask) {
-    return name.replaceAll("/", "-") + "_" + name;
+    return "-" + mask.replaceAll("/", "-") + "_" + name;
   }
   public static DBCheckpoint createSnapshot(OMMetadataManager omMetadataManager, String name, String mask)
       throws IOException {
