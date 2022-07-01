@@ -32,6 +32,7 @@ import java.util.*;
 import static org.apache.hadoop.hdds.utils.HAUtils.getScmBlockClient;
 import static org.apache.hadoop.hdds.utils.HAUtils.getScmContainerClient;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.om.KeyManagerImpl.getRemoteUser;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_VOLUME_LISTALL_ALLOWED;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_VOLUME_LISTALL_ALLOWED_DEFAULT;
@@ -49,5 +50,37 @@ public class SnapshotManager {
       throws IOException {
     RDBStore store = (RDBStore) omMetadataManager.getStore();
     return store.getSnapshot(getSnapshotDirName(name, mask));
+  }
+
+  public static class SnapshotMask {
+    public String getVolume() {
+      return volume;
+    }
+
+    public String getBucket() {
+      return bucket;
+    }
+
+    public String getPath() {
+      return path;
+    }
+
+    private String volume;
+    private String bucket;
+    private String path;
+    public SnapshotMask(String mask) {
+      String []names = mask.split(OM_KEY_PREFIX);
+      if (names.length > 0) {
+        volume = names[0];
+      }
+      if (names.length > 1) {
+        bucket = names[1];
+      }
+      
+      if (names.length > 2) {
+        path = String.join(OM_KEY_PREFIX,
+          Arrays.copyOfRange(names, 2, names.length));
+      }
+    }
   }
 }
