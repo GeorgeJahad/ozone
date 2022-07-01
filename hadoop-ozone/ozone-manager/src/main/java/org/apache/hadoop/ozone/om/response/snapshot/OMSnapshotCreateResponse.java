@@ -68,8 +68,6 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
       BatchOperation batchOperation) throws IOException {
     final Logger LOG =
         LoggerFactory.getLogger(OMSnapshotCreateResponse.class);
-
-
     SnapshotManager.createSnapshot(omMetadataManager, name, mask);
     // TODO: need to add to db table once that exists.
   }
