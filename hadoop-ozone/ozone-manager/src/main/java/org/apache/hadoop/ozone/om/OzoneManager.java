@@ -845,7 +845,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @param conf
    * @return IAccessAuthorizer
    */
-  public static IAccessAuthorizer getACLAuthorizerInstance(OzoneConfiguration conf) {
+  private IAccessAuthorizer getACLAuthorizerInstance(OzoneConfiguration conf) {
     Class<? extends IAccessAuthorizer> clazz = conf.getClass(
         OZONE_ACL_AUTHORIZER_CLASS, OzoneAccessAuthorizer.class,
         IAccessAuthorizer.class);
@@ -3995,7 +3995,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   /**
    * Return list of OzoneAdministrators from config.
    */
-  static Collection<String> getOzoneAdminsFromConfig(OzoneConfiguration conf)
+  Collection<String> getOzoneAdminsFromConfig(OzoneConfiguration conf)
       throws IOException {
     Collection<String> ozAdmins =
         conf.getTrimmedStringCollection(OZONE_ADMINISTRATORS);
