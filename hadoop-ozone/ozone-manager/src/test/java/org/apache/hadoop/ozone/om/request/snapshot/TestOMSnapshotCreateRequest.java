@@ -75,10 +75,6 @@ public class TestOMSnapshotCreateRequest {
         return null;
       });
 
-  private static UserGroupInformation user1 = UserGroupInformation
-      .createUserForTesting("user1", new String[] {"test1"});
-
-
   @Before
   public void setup() throws Exception {
 
@@ -101,7 +97,6 @@ public class TestOMSnapshotCreateRequest {
 
   @After
   public void stop() {
-    UserGroupInformation.reset();
     omMetrics.unRegister();
     Mockito.framework().clearInlineMocks();
   }
@@ -112,6 +107,7 @@ public class TestOMSnapshotCreateRequest {
     String bucketName = UUID.randomUUID().toString();
     String name = UUID.randomUUID().toString();
     String mask = volumeName + OM_KEY_PREFIX + bucketName;
+    OMRequestTestUtils.addVolumeAndBucketToDB(volumeName, bucketName, omMetadataManager);
 
     when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
     OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, mask);
@@ -129,34 +125,11 @@ public class TestOMSnapshotCreateRequest {
 
   private OMSnapshotCreateRequest doPreExecute(String name,
       String mask) throws Exception {
-    OmSnapshot snapshot = new OmSnapshot(name, mask);
-    String volumeName = snapshot.getVolume();
-    String bucketName = snapshot.getBucket();
-    createVolume(volumeName);
-    createBucket(volumeName, bucketName);
     OMRequest originalRequest = OMRequestTestUtils.createSnapshotRequest(name, mask);
     OMSnapshotCreateRequest omSnapshotCreateRequest =
         new OMSnapshotCreateRequest(originalRequest);
 
     OMRequest modifiedRequest = omSnapshotCreateRequest.preExecute(ozoneManager);
     return new OMSnapshotCreateRequest(modifiedRequest);
-  }
-
-  public void createVolume(String volumeName) throws Exception {
-    OmVolumeArgs omVolumeArgs =
-        OmVolumeArgs.newBuilder().setCreationTime(Time.now())
-            .setVolume(volumeName).setAdminName(UUID.randomUUID().toString())
-            .setOwnerName(UUID.randomUUID().toString()).build();
-    OMRequestTestUtils.addVolumeToOM(omMetadataManager, omVolumeArgs);
-  }
-
-  public void createBucket(String volumeName, String bucketName)
-    throws IOException {
-    OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
-        .setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .build();
-
-    OMRequestTestUtils.addBucketToOM(omMetadataManager, bucketInfo);
   }
 }
