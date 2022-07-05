@@ -19,16 +19,18 @@
 package org.apache.hadoop.ozone.om.request.snapshot;
 
 import org.apache.hadoop.ozone.audit.AuditLogger;
+import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.om.helpers.SnapshotMask;
+import org.apache.hadoop.ozone.om.helpers.OmSnapshot;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.request.util.OmResponseUtil;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.snapshot.OMSnapshotCreateResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateSnapshotRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateSnapshotResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
@@ -60,7 +62,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
       OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
     OMMetrics omMetrics = ozoneManager.getMetrics();
     omMetrics.incNumSnapshotCreates();
-    boolean acquiredBucketLock = false, acquiredVolumeLock = false;
+    boolean acquiredBucketLock = false, acquiredSnapshotLock = false;
     Exception exception = null;
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
 
@@ -74,12 +76,13 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
         getOmRequest());
     OMClientResponse omClientResponse = null;
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
+    OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
     String maskString = createSnapshotRequest.getMask();
     String name = createSnapshotRequest.getName();
-    SnapshotMask mask = new SnapshotMask(maskString);
-    String volumeName = mask.getVolume();
-    String bucketName = mask.getBucket();
-    String path = mask.getPath();
+    OmSnapshot snapshot = new OmSnapshot(name, maskString);
+    String volumeName = snapshot.getVolume();
+    String bucketName = snapshot.getBucket();
+    String path = snapshot.getPath();
     try {
     //  For now only support bucket snapshots
       if (volumeName == null || bucketName == null || path != null) {
@@ -94,16 +97,17 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
             "Only bucket owners/admins can create snapshots",
             OMException.ResultCodes.PERMISSION_DENIED);
       }
-      // acquire lock
-      acquiredVolumeLock =
-          omMetadataManager.getLock().acquireReadLock(VOLUME_LOCK, volumeName);
+      // Need this to be sure the bucket doesn't get deleted while creating snapshot
       acquiredBucketLock =
           omMetadataManager.getLock().acquireReadLock(BUCKET_LOCK,
               volumeName, bucketName);
 
+      acquiredSnapshotLock =
+          omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
+              volumeName, snapshot.getBucketResourceName());
+
       // TODO Once the snapshot table code is ready:
       //  Check that the snapshot doesn't exist already/add to table cache
-      //  Add audit log
       omResponse.setCreateSnapshotResponse(
           CreateSnapshotResponse.newBuilder().setMask(maskString).setName(name));
       omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), name, maskString);
@@ -114,15 +118,19 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     } finally {
       addResponseToDoubleBuffer(transactionLogIndex, omClientResponse,
           ozoneManagerDoubleBufferHelper);
+      if (acquiredSnapshotLock) {
+        omMetadataManager.getLock().releaseWriteLock(BUCKET_LOCK, volumeName,
+            snapshot.getBucketResourceName());
+      }
       if (acquiredBucketLock) {
         omMetadataManager.getLock().releaseReadLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
-      if (acquiredVolumeLock) {
-        omMetadataManager.getLock().releaseReadLock(VOLUME_LOCK, volumeName);
-      }
-
     }
+
+    // Performing audit logging outside the lock.
+    auditLog(auditLogger, buildAuditMessage(OMAction.CREATE_SNAPSHOT,
+        snapshot.toAuditMap(), exception, userInfo));
 
     // return response.
     return omClientResponse;
