@@ -69,6 +69,8 @@ public class TestOMSnapshotCreateRequest {
   private OMMetadataManager omMetadataManager;
   private AuditLogger auditLogger;
 
+  private String volumeName, bucketName, name, mask;
+
   // Just setting ozoneManagerDoubleBuffer which does nothing.
   private OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper =
       ((response, transactionIndex) -> {
@@ -93,6 +95,13 @@ public class TestOMSnapshotCreateRequest {
     auditLogger = mock(AuditLogger.class);
     when(ozoneManager.getAuditLogger()).thenReturn(auditLogger);
     Mockito.doNothing().when(auditLogger).logWrite(any(AuditMessage.class));
+
+    volumeName = UUID.randomUUID().toString();
+    bucketName = UUID.randomUUID().toString();
+    name = UUID.randomUUID().toString();
+    mask = volumeName + OM_KEY_PREFIX + bucketName;
+    OMRequestTestUtils.addVolumeAndBucketToDB(volumeName, bucketName, omMetadataManager);
+
   }
 
   @After
@@ -103,23 +112,47 @@ public class TestOMSnapshotCreateRequest {
 
   @Test
   public void testValidateAndUpdateCache() throws Exception {
-    String volumeName = UUID.randomUUID().toString();
-    String bucketName = UUID.randomUUID().toString();
-    String name = UUID.randomUUID().toString();
-    String mask = volumeName + OM_KEY_PREFIX + bucketName;
-    OMRequestTestUtils.addVolumeAndBucketToDB(volumeName, bucketName, omMetadataManager);
-
     when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
+    OMClientResponse omClientResponse = doValidateAndUpdateCache();
+    OMResponse omResponse = omClientResponse.getOMResponse();
+    
+    Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
+    Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateSnapshot,
+        omResponse.getCmdType());
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
+        omResponse.getStatus());
+  }
+
+  private OMClientResponse doValidateAndUpdateCache() throws Exception {
     OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, mask);
 
     OMClientResponse omClientResponse =
         omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 1,
             ozoneManagerDoubleBufferHelper);
+    return omClientResponse;
+  }
+
+  @Test
+  public void testValidateNotOwner() throws Exception {
+    OMClientResponse omClientResponse = doValidateAndUpdateCache();
     OMResponse omResponse = omClientResponse.getOMResponse();
     Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
     Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateSnapshot,
         omResponse.getCmdType());
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.PERMISSION_DENIED,
+        omResponse.getStatus());
+  }
+
+  @Test
+  public void testValidateInvalidMask() throws Exception {
+    mask = "";
+
+    OMClientResponse omClientResponse = doValidateAndUpdateCache();
+    OMResponse omResponse = omClientResponse.getOMResponse();
+    Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
+    Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateSnapshot,
+        omResponse.getCmdType());
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.PERMISSION_DENIED,
         omResponse.getStatus());
   }
 
