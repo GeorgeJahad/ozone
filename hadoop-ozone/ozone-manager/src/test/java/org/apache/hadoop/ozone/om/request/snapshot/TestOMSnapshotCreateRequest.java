@@ -91,12 +91,12 @@ public class TestOMSnapshotCreateRequest {
     when(ozoneManager.getMetrics()).thenReturn(omMetrics);
     when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
     when(ozoneManager.isRatisEnabled()).thenReturn(true);
-    InetAddress address = mock(InetAddress.class);
-    when(address.getHostName()).thenReturn("dummy");
-    when(address.getHostAddress()).thenReturn("dummy");
-    InetSocketAddress rpcAddress = mock(InetSocketAddress.class);
-    when(rpcAddress.getAddress()).thenReturn(address);
-    when(ozoneManager.getOmRpcServerAddr()).thenReturn(rpcAddress);
+    // InetAddress address = mock(InetAddress.class);
+    // when(address.getHostName()).thenReturn("dummy");
+    // when(address.getHostAddress()).thenReturn("dummy");
+    // InetSocketAddress rpcAddress = mock(InetSocketAddress.class);
+    // when(rpcAddress.getAddress()).thenReturn(address);
+    // when(ozoneManager.getOmRpcServerAddr()).thenReturn(rpcAddress);
     OMLayoutVersionManager lvm = mock(OMLayoutVersionManager.class);
     when(lvm.getMetadataLayoutVersion()).thenReturn(0);
     when(ozoneManager.getVersionManager()).thenReturn(lvm);
@@ -120,6 +120,7 @@ public class TestOMSnapshotCreateRequest {
     String name = UUID.randomUUID().toString();
     String mask = volumeName + OM_KEY_PREFIX + bucketName;
 
+    when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
     OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, mask);
 
     doValidateAndUpdateCache(name, mask,
