@@ -152,7 +152,7 @@ public class TestOMSnapshotCreateRequest {
     Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
     Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateSnapshot,
         omResponse.getCmdType());
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.PERMISSION_DENIED,
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.INVALID_SNAPSHOT_ERROR,
         omResponse.getStatus());
   }
 

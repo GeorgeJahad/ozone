@@ -65,9 +65,6 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     boolean acquiredBucketLock = false, acquiredSnapshotLock = false;
     Exception exception = null;
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
-
-
-
     
     CreateSnapshotRequest createSnapshotRequest = getOmRequest()
         .getCreateSnapshotRequest();
@@ -75,6 +72,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
         getOmRequest());
     OMClientResponse omClientResponse = null;
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
+
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
     String maskString = createSnapshotRequest.getMask();
     String name = createSnapshotRequest.getName();
