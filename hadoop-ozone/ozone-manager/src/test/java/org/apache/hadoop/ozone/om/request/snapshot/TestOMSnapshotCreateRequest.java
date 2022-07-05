@@ -91,19 +91,12 @@ public class TestOMSnapshotCreateRequest {
     when(ozoneManager.getMetrics()).thenReturn(omMetrics);
     when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
     when(ozoneManager.isRatisEnabled()).thenReturn(true);
-    // InetAddress address = mock(InetAddress.class);
-    // when(address.getHostName()).thenReturn("dummy");
-    // when(address.getHostAddress()).thenReturn("dummy");
-    // InetSocketAddress rpcAddress = mock(InetSocketAddress.class);
-    // when(rpcAddress.getAddress()).thenReturn(address);
-    // when(ozoneManager.getOmRpcServerAddr()).thenReturn(rpcAddress);
     OMLayoutVersionManager lvm = mock(OMLayoutVersionManager.class);
     when(lvm.getMetadataLayoutVersion()).thenReturn(0);
     when(ozoneManager.getVersionManager()).thenReturn(lvm);
     auditLogger = mock(AuditLogger.class);
     when(ozoneManager.getAuditLogger()).thenReturn(auditLogger);
     Mockito.doNothing().when(auditLogger).logWrite(any(AuditMessage.class));
-    UserGroupInformation.setLoginUser(user1);
   }
 
   @After
@@ -123,80 +116,16 @@ public class TestOMSnapshotCreateRequest {
     when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
     OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, mask);
 
-    doValidateAndUpdateCache(name, mask,
-        omSnapshotCreateRequest);
-
+    OMClientResponse omClientResponse =
+        omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 1,
+            ozoneManagerDoubleBufferHelper);
+    OMResponse omResponse = omClientResponse.getOMResponse();
+    Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
+    Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateSnapshot,
+        omResponse.getCmdType());
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
+        omResponse.getStatus());
   }
-
-  // @Test
-  // public void testValidateAndUpdateCacheWithNoVolume() throws Exception {
-  //   String volumeName = UUID.randomUUID().toString();
-  //   String bucketName = UUID.randomUUID().toString();
-
-  //   OMRequest originalRequest = OMRequestTestUtils.createBucketRequest(
-  //       bucketName, volumeName, false, StorageTypeProto.SSD);
-
-  //   OMSnapshotCreateRequest omSnapshotCreateRequest =
-  //       new OMSnapshotCreateRequest(originalRequest);
-
-  //   String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
-
-  //   // As we have not still called validateAndUpdateCache, get() should
-  //   // return null.
-
-  //   Assert.assertNull(omMetadataManager.getBucketTable().get(bucketKey));
-
-  //   OMClientResponse omClientResponse =
-  //       omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 1,
-  //           ozoneManagerDoubleBufferHelper);
-
-  //   OMResponse omResponse = omClientResponse.getOMResponse();
-  //   Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
-  //   Assert.assertEquals(OzoneManagerProtocolProtos.Status.VOLUME_NOT_FOUND,
-  //       omResponse.getStatus());
-
-  //   // As request is invalid bucket table should not have entry.
-  //   Assert.assertNull(omMetadataManager.getBucketTable().get(bucketKey));
-  // }
-
-  // @Test
-  // public void testValidateAndUpdateCacheWithBucketAlreadyExists()
-  //     throws Exception {
-  //   String volumeName = UUID.randomUUID().toString();
-  //   String bucketName = UUID.randomUUID().toString();
-
-  //   OMSnapshotCreateRequest omSnapshotCreateRequest =
-  //       doPreExecute(volumeName, bucketName);
-
-  //   doValidateAndUpdateCache(volumeName, bucketName,
-  //       omSnapshotCreateRequest.getOmRequest());
-
-  //   // Try create same bucket again
-  //   OMClientResponse omClientResponse =
-  //       omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 2,
-  //           ozoneManagerDoubleBufferHelper);
-
-  //   OMResponse omResponse = omClientResponse.getOMResponse();
-  //   Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
-  //   Assert.assertEquals(OzoneManagerProtocolProtos.Status.BUCKET_ALREADY_EXISTS,
-  //       omResponse.getStatus());
-  // }
-
-  // @Test
-  // public void testValidateAndUpdateCacheVerifyBucketLayout() throws Exception {
-  //   String volumeName = UUID.randomUUID().toString();
-  //   String bucketName = UUID.randomUUID().toString();
-  //   String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
-
-  //   OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(volumeName,
-  //       bucketName);
-
-  //   doValidateAndUpdateCache(volumeName, bucketName,
-  //       omSnapshotCreateRequest.getOmRequest());
-
-  //   Assert.assertEquals(BucketLayout.LEGACY,
-  //       omMetadataManager.getBucketTable().get(bucketKey).getBucketLayout());
-  // }
 
   private OMSnapshotCreateRequest doPreExecute(String name,
       String mask) throws Exception {
@@ -206,31 +135,11 @@ public class TestOMSnapshotCreateRequest {
     createVolume(volumeName);
     createBucket(volumeName, bucketName);
     OMRequest originalRequest = OMRequestTestUtils.createSnapshotRequest(name, mask);
-    // OzoneManagerProtocolProtos.UserInfo userInfo = OzoneManagerProtocolProtos.UserInfo.newBuilder().setUserName("test1").build();
-    // omRequest.toBuilder().setUserInfo(userInfo).build();
     OMSnapshotCreateRequest omSnapshotCreateRequest =
         new OMSnapshotCreateRequest(originalRequest);
 
     OMRequest modifiedRequest = omSnapshotCreateRequest.preExecute(ozoneManager);
     return new OMSnapshotCreateRequest(modifiedRequest);
-  }
-
-  private void doValidateAndUpdateCache(String name, String mask,
-    OMSnapshotCreateRequest request) throws Exception {
-
-    OMClientResponse omClientResponse =
-        request.validateAndUpdateCache(ozoneManager, 1,
-            ozoneManagerDoubleBufferHelper);
-
-    verifySuccessCreateSnapshotResponse(omClientResponse.getOMResponse());
-  }
-
-  public static void verifySuccessCreateSnapshotResponse(OMResponse omResponse) {
-    Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
-    Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateSnapshot,
-        omResponse.getCmdType());
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
-        omResponse.getStatus());
   }
 
   public void createVolume(String volumeName) throws Exception {
