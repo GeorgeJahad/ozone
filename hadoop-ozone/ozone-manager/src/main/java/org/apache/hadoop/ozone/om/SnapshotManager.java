@@ -1,5 +1,6 @@
 package org.apache.hadoop.ozone.om;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.RDBStore;
 
@@ -7,7 +8,8 @@ import java.io.IOException;
 
 public class SnapshotManager {
 
-  private static String getSnapshotDirName(String name, String mask) {
+  @VisibleForTesting
+  public static String getSnapshotDirName(String name, String mask) {
     return "-" + mask.replaceAll("/", "-") + "_" + name;
   }
 

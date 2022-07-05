@@ -115,11 +115,24 @@ public class TestOMSnapshotCreateRequest {
     when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
     OMClientResponse omClientResponse = doValidateAndUpdateCache();
     OMResponse omResponse = omClientResponse.getOMResponse();
-    
-    Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
-    Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateSnapshot,
-        omResponse.getCmdType());
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
+        omResponse.getStatus());
+  }
+
+  @Test
+  public void testValidateNotOwner() throws Exception {
+    OMClientResponse omClientResponse = doValidateAndUpdateCache();
+    OMResponse omResponse = omClientResponse.getOMResponse();
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.PERMISSION_DENIED,
+        omResponse.getStatus());
+  }
+
+  @Test
+  public void testValidateInvalidMask() throws Exception {
+    mask = "";
+    OMClientResponse omClientResponse = doValidateAndUpdateCache();
+    OMResponse omResponse = omClientResponse.getOMResponse();
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.INVALID_SNAPSHOT_ERROR,
         omResponse.getStatus());
   }
 
@@ -129,31 +142,12 @@ public class TestOMSnapshotCreateRequest {
     OMClientResponse omClientResponse =
         omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 1,
             ozoneManagerDoubleBufferHelper);
+    
+    OMResponse omResponse = omClientResponse.getOMResponse();
+    Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
+    Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateSnapshot,
+        omResponse.getCmdType());
     return omClientResponse;
-  }
-
-  @Test
-  public void testValidateNotOwner() throws Exception {
-    OMClientResponse omClientResponse = doValidateAndUpdateCache();
-    OMResponse omResponse = omClientResponse.getOMResponse();
-    Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
-    Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateSnapshot,
-        omResponse.getCmdType());
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.PERMISSION_DENIED,
-        omResponse.getStatus());
-  }
-
-  @Test
-  public void testValidateInvalidMask() throws Exception {
-    mask = "";
-
-    OMClientResponse omClientResponse = doValidateAndUpdateCache();
-    OMResponse omResponse = omClientResponse.getOMResponse();
-    Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
-    Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateSnapshot,
-        omResponse.getCmdType());
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.INVALID_SNAPSHOT_ERROR,
-        omResponse.getStatus());
   }
 
   private OMSnapshotCreateRequest doPreExecute(String name,
@@ -165,4 +159,5 @@ public class TestOMSnapshotCreateRequest {
     OMRequest modifiedRequest = omSnapshotCreateRequest.preExecute(ozoneManager);
     return new OMSnapshotCreateRequest(modifiedRequest);
   }
+
 }
