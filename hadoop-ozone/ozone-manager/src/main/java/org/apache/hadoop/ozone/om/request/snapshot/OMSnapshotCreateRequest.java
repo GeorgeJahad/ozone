@@ -68,7 +68,6 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
 
 
 
-    // TODO update snapshot metadata table cache
     
     CreateSnapshotRequest createSnapshotRequest = getOmRequest()
         .getCreateSnapshotRequest();
