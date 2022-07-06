@@ -24,7 +24,7 @@ import picocli.CommandLine;
 import java.io.IOException;
 
 /**
- * ozone snapshot create.
+ * ozone bucket snapshot create.
  */
 @CommandLine.Command(name = "create",
     description = "create snapshot")
@@ -38,10 +38,10 @@ public class SnapshotCreateHandler extends BucketHandler {
   @Override
   protected void execute(OzoneClient client, OzoneAddress address)
       throws IOException {
-    String mask = address.getVolumeName() + "/" + address.getBucketName();
+    String mask = address.getVolumeName() + OM_KEY_PREFIX + address.getBucketName();
     client.getObjectStore().createSnapshot(name, mask);
     if (isVerbose()) {
-      out().format("created snapshot '%s %s.%n", name, mask);
+      out().format("created snapshot '%s %s'.%n", name, mask);
     }
   }
 }
