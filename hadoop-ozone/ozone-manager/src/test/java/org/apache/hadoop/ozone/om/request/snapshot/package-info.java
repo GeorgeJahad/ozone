@@ -18,6 +18,6 @@
  */
 
 /**
- * Package contains classes related to OM snapshot responses.
+ * Package contains test classes for snapshot requests.
  */
-package org.apache.hadoop.ozone.om.response.snapshot;
+package org.apache.hadoop.ozone.om.request.snapshot;
