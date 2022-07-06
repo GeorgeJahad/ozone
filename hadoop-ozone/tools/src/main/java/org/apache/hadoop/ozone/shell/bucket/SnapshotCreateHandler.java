@@ -23,6 +23,8 @@ import picocli.CommandLine;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+
 /**
  * ozone bucket snapshot create.
  */

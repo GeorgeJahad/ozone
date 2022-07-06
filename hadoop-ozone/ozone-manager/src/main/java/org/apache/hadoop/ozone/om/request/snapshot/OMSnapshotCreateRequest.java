@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.om.request.snapshot;
 
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
@@ -51,10 +52,45 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMSnapshotCreateRequest.class);
 
+  private final String mask;
+  private final String name;
+  private final String volumeName;
+  private final String bucketName;
+  private final String path;
+  private final OmSnapshot snapshot;
   public OMSnapshotCreateRequest(OMRequest omRequest) {
     super(omRequest);
+    CreateSnapshotRequest createSnapshotRequest = omRequest
+        .getCreateSnapshotRequest();
+    mask = createSnapshotRequest.getMask();
+    name = createSnapshotRequest.getName();
+    snapshot = new OmSnapshot(name, mask);
+    volumeName = snapshot.getVolume();
+    bucketName = snapshot.getBucket();
+    path = snapshot.getPath();
   }
 
+  @Override
+  public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
+    final OMRequest omRequest = super.preExecute(ozoneManager);
+    //  For now only support bucket snapshots
+    if (volumeName == null || bucketName == null || path != null) {
+      LOG.debug("Bad mask: {}", mask);
+      throw new OMException("Bad Snapshot path", OMException.ResultCodes.INVALID_SNAPSHOT_ERROR);
+    }
+    UserGroupInformation ugi = createUGI();
+    String bucketOwner = ozoneManager.getBucketOwner(volumeName, bucketName);
+    if (!ozoneManager.isAdmin(ugi) &&
+        !ozoneManager.isOwner(ugi, bucketOwner)) {
+      throw new OMException(
+          "Only bucket owners/admins can create snapshots",
+          OMException.ResultCodes.PERMISSION_DENIED);
+    }
+    // Verify name
+    OmUtils.validateSnapshotName(name);
+    return omRequest;
+  }
+  
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
       long transactionLogIndex,
@@ -67,34 +103,13 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     Exception exception = null;
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     
-    CreateSnapshotRequest createSnapshotRequest = getOmRequest()
-        .getCreateSnapshotRequest();
     OMResponse.Builder omResponse = OmResponseUtil.getOMResponseBuilder(
         getOmRequest());
     OMClientResponse omClientResponse = null;
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
 
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
-    String mask = createSnapshotRequest.getMask();
-    String name = createSnapshotRequest.getName();
-    OmSnapshot snapshot = new OmSnapshot(name, mask);
-    String volumeName = snapshot.getVolume();
-    String bucketName = snapshot.getBucket();
-    String path = snapshot.getPath();
     try {
-    //  For now only support bucket snapshots
-      if (volumeName == null || bucketName == null || path != null) {
-        LOG.debug("Bad mask: {}", mask);
-        throw new OMException("Bad Snapshot path", OMException.ResultCodes.INVALID_SNAPSHOT_ERROR);
-      }
-      UserGroupInformation ugi = createUGI();
-      String bucketOwner = ozoneManager.getBucketOwner(volumeName, bucketName);
-      if (!ozoneManager.isAdmin(ugi) &&
-          !ozoneManager.isOwner(ugi, bucketOwner)) {
-        throw new OMException(
-            "Only bucket owners/admins can create snapshots",
-            OMException.ResultCodes.PERMISSION_DENIED);
-      }
       // Need this to be sure the bucket doesn't get deleted while creating snapshot
       acquiredBucketLock =
           omMetadataManager.getLock().acquireReadLock(BUCKET_LOCK,

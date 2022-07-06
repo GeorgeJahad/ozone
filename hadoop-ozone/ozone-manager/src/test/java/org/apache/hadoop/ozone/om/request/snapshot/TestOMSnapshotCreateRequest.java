@@ -114,6 +114,26 @@ public class TestOMSnapshotCreateRequest {
   }
 
   @Test
+  public void testPreExecute() throws Exception {
+    // Check bad owner
+    LambdaTestUtils.intercept(OMException.class,
+      "Only bucket owners/admins can create snapshots",
+      () -> doPreExecute(name, mask));
+    // now confirm it works:
+    when(ozoneManager.isOwner((UserGroupInformation) any(), any())).thenReturn(true);
+    doPreExecute(name, mask);
+    // check bad mask
+    LambdaTestUtils.intercept(OMException.class,
+        "Bad Snapshot path",
+        () -> doPreExecute(name, "volWithNoBucket"));
+    // check bad name
+    String badName = "a?b";
+    LambdaTestUtils.intercept(OMException.class,
+        "Invalid snapshot name: " + badName,
+        () -> doPreExecute(badName, mask));
+  }
+  
+  @Test
   public void testValidateAndUpdateCache() throws Exception {
     when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
     OMClientResponse omClientResponse = doValidateAndUpdateCache();
@@ -121,25 +141,6 @@ public class TestOMSnapshotCreateRequest {
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
         omResponse.getStatus());
   }
-
-  @Test
-  public void testValidateNotOwner() throws Exception {
-    OMClientResponse omClientResponse = doValidateAndUpdateCache();
-    OMResponse omResponse = omClientResponse.getOMResponse();
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.PERMISSION_DENIED,
-        omResponse.getStatus());
-  }
-
-  @Test
-  public void testValidateInvalidMask() throws Exception {
-    mask = "";
-    OMClientResponse omClientResponse = doValidateAndUpdateCache();
-    OMResponse omResponse = omClientResponse.getOMResponse();
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.INVALID_SNAPSHOT_ERROR,
-        omResponse.getStatus());
-  }
-
-
   private OMClientResponse doValidateAndUpdateCache() throws Exception {
     OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, mask);
 

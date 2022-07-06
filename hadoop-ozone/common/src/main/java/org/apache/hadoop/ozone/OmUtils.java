@@ -545,6 +545,19 @@ public final class OmUtils {
   }
 
   /**
+   * Verify snapshot name is a valid DNS name.
+   */
+  public static void validateSnapshotName(String snapshotName)
+      throws OMException {
+    try {
+      HddsClientUtils.verifyResourceName(snapshotName);
+    } catch (IllegalArgumentException e) {
+      throw new OMException("Invalid snapshot name: " + snapshotName,
+          OMException.ResultCodes.INVALID_SNAPSHOT_ERROR);
+    }
+  }
+
+  /**
    * Return OM Client Rpc Time out.
    */
   public static long getOMClientRpcTimeOut(ConfigurationSource configuration) {
