@@ -85,14 +85,16 @@ public class TestOMSnapshotCreateResponse {
             .setCmdType(OzoneManagerProtocolProtos.Type.CreateSnapshot)
             .setStatus(OzoneManagerProtocolProtos.Status.OK)
             .setCreateSnapshotResponse(
-                CreateSnapshotResponse.newBuilder().setName(name).setMask(mask)).build(), name, mask);
+                CreateSnapshotResponse.newBuilder().setName(name)
+                    .setMask(mask)).build(), name, mask);
 
     omSnapshotCreateResponse.addToDBBatch(omMetadataManager, batchOperation);
 
     // Do manual commit and see whether addToBatch is successful or not.
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
     // Confirm snapshot directory was created
-    String snapshotDir = path + "/db.snapshots/om.db"+ SnapshotManager.getSnapshotDirName (name, mask);
+    String snapshotDir = path + "/db.snapshots/om.db"+
+        SnapshotManager.getSnapshotDirName (name, mask);
     Assert.assertTrue((new File(snapshotDir)).exists());
   }
  }
