@@ -89,6 +89,9 @@ public class TestOMSnapshotCreateRequest {
     when(ozoneManager.getMetrics()).thenReturn(omMetrics);
     when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
     when(ozoneManager.isRatisEnabled()).thenReturn(true);
+    when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
+    when(ozoneManager.isOwner((UserGroupInformation) any(), any())).thenReturn(true);
+    when(ozoneManager.getBucketOwner(any(), any())).thenReturn("dummyBucketOwner");
     OMLayoutVersionManager lvm = mock(OMLayoutVersionManager.class);
     when(lvm.getMetadataLayoutVersion()).thenReturn(0);
     when(ozoneManager.getVersionManager()).thenReturn(lvm);
@@ -135,6 +138,7 @@ public class TestOMSnapshotCreateRequest {
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.INVALID_SNAPSHOT_ERROR,
         omResponse.getStatus());
   }
+
 
   private OMClientResponse doValidateAndUpdateCache() throws Exception {
     OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, mask);
