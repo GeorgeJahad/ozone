@@ -34,10 +34,10 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.ParentCommand;
 
 /**
- * Subcommands for the snapshot related operations.
+ * Subcommands for bucket snapshot related operations.
  */
 @Command(name = "snapshot",
-    description = "Snapshot specific operations",
+    description = "Bucket snapshot specific operations",
     subcommands = {
         SnapshotCreateHandler.class,
     },
