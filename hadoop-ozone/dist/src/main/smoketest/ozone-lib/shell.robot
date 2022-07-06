@@ -99,3 +99,10 @@ Verify EC Replication Config
                    Should Match Regexp      ${result}       ^(?m)${data}$
                    Should Match Regexp      ${result}       ^(?m)${parity}$
                    Should Match Regexp      ${result}       ^(?m)${chunksize}$
+
+Snapshot Create
+    [arguments]    ${bucket}    ${name}
+    ${rc}    ${output} =      Run And Return Rc And Output             timeout 15 ozone sh bucket snapshot create ${bucket} ${name}
+    Return From Keyword If    ${rc} != 0                               ${FALSE}
+    [Return]                  ${TRUE}
+
