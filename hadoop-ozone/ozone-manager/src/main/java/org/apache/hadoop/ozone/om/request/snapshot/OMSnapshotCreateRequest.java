@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
-import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
 
 
 /**
@@ -60,8 +59,10 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
       long transactionLogIndex,
       OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
+
     OMMetrics omMetrics = ozoneManager.getMetrics();
     omMetrics.incNumSnapshotCreates();
+
     boolean acquiredBucketLock = false, acquiredSnapshotLock = false;
     Exception exception = null;
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
@@ -74,16 +75,16 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
 
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
-    String maskString = createSnapshotRequest.getMask();
+    String mask = createSnapshotRequest.getMask();
     String name = createSnapshotRequest.getName();
-    OmSnapshot snapshot = new OmSnapshot(name, maskString);
+    OmSnapshot snapshot = new OmSnapshot(name, mask);
     String volumeName = snapshot.getVolume();
     String bucketName = snapshot.getBucket();
     String path = snapshot.getPath();
     try {
     //  For now only support bucket snapshots
       if (volumeName == null || bucketName == null || path != null) {
-        LOG.debug("Bad mask: {}", maskString);
+        LOG.debug("Bad mask: {}", mask);
         throw new OMException("Bad Snapshot path", OMException.ResultCodes.INVALID_SNAPSHOT_ERROR);
       }
       UserGroupInformation ugi = createUGI();
@@ -106,8 +107,8 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
       // TODO Once the snapshot table code is ready:
       //  Check that the snapshot doesn't exist already/add to table cache
       omResponse.setCreateSnapshotResponse(
-          CreateSnapshotResponse.newBuilder().setMask(maskString).setName(name));
-      omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), name, maskString);
+          CreateSnapshotResponse.newBuilder().setMask(mask).setName(name));
+      omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), name, mask);
     } catch (Exception ex) {
       exception = ex;
       omClientResponse = new OMSnapshotCreateResponse(
