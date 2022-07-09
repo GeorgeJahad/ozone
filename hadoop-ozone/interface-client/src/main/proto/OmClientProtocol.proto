@@ -1641,8 +1641,7 @@ message SetRangerServiceVersionResponse {
 }
 
 message CreateSnapshotResponse {
-  required string name = 1;
-  required string mask = 2;
+  required SnapshotInfoEntry snapshotInfo = 1;
 }
 
 message DeleteTenantResponse {
