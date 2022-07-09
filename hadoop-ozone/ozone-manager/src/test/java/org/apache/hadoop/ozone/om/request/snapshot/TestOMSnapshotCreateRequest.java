@@ -29,8 +29,7 @@ import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.om.*;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.om.helpers.BucketLayout;
-import org.apache.hadoop.ozone.om.helpers.OmSnapshot;
+import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.upgrade.OMLayoutVersionManager;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -43,8 +42,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .StorageTypeProto;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.request.OMRequestTestUtils;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -143,11 +140,28 @@ public class TestOMSnapshotCreateRequest {
   }
   private OMClientResponse doValidateAndUpdateCache() throws Exception {
     OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, mask);
+    String key = SnapshotManager.getKey(name, mask);
+    // As we have not still called validateAndUpdateCache, get() should
+    // return null.
 
+    Assert.assertNull(omMetadataManager.getBucketTable().get(key));
     OMClientResponse omClientResponse =
         omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 1,
             ozoneManagerDoubleBufferHelper);
     
+    // As now after validateAndUpdateCache it should add entry to cache, get
+    // should return non null value.
+    SnapshotInfo snapshotInfo =
+        omMetadataManager.getSnapshotInfoTable().get(key);
+    Assert.assertNotNull(snapshotInfo);
+
+    // verify table data with response data.
+    SnapshotInfo snapshotInfoFromProto = SnapshotInfo.getFromProtobuf(
+        omClientResponse.getOMResponse().getCreateSnapshotResponse().getSnapshotInfo());
+    Assert.assertEquals(snapshotInfoFromProto.getCreationTime(),
+        snapshotInfo.getCreationTime());
+
+
     OMResponse omResponse = omClientResponse.getOMResponse();
     Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
     Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateSnapshot,

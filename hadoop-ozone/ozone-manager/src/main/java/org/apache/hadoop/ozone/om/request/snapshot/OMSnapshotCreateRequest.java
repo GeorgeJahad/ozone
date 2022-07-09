@@ -27,6 +27,7 @@ import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.SnapshotManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmSnapshot;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
@@ -136,7 +137,8 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
 
       // TODO Once the snapshot table code is ready:
       //  Check that the snapshot doesn't exist already/add to table cache
-      omMetadataManager.getSnapshotInfoTable().addCacheEntry(new CacheKey<>(path + OM_KEY_PREFIX + mask),
+      omMetadataManager.getSnapshotInfoTable().addCacheEntry(new CacheKey<>(
+              SnapshotManager.getKey(name, mask)),
           new CacheValue<>(Optional.of(snapshotInfo), transactionLogIndex));
 
       omResponse.setCreateSnapshotResponse(

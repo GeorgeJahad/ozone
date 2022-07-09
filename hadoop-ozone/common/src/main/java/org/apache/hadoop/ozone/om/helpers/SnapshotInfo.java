@@ -285,7 +285,8 @@ public final class SnapshotInfo {
     SnapshotInfoEntry.Builder sib = SnapshotInfoEntry.newBuilder()
         .setName(name)
         .setSnapshotStatus(snapshotStatus.toProto())
-      .setSnapshotPath(snapshotPath);
+        .setSnapshotPath(snapshotPath)
+        .setCreationTime(creationTime);
     /*    
         sib.setSnapshotID(snapshotID)
         sib.setCreationTime(creationTime)
