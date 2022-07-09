@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.ozone.om.SnapshotManager;
+import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -80,13 +81,16 @@ public class TestOMSnapshotCreateResponse {
     String bucketName = UUID.randomUUID().toString();
     String name = UUID.randomUUID().toString();
     String mask = volumeName + OM_KEY_PREFIX + bucketName;
+    SnapshotInfo snapshotInfo = SnapshotInfo.newBuilder()
+        .setSnapshotPath(mask)
+        .setName(name).build();
     OMSnapshotCreateResponse omSnapshotCreateResponse =
         new OMSnapshotCreateResponse(OMResponse.newBuilder()
             .setCmdType(OzoneManagerProtocolProtos.Type.CreateSnapshot)
             .setStatus(OzoneManagerProtocolProtos.Status.OK)
             .setCreateSnapshotResponse(
-                CreateSnapshotResponse.newBuilder().setName(name)
-                    .setMask(mask)).build(), name, mask);
+                CreateSnapshotResponse.newBuilder().setSnapshotInfo(snapshotInfo.getProtobuf())
+                    .build()).build());
 
     omSnapshotCreateResponse.addToDBBatch(omMetadataManager, batchOperation);
 

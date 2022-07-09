@@ -283,15 +283,17 @@ public final class SnapshotInfo {
    */
   public SnapshotInfoEntry getProtobuf() {
     SnapshotInfoEntry.Builder sib = SnapshotInfoEntry.newBuilder()
-        .setSnapshotID(snapshotID)
         .setName(name)
         .setSnapshotStatus(snapshotStatus.toProto())
-        .setCreationTime(creationTime)
-        .setDeletionTime(deletionTime)
-        .setPathPreviousSnapshotID(pathPreviousSnapshotID)
-        .setGlobalPreviousSnapshotID(globalPreviousSnapshotID)
-        .setSnapshotPath(snapshotPath)
-        .setCheckpointDir(checkpointDir);
+      .setSnapshotPath(snapshotPath);
+    /*    
+        sib.setSnapshotID(snapshotID)
+        sib.setCreationTime(creationTime)
+        sib.setDeletionTime(deletionTime)
+        sib.setPathPreviousSnapshotID(pathPreviousSnapshotID)
+        sib.setGlobalPreviousSnapshotID(globalPreviousSnapshotID)
+        sib.setCheckpointDir(checkpointDir);
+    */
     return sib.build();
   }
 

@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.ozone.om.request.snapshot;
 
+import com.google.common.base.Optional;
+import org.apache.hadoop.hdds.utils.db.cache.CacheKey;
+import org.apache.hadoop.hdds.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
@@ -26,6 +29,7 @@ import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmSnapshot;
+import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.request.util.OmResponseUtil;
@@ -37,11 +41,14 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateS
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
+import org.apache.ratis.server.RaftServerConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 
 
@@ -108,6 +115,14 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     OMClientResponse omClientResponse = null;
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
 
+    SnapshotInfo.Builder builder = new SnapshotInfo.Builder();
+
+    // Set creation time & modification time.
+    long initialTime = Time.now();
+    builder.setCreationTime(initialTime)
+        .setName(name)
+        .setSnapshotPath(mask);
+    SnapshotInfo snapshotInfo = builder.build();
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
     try {
       // Need this to be sure the bucket doesn't get deleted while creating snapshot
@@ -121,13 +136,16 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
 
       // TODO Once the snapshot table code is ready:
       //  Check that the snapshot doesn't exist already/add to table cache
+      omMetadataManager.getSnapshotInfoTable().addCacheEntry(new CacheKey<>(path + OM_KEY_PREFIX + mask),
+          new CacheValue<>(Optional.of(snapshotInfo), transactionLogIndex));
+
       omResponse.setCreateSnapshotResponse(
-          CreateSnapshotResponse.newBuilder().setMask(mask).setName(name));
+          CreateSnapshotResponse.newBuilder().setSnapshotInfo(snapshotInfo.getProtobuf()));
       omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), name, mask);
-    } catch (Exception ex) {
-      exception = ex;
-      omClientResponse = new OMSnapshotCreateResponse(
-          createErrorOMResponse(omResponse, (IOException) exception));
+    // } catch (IOException ex) {
+    //   exception = ex;
+    //   omClientResponse = new OMSnapshotCreateResponse(
+    //       createErrorOMResponse(omResponse, (IOException) exception));
     } finally {
       addResponseToDoubleBuffer(transactionLogIndex, omClientResponse,
           ozoneManagerDoubleBufferHelper);
