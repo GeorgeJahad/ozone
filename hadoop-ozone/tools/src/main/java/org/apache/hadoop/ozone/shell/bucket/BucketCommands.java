@@ -81,8 +81,4 @@ public class BucketCommands implements GenericParentCommand, Callable<Void>,
   public Class<?> getParentType() {
     return OzoneShell.class;
   }
-
-  public Shell getShell() {
-    return shell;
-  }
 }

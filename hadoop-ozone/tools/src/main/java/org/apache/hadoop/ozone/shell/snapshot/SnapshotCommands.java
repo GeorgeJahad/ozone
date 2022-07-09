@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.ozone.shell.bucket;
+package org.apache.hadoop.ozone.shell.snapshot;
 
 import java.util.concurrent.Callable;
 
@@ -27,19 +27,18 @@ import org.apache.hadoop.hdds.cli.SubcommandWithParent;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.shell.OzoneShell;
 import org.apache.hadoop.ozone.shell.Shell;
-import org.apache.hadoop.ozone.shell.bucket.BucketCommands;
 
 import org.kohsuke.MetaInfServices;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ParentCommand;
 
 /**
- * Subcommands for bucket snapshot related operations.
+ * Subcommands for the snapshot related operations.
  */
 @Command(name = "snapshot",
-    description = "Bucket snapshot specific operations",
+    description = "Snapshot specific operations",
     subcommands = {
-        SnapshotCreateHandler.class,
+        CreateSnapshotHandler.class,
     },
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)
@@ -48,27 +47,26 @@ public class SnapshotCommands implements GenericParentCommand, Callable<Void>,
     SubcommandWithParent {
 
   @ParentCommand
-  private BucketCommands bucketCommands;
+  private Shell shell;
 
   @Override
   public Void call() throws Exception {
     throw new MissingSubcommandException(
-       bucketCommands.getShell().getCmd()
-           .getSubcommands().get("bucket").getSubcommands().get("snapshot"));
+        this.shell.getCmd().getSubcommands().get("snapshot"));
   }
 
   @Override
   public boolean isVerbose() {
-    return bucketCommands.isVerbose();
+    return shell.isVerbose();
   }
 
   @Override
   public OzoneConfiguration createOzoneConfiguration() {
-    return bucketCommands.createOzoneConfiguration();
+    return shell.createOzoneConfiguration();
   }
 
   @Override
   public Class<?> getParentType() {
-    return BucketCommands.class;
+    return OzoneShell.class;
   }
 }

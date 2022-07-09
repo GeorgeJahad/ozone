@@ -15,7 +15,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.hadoop.ozone.shell.bucket;
+package org.apache.hadoop.ozone.shell.snapshot;
 
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.shell.OzoneAddress;
@@ -23,27 +23,26 @@ import picocli.CommandLine;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
-
 /**
- * ozone bucket snapshot create.
+ * ozone snapshot create.
  */
 @CommandLine.Command(name = "create",
     description = "create snapshot")
-public class SnapshotCreateHandler extends BucketHandler {
+public class CreateSnapshotHandler extends SnapshotHandler {
 
-  @CommandLine.Parameters(index = "1", arity = "1..1",
-      description = "The name of the snapshot")
+  @CommandLine.Parameters(description = "mask", arity = "1..1")
+  private String mask;
+
+  @CommandLine.Parameters(description = "name", arity = "1..1")
   private String name;
-
 
   @Override
   protected void execute(OzoneClient client, OzoneAddress address)
       throws IOException {
-    String mask = address.getVolumeName() + OM_KEY_PREFIX + address.getBucketName();
+
     String newName = client.getObjectStore().createSnapshot(name, mask);
     if (isVerbose()) {
-      out().format("created snapshot '%s %s'.%n", newName, mask);
+      out().format("created snapshot '%s %s'.%n", mask, newName);
     }
   }
 }
