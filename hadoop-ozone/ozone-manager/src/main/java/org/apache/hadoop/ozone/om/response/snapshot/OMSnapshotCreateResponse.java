@@ -72,8 +72,8 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
     final Logger LOG =
         LoggerFactory.getLogger(OMSnapshotCreateResponse.class);
     SnapshotManager.createSnapshot(omMetadataManager, name, mask);
-    String key = mask + OM_KEY_PREFIX + name;
+    String key = SnapshotManager.getKey(name, mask);
     omMetadataManager.getSnapshotInfoTable().putWithBatch(batchOperation,
-        key, SnapshotInfo.getFromProtobuf( getOMResponse().getCreateSnapshotResponse().getSnapshotInfo()));
+        key, SnapshotInfo.getFromProtobuf(getOMResponse().getCreateSnapshotResponse().getSnapshotInfo()));
   }
 }

@@ -90,7 +90,7 @@ public class TestOMSnapshotCreateResponse {
             .setStatus(OzoneManagerProtocolProtos.Status.OK)
             .setCreateSnapshotResponse(
                 CreateSnapshotResponse.newBuilder().setSnapshotInfo(snapshotInfo.getProtobuf())
-                    .build()).build());
+                    .build()).build(), name, mask);
 
     omSnapshotCreateResponse.addToDBBatch(omMetadataManager, batchOperation);
 

@@ -50,6 +50,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.FILE_ALREADY_EXISTS;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 
 
@@ -108,7 +109,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     omMetrics.incNumSnapshotCreates();
 
     boolean acquiredBucketLock = false, acquiredSnapshotLock = false;
-    Exception exception = null;
+    IOException exception = null;
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     
     OMResponse.Builder omResponse = OmResponseUtil.getOMResponseBuilder(
@@ -135,19 +136,23 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
           omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
               volumeName, snapshot.getBucketResourceName());
 
-      // TODO Once the snapshot table code is ready:
-      //  Check that the snapshot doesn't exist already/add to table cache
-      omMetadataManager.getSnapshotInfoTable().addCacheEntry(new CacheKey<>(
-              SnapshotManager.getKey(name, mask)),
+      String key = SnapshotManager.getKey(name, mask);
+      //Check if snapshot already exists
+      if (omMetadataManager.getSnapshotInfoTable().isExist(key)) {
+        LOG.debug("snapshot: {} already exists ", key);
+        throw new OMException("Snapshot already exists", FILE_ALREADY_EXISTS);
+      }
+
+      omMetadataManager.getSnapshotInfoTable().addCacheEntry(new CacheKey<>(key),
           new CacheValue<>(Optional.of(snapshotInfo), transactionLogIndex));
 
       omResponse.setCreateSnapshotResponse(
           CreateSnapshotResponse.newBuilder().setSnapshotInfo(snapshotInfo.getProtobuf()));
       omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), name, mask);
-    // } catch (IOException ex) {
-    //   exception = ex;
-    //   omClientResponse = new OMSnapshotCreateResponse(
-    //       createErrorOMResponse(omResponse, (IOException) exception));
+    } catch (IOException ex) {
+      exception = ex;
+      omClientResponse = new OMSnapshotCreateResponse(
+          createErrorOMResponse(omResponse, exception));
     } finally {
       addResponseToDoubleBuffer(transactionLogIndex, omClientResponse,
           ozoneManagerDoubleBufferHelper);
