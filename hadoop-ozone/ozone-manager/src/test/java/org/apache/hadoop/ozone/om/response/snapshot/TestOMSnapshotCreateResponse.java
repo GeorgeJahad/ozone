@@ -98,7 +98,7 @@ public class TestOMSnapshotCreateResponse {
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
     // Confirm snapshot directory was created
     String snapshotDir = path + "/db.snapshots/om.db"+
-        SnapshotManager.getDirName (name, mask);
+        snapshotInfo.getCheckpointDirName();
     Assert.assertTrue((new File(snapshotDir)).exists());
   }
  }

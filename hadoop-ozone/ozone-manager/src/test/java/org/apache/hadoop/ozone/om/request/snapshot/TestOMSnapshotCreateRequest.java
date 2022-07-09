@@ -140,7 +140,7 @@ public class TestOMSnapshotCreateRequest {
   }
   private OMClientResponse doValidateAndUpdateCache() throws Exception {
     OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, mask);
-    String key = SnapshotManager.getKey(name, mask);
+    String key = SnapshotInfo.getKey(name, mask);
     // As we have not still called validateAndUpdateCache, get() should
     // return null.
 

@@ -71,9 +71,11 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
       BatchOperation batchOperation) throws IOException {
     final Logger LOG =
         LoggerFactory.getLogger(OMSnapshotCreateResponse.class);
-    SnapshotManager.createSnapshot(omMetadataManager, name, mask);
-    String key = SnapshotManager.getKey(name, mask);
+    SnapshotManager.createSnapshot(omMetadataManager, SnapshotInfo.newSnapshotInfo(name, mask));
+    SnapshotInfo snapshotInfo =
+      SnapshotInfo.getFromProtobuf(getOMResponse().getCreateSnapshotResponse().getSnapshotInfo());
+    String key = SnapshotInfo.getKey(name, mask);
     omMetadataManager.getSnapshotInfoTable().putWithBatch(batchOperation,
-        key, SnapshotInfo.getFromProtobuf(getOMResponse().getCreateSnapshotResponse().getSnapshotInfo()));
+        key, snapshotInfo);
   }
 }

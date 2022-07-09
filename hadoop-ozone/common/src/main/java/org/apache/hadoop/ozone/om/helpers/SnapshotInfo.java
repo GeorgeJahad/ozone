@@ -18,10 +18,19 @@ package org.apache.hadoop.ozone.om.helpers;
  *  limitations under the License.
  */
 
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.audit.Auditable;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SnapshotInfoEntry;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SnapshotStatusProto;
-
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Time;
+
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 
 /**
  * This class is used for storing info related to Snapshots.
@@ -31,7 +40,7 @@ import com.google.common.base.Preconditions;
  * snapshot checkpoint directory, previous snapshotid
  * for the snapshot path & global amongst other necessary fields.
  */
-public final class SnapshotInfo {
+public final class SnapshotInfo implements Auditable {
 
   /**
    * SnapshotStatus enum composed of
@@ -71,7 +80,7 @@ public final class SnapshotInfo {
             "BUG: missing valid SnapshotStatus, found status=" + status);
       }
     }
-  };
+  }
 
   private final String snapshotID;  // UUID
   private String name;
@@ -289,7 +298,6 @@ public final class SnapshotInfo {
         .setCreationTime(creationTime);
     /*    
         sib.setSnapshotID(snapshotID)
-        sib.setCreationTime(creationTime)
         sib.setDeletionTime(deletionTime)
         sib.setPathPreviousSnapshotID(pathPreviousSnapshotID)
         sib.setGlobalPreviousSnapshotID(globalPreviousSnapshotID)
@@ -321,4 +329,73 @@ public final class SnapshotInfo {
 
     return osib.build();
   }
+
+  public String getVolumeName() {
+    String volumeName = null;
+    String[] names = snapshotPath.split(OM_KEY_PREFIX);
+    if (names.length > 0) {
+      volumeName = names[0];
+    }
+    return volumeName;
+  }
+
+  public String getBucketName() {
+    String bucketName = null;
+    String[] names = snapshotPath.split(OM_KEY_PREFIX);
+    if (names.length > 1) {
+      bucketName = names[1];
+    }
+    return bucketName;
+  }
+
+  // Snapshot on directories is not supported yet
+  //  this is only used currently to confirm that mask doesn't
+  //  contain a directory
+  public String getDirName() {
+    String dirName = null;
+    String[] names = snapshotPath.split(OM_KEY_PREFIX);
+    if (names.length > 2) {
+      dirName = String.join(OM_KEY_PREFIX,
+          Arrays.copyOfRange(names, 2, names.length));
+    }
+    return dirName;
+  }
+
+  public String getSnapshotLockResourceName() {
+    return getBucketName() + OM_KEY_PREFIX + "snapshot";
+  }
+
+  @Override
+  public Map<String, String> toAuditMap() {
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.VOLUME, getVolumeName());
+    auditMap.put(OzoneConsts.BUCKET, getBucketName());
+    auditMap.put(OzoneConsts.OM_SNAPSHOT_NAME, this.name);
+    return auditMap;
+  }
+
+
+  public static String getCheckpointDirName(String name, String snapshotPath) {
+    return "-" + getKey(name, snapshotPath);
+  }
+
+  public String getCheckpointDirName() {
+    return getCheckpointDirName(name, snapshotPath);
+  }
+  public static String getKey(String name, String mask) {
+    return mask.replaceAll(OM_KEY_PREFIX, "-") + "_" + name;
+  }
+
+  public static SnapshotInfo newSnapshotInfo(String name, String snapshotPath) {
+    String id = UUID.randomUUID().toString();
+    SnapshotInfo.Builder builder = new SnapshotInfo.Builder();
+    long initialTime = Time.now();
+    builder.setCreationTime(initialTime)
+        .setName(name)
+        .setSnapshotPath(snapshotPath)
+        .setSnapshotID(id)
+      .setCheckpointDir(getCheckpointDirName(name, snapshotPath));
+    return builder.build();
+  }
+
 }
