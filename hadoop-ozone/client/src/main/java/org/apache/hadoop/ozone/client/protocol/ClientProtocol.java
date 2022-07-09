@@ -962,8 +962,9 @@ public interface ClientProtocol {
    * Create snapshot
    * @param name name to be used
    * @param mask mask to use
+   * @return name used
    * @throws IOException
    */
-  void createSnapshot(String name, String mask) throws IOException;
+  String createSnapshot(String name, String mask) throws IOException;
   
 }

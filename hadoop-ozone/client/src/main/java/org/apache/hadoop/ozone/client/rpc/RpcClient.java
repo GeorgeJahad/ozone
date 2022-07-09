@@ -912,12 +912,12 @@ public class RpcClient implements ClientProtocol {
    * @throws IOException
    */
   @Override
-  public void createSnapshot(String name, String mask) throws IOException {
+  public String createSnapshot(String name, String mask) throws IOException {
     Preconditions.checkArgument(Strings.isNotBlank(mask),
         "mask can't be null or empty.");
     Preconditions.checkArgument(Strings.isNotBlank(name),
         "name can't be null or empty.");
-    ozoneManagerClient.createSnapshot(name, mask);
+    return ozoneManagerClient.createSnapshot(name, mask);
   }
 
   /**

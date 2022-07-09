@@ -35,35 +35,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.ClientVersion;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.om.helpers.DBUpdates;
-import org.apache.hadoop.ozone.om.helpers.DeleteTenantState;
-import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
-import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.helpers.OmDeleteKeys;
-import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartUpload;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
-import org.apache.hadoop.ozone.om.helpers.OmRenameKeys;
-import org.apache.hadoop.ozone.om.helpers.OmTenantArgs;
-import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
-import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
-import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
-import org.apache.hadoop.ozone.om.helpers.S3VolumeContext;
-import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.om.helpers.ServiceInfoEx;
-import org.apache.hadoop.ozone.om.helpers.TenantStateList;
-import org.apache.hadoop.ozone.om.helpers.TenantUserInfoValue;
-import org.apache.hadoop.ozone.om.helpers.TenantUserList;
+import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.ozone.om.protocol.S3Auth;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AddAclRequest;
@@ -1087,7 +1059,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
    * {@inheritDoc}
    */
   @Override
-  public void createSnapshot(String name, String mask)
+  public String createSnapshot(String name, String mask)
       throws IOException {
 
     final OzoneManagerProtocolProtos.CreateSnapshotRequest.Builder requestBuilder =
@@ -1099,6 +1071,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .build();
     final OMResponse omResponse = submitRequest(omRequest);
     handleError(omResponse);
+    SnapshotInfo snapshotInfo = SnapshotInfo.getFromProtobuf(omResponse.getCreateSnapshotResponse().getSnapshotInfo());
+    return snapshotInfo.getName();
   }
 
   /**

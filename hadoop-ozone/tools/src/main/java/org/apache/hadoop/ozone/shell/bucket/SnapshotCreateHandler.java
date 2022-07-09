@@ -41,9 +41,9 @@ public class SnapshotCreateHandler extends BucketHandler {
   protected void execute(OzoneClient client, OzoneAddress address)
       throws IOException {
     String mask = address.getVolumeName() + OM_KEY_PREFIX + address.getBucketName();
-    client.getObjectStore().createSnapshot(name, mask);
+    String newName = client.getObjectStore().createSnapshot(name, mask);
     if (isVerbose()) {
-      out().format("created snapshot '%s %s'.%n", name, mask);
+      out().format("created snapshot '%s %s'.%n", newName, mask);
     }
   }
 }
