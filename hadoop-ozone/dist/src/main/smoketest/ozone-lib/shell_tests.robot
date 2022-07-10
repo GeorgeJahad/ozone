@@ -56,18 +56,3 @@ Compare Key With Local File with Different File
 Compare Key With Local File if File Does Not Exist
     ${matches} =                Compare Key With Local File     o3://${OM_SERVICE_ID}/vol1/bucket/passwd    /no-such-file
     Should Be Equal             ${matches}     ${FALSE}
-
-
-# Execute Create Snapshot
-#     ${output} =                Snapshot Create         vol1/bucket     snapshot1
-#     Should Be Equal             ${output}       ${EMPTY}
-
-# Try Creating Duplicate Snapshot
-#     ${output} =                Snapshot Create         vol1/bucket     snapshot1
-#     Should Be Equal             ${output}       FILE_ALREADY_EXISTS Snapshot already exists
-
-# Try Creating Invalid Snapshot
-#     ${created} =                Snapshot Create         vol1/bucket2    snapshot1
-#     Should Be Equal             ${created}       BUCKET_NOT_FOUND Bucket not found
-
-    
