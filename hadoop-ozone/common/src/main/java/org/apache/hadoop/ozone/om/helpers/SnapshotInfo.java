@@ -54,6 +54,7 @@ public final class SnapshotInfo implements Auditable {
     SNAPSHOT_RECLAIMED;
 
     public static final SnapshotStatus DEFAULT = SNAPSHOT_ACTIVE;
+
     public SnapshotStatusProto toProto() {
       switch (this) {
       case SNAPSHOT_ACTIVE:
@@ -300,34 +301,15 @@ public final class SnapshotInfo implements Auditable {
    */
   public SnapshotInfoEntry getProtobuf() {
     SnapshotInfoEntry.Builder sib = SnapshotInfoEntry.newBuilder()
+        .setSnapshotID(snapshotID)
+        .setName(name)
         .setSnapshotStatus(snapshotStatus.toProto())
+        .setCreationTime(creationTime)
+        .setDeletionTime(deletionTime)
+        .setPathPreviousSnapshotID(pathPreviousSnapshotID)
+        .setGlobalPreviousSnapshotID(globalPreviousSnapshotID)
         .setSnapshotPath(snapshotPath)
-        .setCreationTime(creationTime);
-
-    if (name != null) {
-      sib.setName(name);
-    }
-
-    if (snapshotID != null) {
-      sib.setSnapshotID(snapshotID);
-    }
-
-    if (deletionTime != 0) {
-      sib.setDeletionTime(deletionTime);      
-    }
-
-    if (pathPreviousSnapshotID != null) {
-      sib.setPathPreviousSnapshotID(pathPreviousSnapshotID);      
-    }
-
-    if (globalPreviousSnapshotID != null) {
-      sib.setGlobalPreviousSnapshotID(globalPreviousSnapshotID);      
-    }
-
-    if (checkpointDir != null) {
-      sib.setCheckpointDir(checkpointDir);
-    }
-
+        .setCheckpointDir(checkpointDir);
     return sib.build();
   }
 

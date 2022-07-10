@@ -1059,8 +1059,8 @@ public final class OMRequestTestUtils {
   public static OMRequest createSnapshotRequest(String name,
       String snapshotPath) {
     return OMRequest.newBuilder().setCreateSnapshotRequest(
-        OzoneManagerProtocolProtos.CreateSnapshotRequest.newBuilder()
-            .setName(name).setSnapshotPath(snapshotPath))
+            OzoneManagerProtocolProtos.CreateSnapshotRequest.newBuilder()
+                .setName(name).setSnapshotPath(snapshotPath))
         .setCmdType(OzoneManagerProtocolProtos.Type.CreateSnapshot)
         .setClientId(UUID.randomUUID().toString()).build();
   }
