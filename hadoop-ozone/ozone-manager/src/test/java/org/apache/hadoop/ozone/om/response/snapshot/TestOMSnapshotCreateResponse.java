@@ -45,7 +45,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 
-import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.*;
 
 /**
  * This class tests OMSnapshotCreateResponse.
@@ -97,7 +97,7 @@ public class TestOMSnapshotCreateResponse {
     // Do manual commit and see whether addToBatch is successful or not.
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
     // Confirm snapshot directory was created
-    String snapshotDir = path + "/db.snapshots/om.db"+
+    String snapshotDir = path + OM_KEY_PREFIX + OM_SNAPSHOT_DIR + OM_KEY_PREFIX + OM_DB_NAME +
         snapshotInfo.getCheckpointDirName();
     Assert.assertTrue((new File(snapshotDir)).exists());
   }

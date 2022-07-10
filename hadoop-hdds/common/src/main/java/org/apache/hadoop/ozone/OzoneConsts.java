@@ -552,5 +552,6 @@ public final class OzoneConsts {
 
   public static final String OM_SNAPSHOT_NAME = "snapshotName";
   public static final String OM_SNAPSHOT_PATH = "snapshotPath";
+  public static final String OM_SNAPSHOT_DIR = "db.snapshots";
 
 }

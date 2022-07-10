@@ -915,9 +915,7 @@ public class RpcClient implements ClientProtocol {
   public String createSnapshot(String name, String snapshotPath) throws IOException {
     Preconditions.checkArgument(Strings.isNotBlank(snapshotPath),
         "snapshotPath can't be null or empty.");
-    Preconditions.checkArgument(Strings.isNotBlank(name),
-        "name can't be null or empty.");
-    return ozoneManagerClient.createSnapshot(name, snapshotPath);
+     return ozoneManagerClient.createSnapshot(name, snapshotPath);
   }
 
   /**

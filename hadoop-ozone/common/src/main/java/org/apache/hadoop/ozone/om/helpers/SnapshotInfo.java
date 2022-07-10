@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.om.helpers;
  *  limitations under the License.
  */
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SnapshotInfoEntry;
@@ -25,6 +26,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Snapsho
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.util.Time;
 
+import java.time.*;
+import java.time.chrono.ChronoLocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -386,10 +390,21 @@ public final class SnapshotInfo implements Auditable {
     return snapshotPath.replaceAll(OM_KEY_PREFIX, "-") + "_" + name;
   }
 
+  private static String generateName(long initialTime) {
+    String timePattern = "yyyyMMdd-HHmmss.SSS";
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern(timePattern);
+    Instant instant = Instant.ofEpochMilli(initialTime);
+    return "s" + formatter.format(ZonedDateTime.ofInstant(instant,
+        ZoneId.systemDefault()));
+  }
+  
   public static SnapshotInfo newSnapshotInfo(String name, String snapshotPath) {
     String id = UUID.randomUUID().toString();
     SnapshotInfo.Builder builder = new SnapshotInfo.Builder();
     long initialTime = Time.now();
+    if (StringUtils.isBlank(name)) {
+      name = generateName(initialTime); 
+    }
     builder.setCreationTime(initialTime)
         .setName(name)
         .setSnapshotPath(snapshotPath)

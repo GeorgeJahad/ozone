@@ -1599,7 +1599,7 @@ message SetRangerServiceVersionRequest {
 }
 
 message CreateSnapshotRequest {
-  required string name = 1;
+  optional string name = 1;
   required string snapshotPath = 2;
 }
 

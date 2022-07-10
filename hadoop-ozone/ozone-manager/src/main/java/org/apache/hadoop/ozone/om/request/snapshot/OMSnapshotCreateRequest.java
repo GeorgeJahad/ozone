@@ -61,28 +61,30 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
       LoggerFactory.getLogger(OMSnapshotCreateRequest.class);
 
   private final String snapshotPath;
-  private final String name;
   private final String volumeName;
   private final String bucketName;
-  private final String path;
+  private final String name;
+  private final String dirName;
   private final SnapshotInfo snapshotInfo;
+
   public OMSnapshotCreateRequest(OMRequest omRequest) {
     super(omRequest);
     CreateSnapshotRequest createSnapshotRequest = omRequest
         .getCreateSnapshotRequest();
     snapshotPath = createSnapshotRequest.getSnapshotPath();
-    name = createSnapshotRequest.getName();
-    snapshotInfo = SnapshotInfo.newSnapshotInfo(name, snapshotPath);
+    String nameInput = createSnapshotRequest.getName();
+    snapshotInfo = SnapshotInfo.newSnapshotInfo(nameInput, snapshotPath);
+    name = snapshotInfo.getName();
     volumeName = snapshotInfo.getVolumeName();
     bucketName = snapshotInfo.getBucketName();
-    path = snapshotInfo.getDirName();
+    dirName = snapshotInfo.getDirName();
   }
 
   @Override
   public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
     final OMRequest omRequest = super.preExecute(ozoneManager);
     //  For now only support bucket snapshots
-    if (volumeName == null || bucketName == null || path != null) {
+    if (volumeName == null || bucketName == null || dirName != null) {
       LOG.debug("Bad snapshotPath: {}", snapshotPath);
       throw new OMException("Bad Snapshot path", OMException.ResultCodes.INVALID_SNAPSHOT_ERROR);
     }
