@@ -62,7 +62,12 @@ Execute Create Snapshot
     ${created} =                Snapshot Create         vol1/bucket     snapshot1
     Should Be Equal             ${created}       ${TRUE}
 
+Try Creating Duplicate Snapshot
+    ${created} =                Snapshot Create         vol1/bucket     snapshot1
+    Should Be Equal             ${created}       ${false}
+
 Try Creating Invalid Snapshot
     ${created} =                Snapshot Create         vol1/bucket2    snapshot1
     Should Be Equal             ${created}       ${FALSE}
 
+    
