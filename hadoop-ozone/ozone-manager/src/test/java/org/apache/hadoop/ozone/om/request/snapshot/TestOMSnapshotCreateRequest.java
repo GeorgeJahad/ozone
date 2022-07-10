@@ -158,8 +158,7 @@ public class TestOMSnapshotCreateRequest {
     // verify table data with response data.
     SnapshotInfo snapshotInfoFromProto = SnapshotInfo.getFromProtobuf(
         omClientResponse.getOMResponse().getCreateSnapshotResponse().getSnapshotInfo());
-    Assert.assertEquals(snapshotInfoFromProto.getCreationTime(),
-        snapshotInfo.getCreationTime());
+    Assert.assertEquals(snapshotInfoFromProto, snapshotInfo);
 
 
     OMResponse omResponse = omClientResponse.getOMResponse();

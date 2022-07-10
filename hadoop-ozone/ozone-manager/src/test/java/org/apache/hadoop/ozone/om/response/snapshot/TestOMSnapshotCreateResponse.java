@@ -109,7 +109,6 @@ public class TestOMSnapshotCreateResponse {
 
     SnapshotInfo storedInfo = keyValue.getValue();
     Assert.assertEquals(SnapshotInfo.getKey(name, snapshotPath), keyValue.getKey());
-    //TODO: gbj fix:
-    //Assert.assertEquals(snapshotInfo, storedInfo);
+    Assert.assertEquals(snapshotInfo, storedInfo);
   }
  }

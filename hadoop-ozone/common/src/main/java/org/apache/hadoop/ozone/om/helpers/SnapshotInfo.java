@@ -18,6 +18,7 @@ package org.apache.hadoop.ozone.om.helpers;
  *  limitations under the License.
  */
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
@@ -29,10 +30,7 @@ import org.apache.hadoop.util.Time;
 import java.time.*;
 import java.time.chrono.ChronoLocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 
@@ -88,6 +86,9 @@ public final class SnapshotInfo implements Auditable {
   public static final String SNAPSHOT_FLAG = "snapshot";
   private static final String DELIMITER = "_";
   private static final String SEPARATOR = "-";
+  private static final long UNDELETED_TIME = -1;
+  private static final String INITIAL_SNAPSHOT_ID =
+      UUID.randomUUID().toString();
     
   private final String snapshotID;  // UUID
   private String name;
@@ -410,28 +411,54 @@ public final class SnapshotInfo implements Auditable {
     return snapshotPath.replaceAll(OM_KEY_PREFIX, SEPARATOR) + DELIMITER + name;
   }
 
-  private static String generateName(long initialTime) {
+  @VisibleForTesting
+  public static String generateName(long initialTime) {
     String timePattern = "yyyyMMdd-HHmmss.SSS";
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern(timePattern);
     Instant instant = Instant.ofEpochMilli(initialTime);
-    return "s" + formatter.format(ZonedDateTime.ofInstant(instant,
-        ZoneId.systemDefault()));
+    return "s" + formatter.format(
+        ZonedDateTime.ofInstant(instant, ZoneId.of("UTC")));
   }
   
   public static SnapshotInfo newSnapshotInfo(String name, String snapshotPath) {
-    String id = UUID.randomUUID().toString();
     SnapshotInfo.Builder builder = new SnapshotInfo.Builder();
+    String id = UUID.randomUUID().toString();
     long initialTime = Time.now();
     if (StringUtils.isBlank(name)) {
       name = generateName(initialTime); 
     }
-    builder.setCreationTime(initialTime)
+    builder.setSnapshotID(id)
         .setName(name)
+        .setCreationTime(initialTime)
+        .setDeletionTime(UNDELETED_TIME)
+        .setPathPreviousSnapshotID(INITIAL_SNAPSHOT_ID)
+        .setGlobalPreviousSnapshotID(INITIAL_SNAPSHOT_ID)
         .setSnapshotPath(snapshotPath)
-        .setSnapshotID(id)
-        .setGlobalPreviousSnapshotID("dummygbj")
-        .setPathPreviousSnapshotID("dummygbj")
         .setCheckpointDir(getCheckpointDirName(name, snapshotPath));
     return builder.build();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SnapshotInfo that = (SnapshotInfo) o;
+    return creationTime == that.creationTime &&
+        deletionTime == that.deletionTime &&
+        snapshotID.equals(that.snapshotID) &&
+        name.equals(that.name) && snapshotStatus == that.snapshotStatus &&
+        pathPreviousSnapshotID.equals(that.pathPreviousSnapshotID) &&
+        globalPreviousSnapshotID.equals(that.globalPreviousSnapshotID) &&
+        snapshotPath.equals(that.snapshotPath) &&
+        checkpointDir.equals(that.checkpointDir);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(snapshotID, name, creationTime, snapshotPath);
   }
 }
