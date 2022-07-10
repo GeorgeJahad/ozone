@@ -19,9 +19,6 @@
 
 package org.apache.hadoop.ozone.om.request.snapshot;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.UUID;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -40,12 +37,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .StorageTypeProto;
 import org.apache.hadoop.ozone.om.request.OMRequestTestUtils;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.util.Time;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
@@ -64,15 +58,13 @@ public class TestOMSnapshotCreateRequest {
   private OzoneManager ozoneManager;
   private OMMetrics omMetrics;
   private OMMetadataManager omMetadataManager;
-  private AuditLogger auditLogger;
 
-  private String volumeName, bucketName, name, snapshotPath;
+  private String name;
+  private String snapshotPath;
 
   // Just setting ozoneManagerDoubleBuffer which does nothing.
-  private OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper =
-      ((response, transactionIndex) -> {
-        return null;
-      });
+  private final OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper =
+      ((response, transactionIndex) -> null);
 
   @Before
   public void setup() throws Exception {
@@ -87,17 +79,17 @@ public class TestOMSnapshotCreateRequest {
     when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
     when(ozoneManager.isRatisEnabled()).thenReturn(true);
     when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(false);
-    when(ozoneManager.isOwner((UserGroupInformation) any(), any())).thenReturn(false);
-    when(ozoneManager.getBucketOwner(any(), any())).thenReturn("dummyBucketOwner");
+    when(ozoneManager.isOwner(any(), any())).thenReturn(false);
+    when(ozoneManager.getBucketOwner(any(), any(), any(), any())).thenReturn("dummyBucketOwner");
     OMLayoutVersionManager lvm = mock(OMLayoutVersionManager.class);
     when(lvm.getMetadataLayoutVersion()).thenReturn(0);
     when(ozoneManager.getVersionManager()).thenReturn(lvm);
-    auditLogger = mock(AuditLogger.class);
+    AuditLogger auditLogger = mock(AuditLogger.class);
     when(ozoneManager.getAuditLogger()).thenReturn(auditLogger);
     Mockito.doNothing().when(auditLogger).logWrite(any(AuditMessage.class));
 
-    volumeName = UUID.randomUUID().toString();
-    bucketName = UUID.randomUUID().toString();
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
     name = UUID.randomUUID().toString();
     snapshotPath = volumeName + OM_KEY_PREFIX + bucketName;
     OMRequestTestUtils.addVolumeAndBucketToDB(volumeName, bucketName, omMetadataManager);
@@ -117,7 +109,7 @@ public class TestOMSnapshotCreateRequest {
       "Only bucket owners/admins can create snapshots",
       () -> doPreExecute(name, snapshotPath));
     // now confirm it works:
-    when(ozoneManager.isOwner((UserGroupInformation) any(), any())).thenReturn(true);
+    when(ozoneManager.isOwner(any(), any())).thenReturn(true);
     doPreExecute(name, snapshotPath);
     // check bad snapshotPath
     LambdaTestUtils.intercept(OMException.class,
@@ -144,7 +136,7 @@ public class TestOMSnapshotCreateRequest {
             ozoneManagerDoubleBufferHelper);
     
     // As now after validateAndUpdateCache it should add entry to cache, get
-    // should return non null value.
+    // should return non-null value.
     SnapshotInfo snapshotInfo =
         omMetadataManager.getSnapshotInfoTable().get(key);
     Assert.assertNotNull(snapshotInfo);
@@ -175,7 +167,7 @@ public class TestOMSnapshotCreateRequest {
             ozoneManagerDoubleBufferHelper);
     
     // As now after validateAndUpdateCache it should add entry to cache, get
-    // should return non null value.
+    // should return non-null value.
     SnapshotInfo snapshotInfo =
         omMetadataManager.getSnapshotInfoTable().get(key);
     Assert.assertNotNull(snapshotInfo);
