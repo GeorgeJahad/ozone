@@ -88,6 +88,10 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
       LOG.debug("Bad snapshotPath: {}", snapshotPath);
       throw new OMException("Bad Snapshot path", OMException.ResultCodes.INVALID_SNAPSHOT_ERROR);
     }
+
+    // Verify name
+    OmUtils.validateSnapshotName(name);
+
     UserGroupInformation ugi = createUGI();
     String bucketOwner = ozoneManager.getBucketOwner(volumeName, bucketName);
     if (!ozoneManager.isAdmin(ugi) &&
@@ -96,8 +100,6 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
           "Only bucket owners/admins can create snapshots",
           OMException.ResultCodes.PERMISSION_DENIED);
     }
-    // Verify name
-    OmUtils.validateSnapshotName(name);
     return omRequest;
   }
   
