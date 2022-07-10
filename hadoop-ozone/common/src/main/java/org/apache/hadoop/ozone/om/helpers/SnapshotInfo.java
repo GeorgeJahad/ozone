@@ -56,7 +56,6 @@ public final class SnapshotInfo implements Auditable {
     SNAPSHOT_RECLAIMED;
 
     public static final SnapshotStatus DEFAULT = SNAPSHOT_ACTIVE;
-
     public SnapshotStatusProto toProto() {
       switch (this) {
       case SNAPSHOT_ACTIVE:
@@ -86,6 +85,10 @@ public final class SnapshotInfo implements Auditable {
     }
   }
 
+  public static final String SNAPSHOT_FLAG = "snapshot";
+  private static final String DELIMITER = "_";
+  private static final String SEPARATOR = "-";
+    
   private final String snapshotID;  // UUID
   private String name;
   private SnapshotStatus snapshotStatus;
@@ -296,17 +299,34 @@ public final class SnapshotInfo implements Auditable {
    */
   public SnapshotInfoEntry getProtobuf() {
     SnapshotInfoEntry.Builder sib = SnapshotInfoEntry.newBuilder()
-        .setName(name)
         .setSnapshotStatus(snapshotStatus.toProto())
         .setSnapshotPath(snapshotPath)
         .setCreationTime(creationTime);
-    /*    
-        sib.setSnapshotID(snapshotID)
-        sib.setDeletionTime(deletionTime)
-        sib.setPathPreviousSnapshotID(pathPreviousSnapshotID)
-        sib.setGlobalPreviousSnapshotID(globalPreviousSnapshotID)
-        sib.setCheckpointDir(checkpointDir);
-    */
+
+    if (name != null) {
+      sib.setName(name);
+    }
+
+    if (snapshotID != null) {
+      sib.setSnapshotID(snapshotID);
+    }
+
+    if (deletionTime != 0) {
+      sib.setDeletionTime(deletionTime);      
+    }
+
+    if (pathPreviousSnapshotID != null) {
+      sib.setPathPreviousSnapshotID(pathPreviousSnapshotID);      
+    }
+
+    if (globalPreviousSnapshotID != null) {
+      sib.setGlobalPreviousSnapshotID(globalPreviousSnapshotID);      
+    }
+
+    if (checkpointDir != null) {
+      sib.setCheckpointDir(checkpointDir);
+    }
+
     return sib.build();
   }
 
@@ -366,7 +386,7 @@ public final class SnapshotInfo implements Auditable {
   }
 
   public String getSnapshotLockResourceName() {
-    return getBucketName() + OM_KEY_PREFIX + "snapshot";
+    return getBucketName() + OM_KEY_PREFIX + SNAPSHOT_FLAG;
   }
 
   @Override
@@ -380,14 +400,14 @@ public final class SnapshotInfo implements Auditable {
 
 
   public static String getCheckpointDirName(String name, String snapshotPath) {
-    return "-" + getKey(name, snapshotPath);
+    return SEPARATOR + getKey(name, snapshotPath);
   }
 
   public String getCheckpointDirName() {
     return getCheckpointDirName(name, snapshotPath);
   }
   public static String getKey(String name, String snapshotPath) {
-    return snapshotPath.replaceAll(OM_KEY_PREFIX, "-") + "_" + name;
+    return snapshotPath.replaceAll(OM_KEY_PREFIX, SEPARATOR) + DELIMITER + name;
   }
 
   private static String generateName(long initialTime) {
@@ -409,8 +429,9 @@ public final class SnapshotInfo implements Auditable {
         .setName(name)
         .setSnapshotPath(snapshotPath)
         .setSnapshotID(id)
-      .setCheckpointDir(getCheckpointDirName(name, snapshotPath));
+        .setGlobalPreviousSnapshotID("dummygbj")
+        .setPathPreviousSnapshotID("dummygbj")
+        .setCheckpointDir(getCheckpointDirName(name, snapshotPath));
     return builder.build();
   }
-
 }

@@ -81,9 +81,7 @@ public class TestOMSnapshotCreateResponse {
     String bucketName = UUID.randomUUID().toString();
     String name = UUID.randomUUID().toString();
     String snapshotPath = volumeName + OM_KEY_PREFIX + bucketName;
-    SnapshotInfo snapshotInfo = SnapshotInfo.newBuilder()
-        .setSnapshotPath(snapshotPath)
-        .setName(name).build();
+    SnapshotInfo snapshotInfo = SnapshotInfo.newSnapshotInfo(name, snapshotPath);
     Assert.assertEquals(0,
         omMetadataManager.countRowsInTable(omMetadataManager.getSnapshotInfoTable()));
     OMSnapshotCreateResponse omSnapshotCreateResponse =
@@ -105,5 +103,13 @@ public class TestOMSnapshotCreateResponse {
     Assert.assertTrue((new File(snapshotDir)).exists());
     Assert.assertEquals(1,
         omMetadataManager.countRowsInTable(omMetadataManager.getSnapshotInfoTable()));
+
+    Table.KeyValue<String, SnapshotInfo> keyValue =
+        omMetadataManager.getSnapshotInfoTable().iterator().next();
+
+    SnapshotInfo storedInfo = keyValue.getValue();
+    Assert.assertEquals(SnapshotInfo.getKey(name, snapshotPath), keyValue.getKey());
+    //TODO: gbj fix:
+    //Assert.assertEquals(snapshotInfo, storedInfo);
   }
  }
