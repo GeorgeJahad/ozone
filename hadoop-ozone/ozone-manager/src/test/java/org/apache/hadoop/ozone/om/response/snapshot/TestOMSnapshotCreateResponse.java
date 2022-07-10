@@ -84,6 +84,8 @@ public class TestOMSnapshotCreateResponse {
     SnapshotInfo snapshotInfo = SnapshotInfo.newBuilder()
         .setSnapshotPath(snapshotPath)
         .setName(name).build();
+    Assert.assertEquals(0,
+        omMetadataManager.countRowsInTable(omMetadataManager.getSnapshotInfoTable()));
     OMSnapshotCreateResponse omSnapshotCreateResponse =
         new OMSnapshotCreateResponse(OMResponse.newBuilder()
             .setCmdType(OzoneManagerProtocolProtos.Type.CreateSnapshot)
@@ -96,9 +98,12 @@ public class TestOMSnapshotCreateResponse {
 
     // Do manual commit and see whether addToBatch is successful or not.
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
+
     // Confirm snapshot directory was created
     String snapshotDir = path + OM_KEY_PREFIX + OM_SNAPSHOT_DIR + OM_KEY_PREFIX + OM_DB_NAME +
         snapshotInfo.getCheckpointDirName();
     Assert.assertTrue((new File(snapshotDir)).exists());
+    Assert.assertEquals(1,
+        omMetadataManager.countRowsInTable(omMetadataManager.getSnapshotInfoTable()));
   }
  }

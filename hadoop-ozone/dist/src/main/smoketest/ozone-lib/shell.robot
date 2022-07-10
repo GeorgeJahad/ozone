@@ -103,6 +103,5 @@ Verify EC Replication Config
 Snapshot Create
     [arguments]    ${bucket}    ${name}
     ${rc}    ${output} =      Run And Return Rc And Output             timeout 15 ozone sh snapshot create ${bucket} ${name}
-    Return From Keyword If    ${rc} != 0                               ${FALSE}
-    [Return]                  ${TRUE}
+    [Return]                  ${output}
 

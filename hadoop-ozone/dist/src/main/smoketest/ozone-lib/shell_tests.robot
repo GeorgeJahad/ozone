@@ -59,15 +59,15 @@ Compare Key With Local File if File Does Not Exist
 
 
 Execute Create Snapshot
-    ${created} =                Snapshot Create         vol1/bucket     snapshot1
-    Should Be Equal             ${created}       ${TRUE}
+    ${output} =                Snapshot Create         vol1/bucket     snapshot1
+    Should Be Equal             ${output}       ${EMPTY}
 
 Try Creating Duplicate Snapshot
-    ${created} =                Snapshot Create         vol1/bucket     snapshot1
-    Should Be Equal             ${created}       ${false}
+    ${output} =                Snapshot Create         vol1/bucket     snapshot1
+    Should Be Equal             ${output}       FILE_ALREADY_EXISTS Snapshot already exists
 
 Try Creating Invalid Snapshot
     ${created} =                Snapshot Create         vol1/bucket2    snapshot1
-    Should Be Equal             ${created}       ${FALSE}
+    Should Be Equal             ${created}       BUCKET_NOT_FOUND Bucket not found
 
     
