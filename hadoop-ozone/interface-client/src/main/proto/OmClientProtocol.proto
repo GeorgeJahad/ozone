@@ -227,7 +227,8 @@ message OMRequest {
 
   optional SetRangerServiceVersionRequest   SetRangerServiceVersionRequest = 107;
 
-  optional CreateSnapshotRequest             CreateSnapshotRequest           = 109;
+  // skips over 108, purgeDirectoriesRequest
+  optional CreateSnapshotRequest             CreateSnapshotRequest         = 109;
 }
 
 message OMResponse {

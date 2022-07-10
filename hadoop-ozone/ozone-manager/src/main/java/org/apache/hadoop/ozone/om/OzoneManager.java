@@ -2465,7 +2465,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return bucketOwner;
   }
 
-  public String getBucketOwner(String volume, String bucket)
+  private String getBucketOwner(String volume, String bucket)
       throws OMException {
 
     Boolean lockAcquired = metadataManager.getLock().acquireReadLock(
