@@ -133,12 +133,6 @@ public class TestOMSnapshotCreateRequest {
   @Test
   public void testValidateAndUpdateCache() throws Exception {
     when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
-    OMClientResponse omClientResponse = doValidateAndUpdateCache();
-    OMResponse omResponse = omClientResponse.getOMResponse();
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
-        omResponse.getStatus());
-  }
-  private OMClientResponse doValidateAndUpdateCache() throws Exception {
     OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, snapshotPath);
     String key = SnapshotInfo.getKey(name, snapshotPath);
     // As we have not still called validateAndUpdateCache, get() should
@@ -160,12 +154,42 @@ public class TestOMSnapshotCreateRequest {
         omClientResponse.getOMResponse().getCreateSnapshotResponse().getSnapshotInfo());
     Assert.assertEquals(snapshotInfoFromProto, snapshotInfo);
 
-
     OMResponse omResponse = omClientResponse.getOMResponse();
     Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
     Assert.assertEquals(OzoneManagerProtocolProtos.Type.CreateSnapshot,
         omResponse.getCmdType());
-    return omClientResponse;
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
+        omResponse.getStatus());
+  }
+
+  @Test
+  public void testEntryExists() throws Exception {
+    when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
+    OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, snapshotPath);
+    String key = SnapshotInfo.getKey(name, snapshotPath);
+    Assert.assertNull(omMetadataManager.getBucketTable().get(key));
+
+    //create entry
+    OMClientResponse omClientResponse =
+        omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 1,
+            ozoneManagerDoubleBufferHelper);
+    
+    // As now after validateAndUpdateCache it should add entry to cache, get
+    // should return non null value.
+    SnapshotInfo snapshotInfo =
+        omMetadataManager.getSnapshotInfoTable().get(key);
+    Assert.assertNotNull(snapshotInfo);
+
+    // Now create again to verify error
+    omSnapshotCreateRequest = doPreExecute(name, snapshotPath);
+    omClientResponse =
+        omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 2,
+            ozoneManagerDoubleBufferHelper);
+    
+    OMResponse omResponse = omClientResponse.getOMResponse();
+    Assert.assertNotNull(omResponse.getCreateSnapshotResponse());
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.FILE_ALREADY_EXISTS,
+        omResponse.getStatus());
   }
 
   private OMSnapshotCreateRequest doPreExecute(String name,
