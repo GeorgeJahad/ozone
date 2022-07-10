@@ -1054,13 +1054,13 @@ public final class OMRequestTestUtils {
   /**
    * Create OMRequest for Create Snapshot
    * @param name
-   * @param mask
+   * @param snapshotPath
    */
   public static OMRequest createSnapshotRequest(String name,
-      String mask) {
+      String snapshotPath) {
     return OMRequest.newBuilder().setCreateSnapshotRequest(
         OzoneManagerProtocolProtos.CreateSnapshotRequest.newBuilder()
-            .setName(name).setMask(mask))
+            .setName(name).setSnapshotPath(snapshotPath))
         .setCmdType(OzoneManagerProtocolProtos.Type.CreateSnapshot)
         .setClientId(UUID.randomUUID().toString()).build();
   }

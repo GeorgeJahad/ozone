@@ -539,12 +539,12 @@ public class ObjectStore {
   /**
    * Create snapshot
    * @param name name to be used
-   * @param mask mask to be used
+   * @param snapshotPath snapshotPath to be used
    * @return name used
    * @throws IOException
    */
-  public String createSnapshot(String name, String mask) throws IOException {
-    return proxy.createSnapshot(name, mask);
+  public String createSnapshot(String name, String snapshotPath) throws IOException {
+    return proxy.createSnapshot(name, snapshotPath);
   }
 
 

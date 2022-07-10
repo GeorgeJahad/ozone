@@ -80,9 +80,9 @@ public class TestOMSnapshotCreateResponse {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     String name = UUID.randomUUID().toString();
-    String mask = volumeName + OM_KEY_PREFIX + bucketName;
+    String snapshotPath = volumeName + OM_KEY_PREFIX + bucketName;
     SnapshotInfo snapshotInfo = SnapshotInfo.newBuilder()
-        .setSnapshotPath(mask)
+        .setSnapshotPath(snapshotPath)
         .setName(name).build();
     OMSnapshotCreateResponse omSnapshotCreateResponse =
         new OMSnapshotCreateResponse(OMResponse.newBuilder()
@@ -90,7 +90,7 @@ public class TestOMSnapshotCreateResponse {
             .setStatus(OzoneManagerProtocolProtos.Status.OK)
             .setCreateSnapshotResponse(
                 CreateSnapshotResponse.newBuilder().setSnapshotInfo(snapshotInfo.getProtobuf())
-                    .build()).build(), name, mask);
+                    .build()).build(), name, snapshotPath);
 
     omSnapshotCreateResponse.addToDBBatch(omMetadataManager, batchOperation);
 

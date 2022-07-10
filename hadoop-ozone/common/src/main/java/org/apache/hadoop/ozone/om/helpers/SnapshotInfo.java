@@ -349,7 +349,7 @@ public final class SnapshotInfo implements Auditable {
   }
 
   // Snapshot on directories is not supported yet
-  //  this is only used currently to confirm that mask doesn't
+  //  this is only used currently to confirm that snapshotPath doesn't
   //  contain a directory
   public String getDirName() {
     String dirName = null;
@@ -382,8 +382,8 @@ public final class SnapshotInfo implements Auditable {
   public String getCheckpointDirName() {
     return getCheckpointDirName(name, snapshotPath);
   }
-  public static String getKey(String name, String mask) {
-    return mask.replaceAll(OM_KEY_PREFIX, "-") + "_" + name;
+  public static String getKey(String name, String snapshotPath) {
+    return snapshotPath.replaceAll(OM_KEY_PREFIX, "-") + "_" + name;
   }
 
   public static SnapshotInfo newSnapshotInfo(String name, String snapshotPath) {

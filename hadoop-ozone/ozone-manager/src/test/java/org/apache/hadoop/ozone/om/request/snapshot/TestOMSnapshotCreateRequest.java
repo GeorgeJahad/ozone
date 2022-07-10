@@ -66,7 +66,7 @@ public class TestOMSnapshotCreateRequest {
   private OMMetadataManager omMetadataManager;
   private AuditLogger auditLogger;
 
-  private String volumeName, bucketName, name, mask;
+  private String volumeName, bucketName, name, snapshotPath;
 
   // Just setting ozoneManagerDoubleBuffer which does nothing.
   private OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper =
@@ -99,7 +99,7 @@ public class TestOMSnapshotCreateRequest {
     volumeName = UUID.randomUUID().toString();
     bucketName = UUID.randomUUID().toString();
     name = UUID.randomUUID().toString();
-    mask = volumeName + OM_KEY_PREFIX + bucketName;
+    snapshotPath = volumeName + OM_KEY_PREFIX + bucketName;
     OMRequestTestUtils.addVolumeAndBucketToDB(volumeName, bucketName, omMetadataManager);
 
   }
@@ -115,11 +115,11 @@ public class TestOMSnapshotCreateRequest {
     // Check bad owner
     LambdaTestUtils.intercept(OMException.class,
       "Only bucket owners/admins can create snapshots",
-      () -> doPreExecute(name, mask));
+      () -> doPreExecute(name, snapshotPath));
     // now confirm it works:
     when(ozoneManager.isOwner((UserGroupInformation) any(), any())).thenReturn(true);
-    doPreExecute(name, mask);
-    // check bad mask
+    doPreExecute(name, snapshotPath);
+    // check bad snapshotPath
     LambdaTestUtils.intercept(OMException.class,
         "Bad Snapshot path",
         () -> doPreExecute(name, "volWithNoBucket"));
@@ -127,7 +127,7 @@ public class TestOMSnapshotCreateRequest {
     String badName = "a?b";
     LambdaTestUtils.intercept(OMException.class,
         "Invalid snapshot name: " + badName,
-        () -> doPreExecute(badName, mask));
+        () -> doPreExecute(badName, snapshotPath));
   }
   
   @Test
@@ -139,8 +139,8 @@ public class TestOMSnapshotCreateRequest {
         omResponse.getStatus());
   }
   private OMClientResponse doValidateAndUpdateCache() throws Exception {
-    OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, mask);
-    String key = SnapshotInfo.getKey(name, mask);
+    OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, snapshotPath);
+    String key = SnapshotInfo.getKey(name, snapshotPath);
     // As we have not still called validateAndUpdateCache, get() should
     // return null.
 
@@ -170,8 +170,8 @@ public class TestOMSnapshotCreateRequest {
   }
 
   private OMSnapshotCreateRequest doPreExecute(String name,
-      String mask) throws Exception {
-    OMRequest originalRequest = OMRequestTestUtils.createSnapshotRequest(name, mask);
+      String snapshotPath) throws Exception {
+    OMRequest originalRequest = OMRequestTestUtils.createSnapshotRequest(name, snapshotPath);
     OMSnapshotCreateRequest omSnapshotCreateRequest =
         new OMSnapshotCreateRequest(originalRequest);
 

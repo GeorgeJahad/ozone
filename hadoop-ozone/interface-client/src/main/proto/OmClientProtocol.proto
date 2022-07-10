@@ -1600,7 +1600,7 @@ message SetRangerServiceVersionRequest {
 
 message CreateSnapshotRequest {
   required string name = 1;
-  required string mask = 2;
+  required string snapshotPath = 2;
 }
 
 message DeleteTenantRequest {

@@ -632,11 +632,11 @@ public interface OzoneManagerProtocol
   /**
    * Create snapshot
    * @param name name to be used
-   * @param mask mask to use
+   * @param snapshotPath snapshotPath to use
    * @return name used
    * @throws IOException
    */
-  default String createSnapshot(String name, String mask) throws IOException {
+  default String createSnapshot(String name, String snapshotPath) throws IOException {
     throw new UnsupportedOperationException("OzoneManager does not require " +
         "this to be implemented, as write requests use a new approach");
   }

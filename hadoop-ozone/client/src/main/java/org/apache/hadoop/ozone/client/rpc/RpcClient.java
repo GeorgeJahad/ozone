@@ -908,16 +908,16 @@ public class RpcClient implements ClientProtocol {
   /**
    * Create Snapshot
    * @param name name to be used
-   * @param mask mask to use
+   * @param snapshotPath snapshotPath to use
    * @throws IOException
    */
   @Override
-  public String createSnapshot(String name, String mask) throws IOException {
-    Preconditions.checkArgument(Strings.isNotBlank(mask),
-        "mask can't be null or empty.");
+  public String createSnapshot(String name, String snapshotPath) throws IOException {
+    Preconditions.checkArgument(Strings.isNotBlank(snapshotPath),
+        "snapshotPath can't be null or empty.");
     Preconditions.checkArgument(Strings.isNotBlank(name),
         "name can't be null or empty.");
-    return ozoneManagerClient.createSnapshot(name, mask);
+    return ozoneManagerClient.createSnapshot(name, snapshotPath);
   }
 
   /**

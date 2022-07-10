@@ -30,8 +30,8 @@ import java.io.IOException;
     description = "create snapshot")
 public class CreateSnapshotHandler extends SnapshotHandler {
 
-  @CommandLine.Parameters(description = "mask", arity = "1..1")
-  private String mask;
+  @CommandLine.Parameters(description = "snapshotPath", arity = "1..1")
+  private String snapshotPath;
 
   @CommandLine.Parameters(description = "name", arity = "1..1")
   private String name;
@@ -40,9 +40,9 @@ public class CreateSnapshotHandler extends SnapshotHandler {
   protected void execute(OzoneClient client, OzoneAddress address)
       throws IOException {
 
-    String newName = client.getObjectStore().createSnapshot(name, mask);
+    String newName = client.getObjectStore().createSnapshot(name, snapshotPath);
     if (isVerbose()) {
-      out().format("created snapshot '%s %s'.%n", mask, newName);
+      out().format("created snapshot '%s %s'.%n", snapshotPath, newName);
     }
   }
 }

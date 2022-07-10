@@ -1059,13 +1059,13 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
    * {@inheritDoc}
    */
   @Override
-  public String createSnapshot(String name, String mask)
+  public String createSnapshot(String name, String snapshotPath)
       throws IOException {
 
     final OzoneManagerProtocolProtos.CreateSnapshotRequest.Builder requestBuilder =
         OzoneManagerProtocolProtos.CreateSnapshotRequest.newBuilder()
             .setName(name)
-            .setMask(mask);
+            .setSnapshotPath(snapshotPath);
     final OMRequest omRequest = createOMRequest(Type.CreateSnapshot)
         .setCreateSnapshotRequest(requestBuilder)
         .build();

@@ -60,7 +60,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMSnapshotCreateRequest.class);
 
-  private final String mask;
+  private final String snapshotPath;
   private final String name;
   private final String volumeName;
   private final String bucketName;
@@ -70,9 +70,9 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     super(omRequest);
     CreateSnapshotRequest createSnapshotRequest = omRequest
         .getCreateSnapshotRequest();
-    mask = createSnapshotRequest.getMask();
+    snapshotPath = createSnapshotRequest.getSnapshotPath();
     name = createSnapshotRequest.getName();
-    snapshotInfo = SnapshotInfo.newSnapshotInfo(name, mask);
+    snapshotInfo = SnapshotInfo.newSnapshotInfo(name, snapshotPath);
     volumeName = snapshotInfo.getVolumeName();
     bucketName = snapshotInfo.getBucketName();
     path = snapshotInfo.getDirName();
@@ -83,7 +83,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     final OMRequest omRequest = super.preExecute(ozoneManager);
     //  For now only support bucket snapshots
     if (volumeName == null || bucketName == null || path != null) {
-      LOG.debug("Bad mask: {}", mask);
+      LOG.debug("Bad snapshotPath: {}", snapshotPath);
       throw new OMException("Bad Snapshot path", OMException.ResultCodes.INVALID_SNAPSHOT_ERROR);
     }
     UserGroupInformation ugi = createUGI();
@@ -116,7 +116,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     OMClientResponse omClientResponse = null;
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
 
-    SnapshotInfo snapshotInfo = SnapshotInfo.newSnapshotInfo(name, mask);
+    SnapshotInfo snapshotInfo = SnapshotInfo.newSnapshotInfo(name, snapshotPath);
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
     try {
       // Need this to be sure the bucket doesn't get deleted while creating snapshot
@@ -128,7 +128,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
           omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
               volumeName, snapshotInfo.getSnapshotLockResourceName());
 
-      String key = SnapshotInfo.getKey(name, mask);
+      String key = SnapshotInfo.getKey(name, snapshotPath);
       //Check if snapshot already exists
       if (omMetadataManager.getSnapshotInfoTable().isExist(key)) {
         LOG.debug("snapshot: {} already exists ", key);
@@ -140,7 +140,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
 
       omResponse.setCreateSnapshotResponse(
           CreateSnapshotResponse.newBuilder().setSnapshotInfo(snapshotInfo.getProtobuf()));
-      omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), name, mask);
+      omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), name, snapshotPath);
     } catch (IOException ex) {
       exception = ex;
       omClientResponse = new OMSnapshotCreateResponse(

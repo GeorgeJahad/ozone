@@ -46,14 +46,14 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 @CleanupTableInfo(cleanupTables = {})
 public class OMSnapshotCreateResponse extends OMClientResponse {
 
-  private String mask;
+  private String snapshotPath;
   private String name;
   @SuppressWarnings("checkstyle:parameternumber")
   public OMSnapshotCreateResponse(@Nonnull OMResponse omResponse,
-    @Nonnull String name, @Nonnull String mask
+    @Nonnull String name, @Nonnull String snapshotPath
   ) {
     super(omResponse);
-    this.mask = mask;
+    this.snapshotPath = snapshotPath;
     this.name = name;
   }
 
@@ -71,10 +71,10 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
       BatchOperation batchOperation) throws IOException {
     final Logger LOG =
         LoggerFactory.getLogger(OMSnapshotCreateResponse.class);
-    SnapshotManager.createSnapshot(omMetadataManager, SnapshotInfo.newSnapshotInfo(name, mask));
+    SnapshotManager.createSnapshot(omMetadataManager, SnapshotInfo.newSnapshotInfo(name, snapshotPath));
     SnapshotInfo snapshotInfo =
       SnapshotInfo.getFromProtobuf(getOMResponse().getCreateSnapshotResponse().getSnapshotInfo());
-    String key = SnapshotInfo.getKey(name, mask);
+    String key = SnapshotInfo.getKey(name, snapshotPath);
     omMetadataManager.getSnapshotInfoTable().putWithBatch(batchOperation,
         key, snapshotInfo);
   }
