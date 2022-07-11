@@ -93,7 +93,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
 
     UserGroupInformation ugi = createUGI();
     String bucketOwner = ozoneManager.getBucketOwner(volumeName, bucketName,
-        IAccessAuthorizer.ACLType.CREATE, OzoneObj.ResourceType.BUCKET);
+        IAccessAuthorizer.ACLType.READ, OzoneObj.ResourceType.BUCKET);
     if (!ozoneManager.isAdmin(ugi) &&
         !ozoneManager.isOwner(ugi, bucketOwner)) {
       throw new OMException(
@@ -125,7 +125,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
     String key = SnapshotInfo.getKey(name, snapshotPath);
     try {
-      // Need this to be sure the bucket doesn't
+      // Lock bucket so it doesn't
       //  get deleted while creating snapshot
       acquiredBucketLock =
           omMetadataManager.getLock().acquireReadLock(BUCKET_LOCK,
@@ -172,7 +172,16 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
         snapshotInfo.toAuditMap(), exception, userInfo));
 
     // return response.
-    return omClientResponse;
+    if (exception == null) {
+      LOG.info("created snapshot: {} name {} in snapshotPath: {}", name,
+          snapshotPath);
+       return omClientResponse;
+    } else {
+      omMetrics.incNumSnapshotCreateFails();
+      LOG.error("Snapshot creation failed for name:{} in snapshotPath:{}",
+          name, snapshotPath);
+      return omClientResponse;
+    }
   }
   
 }

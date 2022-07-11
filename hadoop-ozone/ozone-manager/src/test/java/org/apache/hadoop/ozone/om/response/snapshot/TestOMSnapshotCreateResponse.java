@@ -56,13 +56,13 @@ public class TestOMSnapshotCreateResponse {
   
   private OMMetadataManager omMetadataManager;
   private BatchOperation batchOperation;
-  private String path;
+  private String fsPath;
   @Before
   public void setup() throws Exception {
     OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
-    path = folder.newFolder().getAbsolutePath();
+    fsPath = folder.newFolder().getAbsolutePath();
     ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
-        path);
+        fsPath);
     omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
     batchOperation = omMetadataManager.getStore().initBatchOperation();
   }
@@ -82,9 +82,13 @@ public class TestOMSnapshotCreateResponse {
     String snapshotPath = volumeName + OM_KEY_PREFIX + bucketName;
     SnapshotInfo snapshotInfo =
         SnapshotInfo.newSnapshotInfo(name, snapshotPath);
+
+    // confirm table is empty
     Assert.assertEquals(0,
         omMetadataManager
         .countRowsInTable(omMetadataManager.getSnapshotInfoTable()));
+
+    // commit to table
     OMSnapshotCreateResponse omSnapshotCreateResponse =
         new OMSnapshotCreateResponse(OMResponse.newBuilder()
             .setCmdType(OzoneManagerProtocolProtos.Type.CreateSnapshot)
@@ -93,23 +97,22 @@ public class TestOMSnapshotCreateResponse {
                 CreateSnapshotResponse.newBuilder()
                 .setSnapshotInfo(snapshotInfo.getProtobuf())
                     .build()).build(), name, snapshotPath);
-
     omSnapshotCreateResponse.addToDBBatch(omMetadataManager, batchOperation);
-
-    // Do manual commit and see whether addToBatch is successful or not.
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
 
     // Confirm snapshot directory was created
-    String snapshotDir = path + OM_KEY_PREFIX +
+    String snapshotDir = fsPath + OM_KEY_PREFIX +
         OM_SNAPSHOT_DIR + OM_KEY_PREFIX + OM_DB_NAME +
         snapshotInfo.getCheckpointDirName();
     Assert.assertTrue((new File(snapshotDir)).exists());
+
+    // Confirm table has 1 entry
     Assert.assertEquals(1, omMetadataManager
         .countRowsInTable(omMetadataManager.getSnapshotInfoTable()));
 
+    // Check contents of entry
     Table.KeyValue<String, SnapshotInfo> keyValue =
         omMetadataManager.getSnapshotInfoTable().iterator().next();
-
     SnapshotInfo storedInfo = keyValue.getValue();
     Assert.assertEquals(SnapshotInfo
         .getKey(name, snapshotPath), keyValue.getKey());

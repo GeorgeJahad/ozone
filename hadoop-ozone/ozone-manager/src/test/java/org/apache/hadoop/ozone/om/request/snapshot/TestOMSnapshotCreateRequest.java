@@ -117,20 +117,22 @@ public class TestOMSnapshotCreateRequest {
 
   @Test
   public void testPreExecute() throws Exception {
-    // should not throw
+    // set the owner
     when(ozoneManager.isOwner(any(), any())).thenReturn(true);
     OMRequest omRequest =
         OMRequestTestUtils.createSnapshotRequest(
         name, snapshotPath);
+    // should not throw
     doPreExecute(omRequest);
   }
 
   @Test
   public void testPreExecuteBadOwner() throws Exception {
-    // Check bad owner
+    // owner not set
     OMRequest omRequest =
         OMRequestTestUtils.createSnapshotRequest(
         name, snapshotPath);
+    // Check bad owner
     LambdaTestUtils.intercept(OMException.class,
         "Only bucket owners/admins can create snapshots",
         () -> doPreExecute(omRequest));
@@ -138,7 +140,7 @@ public class TestOMSnapshotCreateRequest {
   
   @Test
   public void testPreExecuteBadPath() throws Exception {
-    // check bad snapshotPath
+    // check snapshotPath that has no bucket
     OMRequest omRequest =
         OMRequestTestUtils.createSnapshotRequest(
         name, "volWithNoBucket");
@@ -150,7 +152,7 @@ public class TestOMSnapshotCreateRequest {
   
   @Test
   public void testPreExecuteBadName() throws Exception {
-    // check bad name
+    // check invalid snapshot name
     String badName = "a?b";
     OMRequest omRequest =
         OMRequestTestUtils.createSnapshotRequest(
@@ -168,16 +170,17 @@ public class TestOMSnapshotCreateRequest {
     OMSnapshotCreateRequest omSnapshotCreateRequest =
         doPreExecute(omRequest);
     String key = SnapshotInfo.getKey(name, snapshotPath);
+
     // As we have not still called validateAndUpdateCache, get() should
     // return null.
+    Assert.assertNull(omMetadataManager.getSnapshotInfoTable().get(key));
 
-    Assert.assertNull(omMetadataManager.getBucketTable().get(key));
+    // add key to cache
     OMClientResponse omClientResponse =
         omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 1,
             ozoneManagerDoubleBufferHelper);
     
-    // As now after validateAndUpdateCache it should add entry to cache, get
-    // should return non-null value.
+    // check cache
     SnapshotInfo snapshotInfo =
         omMetadataManager.getSnapshotInfoTable().get(key);
     Assert.assertNotNull(snapshotInfo);
@@ -203,19 +206,16 @@ public class TestOMSnapshotCreateRequest {
         OMRequestTestUtils.createSnapshotRequest(name, snapshotPath);
     OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(omRequest);
     String key = SnapshotInfo.getKey(name, snapshotPath);
-    Assert.assertNull(omMetadataManager.getBucketTable().get(key));
+    Assert.assertNull(omMetadataManager.getSnapshotInfoTable().get(key));
 
     //create entry
     omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 1,
         ozoneManagerDoubleBufferHelper);
-    
-    // As now after validateAndUpdateCache it should add entry to cache, get
-    // should return non-null value.
     SnapshotInfo snapshotInfo =
         omMetadataManager.getSnapshotInfoTable().get(key);
     Assert.assertNotNull(snapshotInfo);
 
-    // Now create again to verify error
+    // Now try to create again to verify error
     omRequest =
         OMRequestTestUtils.createSnapshotRequest(name, snapshotPath);
     omSnapshotCreateRequest = doPreExecute(omRequest);

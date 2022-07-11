@@ -116,6 +116,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numListMultipartUploadParts;
   private @Metric MutableCounterLong numListMultipartUploadPartFails;
   private @Metric MutableCounterLong numOpenKeyDeleteRequestFails;
+  private @Metric MutableCounterLong numSnapshotCreateFails;
 
   // Number of tenant operations attempted
   private @Metric MutableCounterLong numTenantOps;
@@ -423,6 +424,11 @@ public class OMMetrics {
   public void incNumSnapshotCreates() {
     numSnapshotCreates.incr();
   }
+
+  public void incNumSnapshotCreateFails() {
+    numSnapshotCreateFails.incr();
+  }
+
 
   public void incNumCompleteMultipartUploadFails() {
     numCompleteMultipartUploadFails.incr();
@@ -1085,6 +1091,11 @@ public class OMMetrics {
   public long getNumSnapshotCreates() {
     return numSnapshotCreates.value();
   }
+
+  public long getNumSnapshotCreateFails() {
+    return numSnapshotCreateFails.value();
+  }
+
 
   public void incNumTrashRenames() {
     numTrashRenames.incr();
