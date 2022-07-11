@@ -369,7 +369,7 @@ public final class SnapshotInfo implements Auditable {
 
   /**
    * Get directory from snapshot path.
-   * Note that snapshot on directories is not supported yet
+   * Note that snapshot on directories is not supported yet;
    *  this is only used to confirm that snapshotPath doesn't
    *  contain a directory
    */
