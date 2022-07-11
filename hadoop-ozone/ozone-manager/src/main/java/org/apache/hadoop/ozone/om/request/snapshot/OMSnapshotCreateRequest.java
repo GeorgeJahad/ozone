@@ -84,7 +84,8 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     //  For now only support bucket snapshots
     if (volumeName == null || bucketName == null || dirName != null) {
       LOG.debug("Bad snapshotPath: {}", snapshotPath);
-      throw new OMException("Bad Snapshot path", OMException.ResultCodes.INVALID_SNAPSHOT_ERROR);
+      throw new OMException("Bad Snapshot path",
+          OMException.ResultCodes.INVALID_SNAPSHOT_ERROR);
     }
 
     // Verify name
@@ -119,11 +120,13 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     OMClientResponse omClientResponse = null;
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
 
-    SnapshotInfo snapshotInfo = SnapshotInfo.newSnapshotInfo(name, snapshotPath);
+    SnapshotInfo snapshotInfo = SnapshotInfo
+        .newSnapshotInfo(name, snapshotPath);
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
     String key = SnapshotInfo.getKey(name, snapshotPath);
     try {
-      // Need this to be sure the bucket doesn't get deleted while creating snapshot
+      // Need this to be sure the bucket doesn't
+      //  get deleted while creating snapshot
       acquiredBucketLock =
           omMetadataManager.getLock().acquireReadLock(BUCKET_LOCK,
               volumeName, bucketName);
@@ -138,12 +141,15 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
         throw new OMException("Snapshot already exists", FILE_ALREADY_EXISTS);
       }
 
-      omMetadataManager.getSnapshotInfoTable().addCacheEntry(new CacheKey<>(key),
-          new CacheValue<>(Optional.of(snapshotInfo), transactionLogIndex));
+      omMetadataManager.getSnapshotInfoTable()
+          .addCacheEntry(new CacheKey<>(key),
+            new CacheValue<>(Optional.of(snapshotInfo), transactionLogIndex));
 
       omResponse.setCreateSnapshotResponse(
-          CreateSnapshotResponse.newBuilder().setSnapshotInfo(snapshotInfo.getProtobuf()));
-      omClientResponse = new OMSnapshotCreateResponse(omResponse.build(), name, snapshotPath);
+          CreateSnapshotResponse.newBuilder()
+          .setSnapshotInfo(snapshotInfo.getProtobuf()));
+      omClientResponse = new OMSnapshotCreateResponse(
+          omResponse.build(), name, snapshotPath);
     } catch (IOException ex) {
       exception = ex;
       omClientResponse = new OMSnapshotCreateResponse(

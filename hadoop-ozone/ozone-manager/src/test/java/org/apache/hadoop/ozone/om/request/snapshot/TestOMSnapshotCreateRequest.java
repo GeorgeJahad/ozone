@@ -1,3 +1,4 @@
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -24,14 +25,24 @@ import java.util.UUID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.AuditMessage;
-import org.apache.hadoop.ozone.om.*;
+
+import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.OMMetrics;
+import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
+import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.om.helpers.*;
+import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.upgrade.OMLayoutVersionManager;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.ozone.test.LambdaTestUtils;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+
 
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
@@ -80,7 +91,8 @@ public class TestOMSnapshotCreateRequest {
     when(ozoneManager.isRatisEnabled()).thenReturn(true);
     when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(false);
     when(ozoneManager.isOwner(any(), any())).thenReturn(false);
-    when(ozoneManager.getBucketOwner(any(), any(), any(), any())).thenReturn("dummyBucketOwner");
+    when(ozoneManager.getBucketOwner(any(), any(),
+        any(), any())).thenReturn("dummyBucketOwner");
     OMLayoutVersionManager lvm = mock(OMLayoutVersionManager.class);
     when(lvm.getMetadataLayoutVersion()).thenReturn(0);
     when(ozoneManager.getVersionManager()).thenReturn(lvm);
@@ -92,7 +104,8 @@ public class TestOMSnapshotCreateRequest {
     String bucketName = UUID.randomUUID().toString();
     name = UUID.randomUUID().toString();
     snapshotPath = volumeName + OM_KEY_PREFIX + bucketName;
-    OMRequestTestUtils.addVolumeAndBucketToDB(volumeName, bucketName, omMetadataManager);
+    OMRequestTestUtils.addVolumeAndBucketToDB(
+        volumeName, bucketName, omMetadataManager);
 
   }
 
@@ -104,28 +117,56 @@ public class TestOMSnapshotCreateRequest {
 
   @Test
   public void testPreExecute() throws Exception {
-    // Check bad owner
-    LambdaTestUtils.intercept(OMException.class,
-      "Only bucket owners/admins can create snapshots",
-      () -> doPreExecute(name, snapshotPath));
-    // now confirm it works:
+    // should not throw
     when(ozoneManager.isOwner(any(), any())).thenReturn(true);
-    doPreExecute(name, snapshotPath);
+    OMRequest omRequest =
+        OMRequestTestUtils.createSnapshotRequest(
+        name, snapshotPath);
+    doPreExecute(omRequest);
+  }
+
+  @Test
+  public void testPreExecuteBadOwner() throws Exception {
+    // Check bad owner
+    OMRequest omRequest =
+        OMRequestTestUtils.createSnapshotRequest(
+        name, snapshotPath);
+    LambdaTestUtils.intercept(OMException.class,
+        "Only bucket owners/admins can create snapshots",
+        () -> doPreExecute(omRequest));
+  }
+  
+  @Test
+  public void testPreExecuteBadPath() throws Exception {
     // check bad snapshotPath
+    OMRequest omRequest =
+        OMRequestTestUtils.createSnapshotRequest(
+        name, "volWithNoBucket");
     LambdaTestUtils.intercept(OMException.class,
         "Bad Snapshot path",
-        () -> doPreExecute(name, "volWithNoBucket"));
+        () -> doPreExecute(omRequest));
+  }
+
+  
+  @Test
+  public void testPreExecuteBadName() throws Exception {
     // check bad name
     String badName = "a?b";
+    OMRequest omRequest =
+        OMRequestTestUtils.createSnapshotRequest(
+        badName, snapshotPath);
     LambdaTestUtils.intercept(OMException.class,
         "Invalid snapshot name: " + badName,
-        () -> doPreExecute(badName, snapshotPath));
+        () -> doPreExecute(omRequest));
   }
   
   @Test
   public void testValidateAndUpdateCache() throws Exception {
     when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
-    OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, snapshotPath);
+    OMRequest omRequest =
+        OMRequestTestUtils.createSnapshotRequest(name, snapshotPath);
+    OMSnapshotCreateRequest omSnapshotCreateRequest =
+        doPreExecute(omRequest);
     String key = SnapshotInfo.getKey(name, snapshotPath);
     // As we have not still called validateAndUpdateCache, get() should
     // return null.
@@ -143,7 +184,8 @@ public class TestOMSnapshotCreateRequest {
 
     // verify table data with response data.
     SnapshotInfo snapshotInfoFromProto = SnapshotInfo.getFromProtobuf(
-        omClientResponse.getOMResponse().getCreateSnapshotResponse().getSnapshotInfo());
+        omClientResponse.getOMResponse()
+        .getCreateSnapshotResponse().getSnapshotInfo());
     Assert.assertEquals(snapshotInfoFromProto, snapshotInfo);
 
     OMResponse omResponse = omClientResponse.getOMResponse();
@@ -157,7 +199,9 @@ public class TestOMSnapshotCreateRequest {
   @Test
   public void testEntryExists() throws Exception {
     when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
-    OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(name, snapshotPath);
+    OMRequest omRequest =
+        OMRequestTestUtils.createSnapshotRequest(name, snapshotPath);
+    OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(omRequest);
     String key = SnapshotInfo.getKey(name, snapshotPath);
     Assert.assertNull(omMetadataManager.getBucketTable().get(key));
 
@@ -172,7 +216,9 @@ public class TestOMSnapshotCreateRequest {
     Assert.assertNotNull(snapshotInfo);
 
     // Now create again to verify error
-    omSnapshotCreateRequest = doPreExecute(name, snapshotPath);
+    omRequest =
+        OMRequestTestUtils.createSnapshotRequest(name, snapshotPath);
+    omSnapshotCreateRequest = doPreExecute(omRequest);
     OMClientResponse omClientResponse =
         omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 2,
             ozoneManagerDoubleBufferHelper);
@@ -183,13 +229,13 @@ public class TestOMSnapshotCreateRequest {
         omResponse.getStatus());
   }
 
-  private OMSnapshotCreateRequest doPreExecute(String name,
-      String snapshotPath) throws Exception {
-    OMRequest originalRequest = OMRequestTestUtils.createSnapshotRequest(name, snapshotPath);
+  private OMSnapshotCreateRequest doPreExecute(
+      OMRequest originalRequest) throws Exception {
     OMSnapshotCreateRequest omSnapshotCreateRequest =
         new OMSnapshotCreateRequest(originalRequest);
 
-    OMRequest modifiedRequest = omSnapshotCreateRequest.preExecute(ozoneManager);
+    OMRequest modifiedRequest =
+        omSnapshotCreateRequest.preExecute(ozoneManager);
     return new OMSnapshotCreateRequest(modifiedRequest);
   }
 

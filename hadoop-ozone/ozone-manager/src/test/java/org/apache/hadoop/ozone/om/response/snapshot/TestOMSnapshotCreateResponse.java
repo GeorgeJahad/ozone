@@ -41,8 +41,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_DIR;
 
-import static org.apache.hadoop.ozone.OzoneConsts.*;
 
 /**
  * This class tests OMSnapshotCreateResponse.
@@ -78,15 +80,18 @@ public class TestOMSnapshotCreateResponse {
     String bucketName = UUID.randomUUID().toString();
     String name = UUID.randomUUID().toString();
     String snapshotPath = volumeName + OM_KEY_PREFIX + bucketName;
-    SnapshotInfo snapshotInfo = SnapshotInfo.newSnapshotInfo(name, snapshotPath);
+    SnapshotInfo snapshotInfo =
+        SnapshotInfo.newSnapshotInfo(name, snapshotPath);
     Assert.assertEquals(0,
-        omMetadataManager.countRowsInTable(omMetadataManager.getSnapshotInfoTable()));
+        omMetadataManager
+        .countRowsInTable(omMetadataManager.getSnapshotInfoTable()));
     OMSnapshotCreateResponse omSnapshotCreateResponse =
         new OMSnapshotCreateResponse(OMResponse.newBuilder()
             .setCmdType(OzoneManagerProtocolProtos.Type.CreateSnapshot)
             .setStatus(OzoneManagerProtocolProtos.Status.OK)
             .setCreateSnapshotResponse(
-                CreateSnapshotResponse.newBuilder().setSnapshotInfo(snapshotInfo.getProtobuf())
+                CreateSnapshotResponse.newBuilder()
+                .setSnapshotInfo(snapshotInfo.getProtobuf())
                     .build()).build(), name, snapshotPath);
 
     omSnapshotCreateResponse.addToDBBatch(omMetadataManager, batchOperation);
@@ -95,17 +100,19 @@ public class TestOMSnapshotCreateResponse {
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
 
     // Confirm snapshot directory was created
-    String snapshotDir = path + OM_KEY_PREFIX + OM_SNAPSHOT_DIR + OM_KEY_PREFIX + OM_DB_NAME +
+    String snapshotDir = path + OM_KEY_PREFIX +
+        OM_SNAPSHOT_DIR + OM_KEY_PREFIX + OM_DB_NAME +
         snapshotInfo.getCheckpointDirName();
     Assert.assertTrue((new File(snapshotDir)).exists());
-    Assert.assertEquals(1,
-        omMetadataManager.countRowsInTable(omMetadataManager.getSnapshotInfoTable()));
+    Assert.assertEquals(1, omMetadataManager
+        .countRowsInTable(omMetadataManager.getSnapshotInfoTable()));
 
     Table.KeyValue<String, SnapshotInfo> keyValue =
         omMetadataManager.getSnapshotInfoTable().iterator().next();
 
     SnapshotInfo storedInfo = keyValue.getValue();
-    Assert.assertEquals(SnapshotInfo.getKey(name, snapshotPath), keyValue.getKey());
+    Assert.assertEquals(SnapshotInfo
+        .getKey(name, snapshotPath), keyValue.getKey());
     Assert.assertEquals(snapshotInfo, storedInfo);
   }
- }
+}

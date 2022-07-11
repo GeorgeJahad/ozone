@@ -1092,7 +1092,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
   public String createSnapshot(String name, String snapshotPath)
       throws IOException {
 
-    final OzoneManagerProtocolProtos.CreateSnapshotRequest.Builder requestBuilder =
+    final OzoneManagerProtocolProtos.CreateSnapshotRequest.Builder
+        requestBuilder =
         OzoneManagerProtocolProtos.CreateSnapshotRequest.newBuilder()
             .setSnapshotPath(snapshotPath);
     if (!StringUtils.isBlank(name)) {
@@ -1104,7 +1105,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .build();
     final OMResponse omResponse = submitRequest(omRequest);
     handleError(omResponse);
-    SnapshotInfo snapshotInfo = SnapshotInfo.getFromProtobuf(omResponse.getCreateSnapshotResponse().getSnapshotInfo());
+    SnapshotInfo snapshotInfo = SnapshotInfo.getFromProtobuf(
+        omResponse.getCreateSnapshotResponse().getSnapshotInfo());
     return snapshotInfo.getName();
   }
 

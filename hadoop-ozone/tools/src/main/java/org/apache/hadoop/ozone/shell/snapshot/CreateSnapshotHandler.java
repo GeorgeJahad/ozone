@@ -30,10 +30,13 @@ import java.io.IOException;
     description = "create snapshot")
 public class CreateSnapshotHandler extends SnapshotHandler {
 
-  @CommandLine.Parameters(description = "snapshotPath, (currently only bucket allowed)", index = "0", arity = "1..1")
+  @CommandLine.Parameters(description =
+      "snapshotPath, (currently only bucket allowed)",
+      index = "0", arity = "1..1")
   private String snapshotPath;
 
-  @CommandLine.Parameters(description = "optional snapshot name", index = "1", arity = "0..1")
+  @CommandLine.Parameters(description = "optional snapshot name",
+      index = "1", arity = "0..1")
   private String name;
 
   @Override

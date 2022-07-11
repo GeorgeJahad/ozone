@@ -959,7 +959,7 @@ public interface ClientProtocol {
       throws IOException;
 
   /**
-   * Create snapshot
+   * Create snapshot.
    * @param name name to be used
    * @param snapshotPath snapshotPath to use
    * @return name used

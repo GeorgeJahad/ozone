@@ -40,7 +40,7 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
   private String name;
   @SuppressWarnings("checkstyle:parameternumber")
   public OMSnapshotCreateResponse(@Nonnull OMResponse omResponse,
-    @Nonnull String name, @Nonnull String snapshotPath
+      @Nonnull String name, @Nonnull String snapshotPath
   ) {
     super(omResponse);
     this.snapshotPath = snapshotPath;
@@ -61,10 +61,12 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
       BatchOperation batchOperation) throws IOException {
 
     // Create the snapshot checkpoint
-    SnapshotManager.createSnapshot(omMetadataManager, SnapshotInfo.newSnapshotInfo(name, snapshotPath));
+    SnapshotManager.createSnapshot(
+        omMetadataManager, SnapshotInfo.newSnapshotInfo(name, snapshotPath));
 
     SnapshotInfo snapshotInfo =
-      SnapshotInfo.getFromProtobuf(getOMResponse().getCreateSnapshotResponse().getSnapshotInfo());
+        SnapshotInfo.getFromProtobuf(
+        getOMResponse().getCreateSnapshotResponse().getSnapshotInfo());
     String key = SnapshotInfo.getKey(name, snapshotPath);
 
     // Add to db

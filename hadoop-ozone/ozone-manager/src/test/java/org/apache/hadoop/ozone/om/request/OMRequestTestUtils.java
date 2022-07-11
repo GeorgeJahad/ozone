@@ -1052,7 +1052,7 @@ public final class OMRequestTestUtils {
   }
 
   /**
-   * Create OMRequest for Create Snapshot
+   * Create OMRequest for Create Snapshot.
    * @param name
    * @param snapshotPath
    */
