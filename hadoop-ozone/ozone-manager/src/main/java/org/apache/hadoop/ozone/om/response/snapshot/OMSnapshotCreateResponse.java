@@ -59,6 +59,7 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
   @Override
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
+
     // Create the snapshot checkpoint
     SnapshotManager.createSnapshot(omMetadataManager, SnapshotInfo.newSnapshotInfo(name, snapshotPath));
 

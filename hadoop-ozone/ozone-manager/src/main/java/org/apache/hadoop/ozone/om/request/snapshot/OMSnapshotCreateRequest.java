@@ -121,6 +121,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
 
     SnapshotInfo snapshotInfo = SnapshotInfo.newSnapshotInfo(name, snapshotPath);
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
+    String key = SnapshotInfo.getKey(name, snapshotPath);
     try {
       // Need this to be sure the bucket doesn't get deleted while creating snapshot
       acquiredBucketLock =
@@ -131,7 +132,6 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
           omMetadataManager.getLock().acquireWriteLock(BUCKET_LOCK,
               volumeName, snapshotInfo.getSnapshotLockResourceName());
 
-      String key = SnapshotInfo.getKey(name, snapshotPath);
       //Check if snapshot already exists
       if (omMetadataManager.getSnapshotInfoTable().isExist(key)) {
         LOG.debug("snapshot: {} already exists ", key);
