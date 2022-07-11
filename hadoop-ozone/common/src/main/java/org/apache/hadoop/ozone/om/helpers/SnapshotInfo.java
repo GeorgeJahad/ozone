@@ -343,6 +343,9 @@ public final class SnapshotInfo implements Auditable {
     return osib.build();
   }
 
+  /**
+   * Get volume from snapshot path.
+   */
   public String getVolumeName() {
     String volumeName = null;
     String[] names = snapshotPath.split(OM_KEY_PREFIX);
@@ -352,6 +355,9 @@ public final class SnapshotInfo implements Auditable {
     return volumeName;
   }
 
+  /**
+   * Get bucket from snapshot path.
+   */
   public String getBucketName() {
     String bucketName = null;
     String[] names = snapshotPath.split(OM_KEY_PREFIX);
@@ -361,9 +367,12 @@ public final class SnapshotInfo implements Auditable {
     return bucketName;
   }
 
-  // Snapshot on directories is not supported yet
-  //  this is only used currently to confirm that snapshotPath doesn't
-  //  contain a directory
+  /**
+   * Get directory from snapshot path.
+   * Note that snapshot on directories is not supported yet
+   *  this is only used to confirm that snapshotPath doesn't
+   *  contain a directory
+   */
   public String getDirName() {
     String dirName = null;
     String[] names = snapshotPath.split(OM_KEY_PREFIX);
@@ -374,6 +383,9 @@ public final class SnapshotInfo implements Auditable {
     return dirName;
   }
 
+  /**
+   * Get the name of the lock resource for this snapshot.
+   */
   public String getSnapshotLockResourceName() {
     return getBucketName() + OM_KEY_PREFIX + SNAPSHOT_FLAG;
   }
@@ -387,18 +399,29 @@ public final class SnapshotInfo implements Auditable {
     return auditMap;
   }
 
-
+  /**
+   * Get the name of the checkpoint directory.
+   */
   public static String getCheckpointDirName(String name, String snapshotPath) {
     return SEPARATOR + getTableKey(name, snapshotPath);
   }
-
+  /**
+   * Get the name of the checkpoint directory, (non-static).
+   */
   public String getCheckpointDirName() {
     return getCheckpointDirName(name, snapshotPath);
   }
+
+  /**
+   * Get the table key for this snapshot.
+   */
   public static String getTableKey(String name, String snapshotPath) {
     return snapshotPath.replaceAll(OM_KEY_PREFIX, SEPARATOR) + DELIMITER + name;
   }
 
+  /**
+   * Generate default name of snapshot, (used if user doesn't provide one).
+   */
   @VisibleForTesting
   public static String generateName(long initialTime) {
     String timePattern = "yyyyMMdd-HHmmss.SSS";
@@ -408,6 +431,9 @@ public final class SnapshotInfo implements Auditable {
         ZonedDateTime.ofInstant(instant, ZoneId.of("UTC")));
   }
   
+  /**
+   * Factory for making standard instance.
+   */
   public static SnapshotInfo newInstance(String name, String snapshotPath) {
     SnapshotInfo.Builder builder = new SnapshotInfo.Builder();
     String id = UUID.randomUUID().toString();
