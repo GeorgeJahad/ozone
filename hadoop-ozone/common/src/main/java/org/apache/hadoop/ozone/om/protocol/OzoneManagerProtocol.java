@@ -639,7 +639,7 @@ public interface OzoneManagerProtocol
   default String createSnapshot(String name,
       String snapshotPath) throws IOException {
     throw new UnsupportedOperationException("OzoneManager does not require " +
-        "this to be implemented, as write requests use a new approach");
+        "this to be implemented");
   }
 
   /**

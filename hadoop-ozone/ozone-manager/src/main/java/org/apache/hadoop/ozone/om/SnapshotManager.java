@@ -28,6 +28,14 @@ import java.io.IOException;
  * This class is used to manage/create OM snapshots.
  */
 public final class SnapshotManager {
+
+  
+  /**
+   * Creates snapshot checkpoint that corresponds with SnapshotInfo.
+   * @param OMMetadataManager the metadata manager
+   * @param snapshotInfo The metadata of snapshot to be created
+   * @return instance of DBCheckpoint
+   */
   public static DBCheckpoint createSnapshot(
       OMMetadataManager omMetadataManager, SnapshotInfo snapshotInfo)
       throws IOException {

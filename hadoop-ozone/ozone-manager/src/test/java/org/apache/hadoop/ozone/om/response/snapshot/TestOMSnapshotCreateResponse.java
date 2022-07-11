@@ -81,7 +81,7 @@ public class TestOMSnapshotCreateResponse {
     String name = UUID.randomUUID().toString();
     String snapshotPath = volumeName + OM_KEY_PREFIX + bucketName;
     SnapshotInfo snapshotInfo =
-        SnapshotInfo.newSnapshotInfo(name, snapshotPath);
+        SnapshotInfo.newInstance(name, snapshotPath);
 
     // confirm table is empty
     Assert.assertEquals(0,
@@ -115,7 +115,7 @@ public class TestOMSnapshotCreateResponse {
         omMetadataManager.getSnapshotInfoTable().iterator().next();
     SnapshotInfo storedInfo = keyValue.getValue();
     Assert.assertEquals(SnapshotInfo
-        .getKey(name, snapshotPath), keyValue.getKey());
+        .getTableKey(name, snapshotPath), keyValue.getKey());
     Assert.assertEquals(snapshotInfo, storedInfo);
   }
 }

@@ -71,7 +71,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     snapshotPath = createSnapshotRequest.getSnapshotPath();
     String possibleName = createSnapshotRequest.getName();
     SnapshotInfo snapshotInfo =
-        SnapshotInfo.newSnapshotInfo(possibleName, snapshotPath);
+        SnapshotInfo.newInstance(possibleName, snapshotPath);
     name = snapshotInfo.getName();
     volumeName = snapshotInfo.getVolumeName();
     bucketName = snapshotInfo.getBucketName();
@@ -121,9 +121,9 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
 
     SnapshotInfo snapshotInfo = SnapshotInfo
-        .newSnapshotInfo(name, snapshotPath);
+        .newInstance(name, snapshotPath);
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
-    String key = SnapshotInfo.getKey(name, snapshotPath);
+    String key = SnapshotInfo.getTableKey(name, snapshotPath);
     try {
       // Lock bucket so it doesn't
       //  get deleted while creating snapshot
@@ -170,18 +170,16 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     // Performing audit logging outside the lock.
     auditLog(auditLogger, buildAuditMessage(OMAction.CREATE_SNAPSHOT,
         snapshotInfo.toAuditMap(), exception, userInfo));
-
-    // return response.
+    
     if (exception == null) {
-      LOG.info("created snapshot: {} name {} in snapshotPath: {}", name,
+      LOG.info("created snapshot: name {} in snapshotPath: {}", name,
           snapshotPath);
-       return omClientResponse;
     } else {
       omMetrics.incNumSnapshotCreateFails();
       LOG.error("Snapshot creation failed for name:{} in snapshotPath:{}",
           name, snapshotPath);
-      return omClientResponse;
     }
+    return omClientResponse;
   }
   
 }

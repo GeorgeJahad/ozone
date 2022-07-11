@@ -389,13 +389,13 @@ public final class SnapshotInfo implements Auditable {
 
 
   public static String getCheckpointDirName(String name, String snapshotPath) {
-    return SEPARATOR + getKey(name, snapshotPath);
+    return SEPARATOR + getTableKey(name, snapshotPath);
   }
 
   public String getCheckpointDirName() {
     return getCheckpointDirName(name, snapshotPath);
   }
-  public static String getKey(String name, String snapshotPath) {
+  public static String getTableKey(String name, String snapshotPath) {
     return snapshotPath.replaceAll(OM_KEY_PREFIX, SEPARATOR) + DELIMITER + name;
   }
 
@@ -408,7 +408,7 @@ public final class SnapshotInfo implements Auditable {
         ZonedDateTime.ofInstant(instant, ZoneId.of("UTC")));
   }
   
-  public static SnapshotInfo newSnapshotInfo(String name, String snapshotPath) {
+  public static SnapshotInfo newInstance(String name, String snapshotPath) {
     SnapshotInfo.Builder builder = new SnapshotInfo.Builder();
     String id = UUID.randomUUID().toString();
     long initialTime = Time.now();

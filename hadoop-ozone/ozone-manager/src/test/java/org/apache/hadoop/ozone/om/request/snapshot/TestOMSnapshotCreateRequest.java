@@ -169,7 +169,7 @@ public class TestOMSnapshotCreateRequest {
         OMRequestTestUtils.createSnapshotRequest(name, snapshotPath);
     OMSnapshotCreateRequest omSnapshotCreateRequest =
         doPreExecute(omRequest);
-    String key = SnapshotInfo.getKey(name, snapshotPath);
+    String key = SnapshotInfo.getTableKey(name, snapshotPath);
 
     // As we have not still called validateAndUpdateCache, get() should
     // return null.
@@ -205,7 +205,7 @@ public class TestOMSnapshotCreateRequest {
     OMRequest omRequest =
         OMRequestTestUtils.createSnapshotRequest(name, snapshotPath);
     OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(omRequest);
-    String key = SnapshotInfo.getKey(name, snapshotPath);
+    String key = SnapshotInfo.getTableKey(name, snapshotPath);
     Assert.assertNull(omMetadataManager.getSnapshotInfoTable().get(key));
 
     //create entry
