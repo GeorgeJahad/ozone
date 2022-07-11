@@ -106,7 +106,7 @@ public class RDBStore implements DBStore {
         }
       }
 
-      //create snapshots directory if not exists.
+      //create snapshot directory if does not exist.
       snapshotsParentDir = Paths.get(dbLocation.getParent(),
           OM_SNAPSHOT_DIR).toString();
       File snapshotsDir = new File(snapshotsParentDir);

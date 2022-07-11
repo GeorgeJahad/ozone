@@ -69,9 +69,9 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     CreateSnapshotRequest createSnapshotRequest = omRequest
         .getCreateSnapshotRequest();
     snapshotPath = createSnapshotRequest.getSnapshotPath();
-    String nameInput = createSnapshotRequest.getName();
+    String possibleName = createSnapshotRequest.getName();
     SnapshotInfo snapshotInfo =
-        SnapshotInfo.newSnapshotInfo(nameInput, snapshotPath);
+        SnapshotInfo.newSnapshotInfo(possibleName, snapshotPath);
     name = snapshotInfo.getName();
     volumeName = snapshotInfo.getVolumeName();
     bucketName = snapshotInfo.getBucketName();

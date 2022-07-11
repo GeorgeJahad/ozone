@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.shell.snapshot;
 
 import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.shell.Handler;
 import org.apache.hadoop.ozone.shell.OzoneAddress;
 import picocli.CommandLine;
 
@@ -28,7 +29,7 @@ import java.io.IOException;
  */
 @CommandLine.Command(name = "create",
     description = "create snapshot")
-public class CreateSnapshotHandler extends SnapshotHandler {
+public class CreateSnapshotHandler extends Handler {
 
   @CommandLine.Parameters(description =
       "snapshotPath, (currently only bucket allowed)",
