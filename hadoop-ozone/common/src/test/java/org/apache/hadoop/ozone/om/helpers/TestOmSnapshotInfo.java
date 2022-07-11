@@ -105,12 +105,14 @@ public class TestOmSnapshotInfo {
 
     SnapshotInfo snapshotInfoActual = SnapshotInfo
         .getFromProtobuf(snapshotInfoEntry);
-    Assert.assertEquals(snapshotInfoExpected.getSnapshotID(),
-        snapshotInfoActual.getSnapshotID());
-    Assert.assertEquals(snapshotInfoExpected.getName(),
-        snapshotInfoActual.getName());
-    Assert.assertEquals(snapshotInfoExpected.getSnapshotStatus(),
-        snapshotInfoActual.getSnapshotStatus());
+    Assert.assertEquals(snapshotInfoExpected, snapshotInfoActual);
+  }
 
+  @Test
+  public void testGenerateName() {
+    // GMT: Sunday, July 10, 2022 7:56:55.001 PM
+    long millis = 1657483015001L;
+    String name = SnapshotInfo.generateName(millis);
+    Assert.assertEquals("s20220710-195655.001", name);
   }
 }
