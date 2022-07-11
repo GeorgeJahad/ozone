@@ -162,9 +162,8 @@ public class TestOMSnapshotCreateRequest {
     Assert.assertNull(omMetadataManager.getBucketTable().get(key));
 
     //create entry
-    OMClientResponse omClientResponse =
-        omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 1,
-            ozoneManagerDoubleBufferHelper);
+    omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 1,
+        ozoneManagerDoubleBufferHelper);
     
     // As now after validateAndUpdateCache it should add entry to cache, get
     // should return non-null value.
@@ -174,7 +173,7 @@ public class TestOMSnapshotCreateRequest {
 
     // Now create again to verify error
     omSnapshotCreateRequest = doPreExecute(name, snapshotPath);
-    omClientResponse =
+    OMClientResponse omClientResponse =
         omSnapshotCreateRequest.validateAndUpdateCache(ozoneManager, 2,
             ozoneManagerDoubleBufferHelper);
     

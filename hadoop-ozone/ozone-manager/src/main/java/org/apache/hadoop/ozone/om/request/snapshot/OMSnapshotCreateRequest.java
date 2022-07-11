@@ -27,7 +27,6 @@ import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
-import org.apache.hadoop.ozone.om.SnapshotManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
@@ -40,15 +39,14 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateS
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateSnapshotResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Time;
-import org.apache.ratis.server.RaftServerConfigKeys;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.FILE_ALREADY_EXISTS;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 
@@ -65,7 +63,6 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
   private final String bucketName;
   private final String name;
   private final String dirName;
-  private final SnapshotInfo snapshotInfo;
 
   public OMSnapshotCreateRequest(OMRequest omRequest) {
     super(omRequest);
@@ -73,7 +70,8 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
         .getCreateSnapshotRequest();
     snapshotPath = createSnapshotRequest.getSnapshotPath();
     String nameInput = createSnapshotRequest.getName();
-    snapshotInfo = SnapshotInfo.newSnapshotInfo(nameInput, snapshotPath);
+    SnapshotInfo snapshotInfo =
+        SnapshotInfo.newSnapshotInfo(nameInput, snapshotPath);
     name = snapshotInfo.getName();
     volumeName = snapshotInfo.getVolumeName();
     bucketName = snapshotInfo.getBucketName();
@@ -93,7 +91,8 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     OmUtils.validateSnapshotName(name);
 
     UserGroupInformation ugi = createUGI();
-    String bucketOwner = ozoneManager.getBucketOwner(volumeName, bucketName, ACLType.CREATE, ResourceType.BUCKET);
+    String bucketOwner = ozoneManager.getBucketOwner(volumeName, bucketName,
+        IAccessAuthorizer.ACLType.CREATE, OzoneObj.ResourceType.BUCKET);
     if (!ozoneManager.isAdmin(ugi) &&
         !ozoneManager.isOwner(ugi, bucketOwner)) {
       throw new OMException(

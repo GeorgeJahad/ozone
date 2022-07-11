@@ -44,6 +44,8 @@ import org.rocksdb.WriteOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_DIR;
+
 /**
  * RocksDB Store that supports creating Tables in DB.
  */
@@ -105,8 +107,8 @@ public class RDBStore implements DBStore {
       }
 
       //create snapshots directory if not exists.
-      snapshotsParentDir =
-              Paths.get(dbLocation.getParent(), "db.snapshots").toString();
+      snapshotsParentDir = Paths.get(dbLocation.getParent(),
+          OM_SNAPSHOT_DIR).toString();
       File snapshotsDir = new File(snapshotsParentDir);
       if (!snapshotsDir.exists()) {
         boolean success = snapshotsDir.mkdir();

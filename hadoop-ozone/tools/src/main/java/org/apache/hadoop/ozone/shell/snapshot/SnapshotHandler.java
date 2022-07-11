@@ -17,13 +17,9 @@
  */
 package org.apache.hadoop.ozone.shell.snapshot;
 
-import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientException;
 import org.apache.hadoop.ozone.shell.Handler;
 import org.apache.hadoop.ozone.shell.OzoneAddress;
-import picocli.CommandLine;
-
-import java.io.IOException;
 
 /**
  * Base class for snapshot command handlers.

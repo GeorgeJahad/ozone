@@ -23,7 +23,6 @@ import java.io.File;
 import java.util.UUID;
 
 import org.apache.hadoop.hdds.utils.db.Table;
-import org.apache.hadoop.ozone.om.SnapshotManager;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.junit.After;
 import org.junit.Assert;
@@ -36,8 +35,6 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.response.TestOMResponseUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateSnapshotResponse;
