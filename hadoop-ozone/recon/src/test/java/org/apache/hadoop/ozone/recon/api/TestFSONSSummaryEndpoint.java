@@ -583,7 +583,7 @@ public class TestFSONSSummaryEndpoint {
   /**
    * When calculating DU under dir1
    * there are 3 keys, file2, file3, file6.
-   * There is one direct key, file1.
+   * There is one direct key, file7.
    * @throws IOException
    */
   @Test
