@@ -73,7 +73,9 @@ Check http return code
                         END
 
 *** Test Cases ***
+
 Check volume creation
+    Kinit as non admin
     Create volume
 
 Check bucket creation
