@@ -33,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
@@ -48,7 +47,6 @@ public class FSOBucketHandler extends BucketHandler {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(FSOBucketHandler.class);
-  private OmBucketInfo omBucketInfo;
 
   private final long volumeId;
   private final long bucketId;
@@ -60,10 +58,9 @@ public class FSOBucketHandler extends BucketHandler {
       OmBucketInfo bucketInfo) throws IOException {
     super(reconNamespaceSummaryManager, omMetadataManager,
         reconSCM);
-    this.omBucketInfo = bucketInfo;
 
-    String vol = omBucketInfo.getVolumeName();
-    String bucket = omBucketInfo.getBucketName();
+    String vol = bucketInfo.getVolumeName();
+    String bucket = bucketInfo.getBucketName();
 
     String[] names = {vol, bucket};
 
@@ -80,8 +77,8 @@ public class FSOBucketHandler extends BucketHandler {
   @Override
   public EntityType determineKeyPath(String keyName)
                                      throws IOException {
-    Path keyPath = Paths.get(keyName);
-    Iterator<Path> elements = keyPath.iterator();
+    java.nio.file.Path keyPath = Paths.get(keyName);
+    Iterator<java.nio.file.Path> elements = keyPath.iterator();
 
     long lastKnownParentId = bucketId;
     OmDirectoryInfo omDirInfo = null;
@@ -102,7 +99,7 @@ public class FSOBucketHandler extends BucketHandler {
         lastKnownParentId = omDirInfo.getObjectID();
       } else if (!elements.hasNext()) {
         // reached last path component. Check file exists for the given path.
-        OmKeyInfo omKeyInfo = getKeyTable()
+        OmKeyInfo omKeyInfo = getOmMetadataManager().getFileTable()
                 .getSkipCache(dbNodeName);
         // The path exists as a file
         if (omKeyInfo != null) {
@@ -122,35 +119,12 @@ public class FSOBucketHandler extends BucketHandler {
     return EntityType.UNKNOWN;
   }
 
-  @Override
-  public long calculateDUForVolume(String volumeName)
-      throws IOException {
-    long result = 0L;
-
-    Table keyTable = getKeyTable();
-
-    TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
-        iterator = keyTable.iterator();
-
-    while (iterator.hasNext()) {
-      Table.KeyValue<String, OmKeyInfo> kv = iterator.next();
-      OmKeyInfo keyInfo = kv.getValue();
-
-      if (keyInfo != null) {
-        if (volumeName.equals(keyInfo.getVolumeName())) {
-          result += getKeySizeWithReplication(keyInfo);
-        }
-      }
-    }
-    return result;
-  }
-
   // FileTable's key is in the format of "volumeId/bucketId/parentId/fileName"
   // Make use of RocksDB's order to seek to the prefix and avoid full iteration
   @Override
   public long calculateDUUnderObject(long parentId)
       throws IOException {
-    Table keyTable = getKeyTable();
+    Table keyTable = getOmMetadataManager().getFileTable();
 
     TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
             iterator = keyTable.iterator();
@@ -214,7 +188,7 @@ public class FSOBucketHandler extends BucketHandler {
                                List<DUResponse.DiskUsage> duData,
                                String normalizedPath) throws IOException {
 
-    Table keyTable = getKeyTable();
+    Table keyTable = getOmMetadataManager().getFileTable();
     TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
             iterator = keyTable.iterator();
 
@@ -304,21 +278,6 @@ public class FSOBucketHandler extends BucketHandler {
   }
 
   @Override
-  public int getTotalDirCount(long objectId) throws IOException {
-    NSSummary nsSummary =
-        getReconNamespaceSummaryManager().getNSSummary(objectId);
-    if (nsSummary == null) {
-      return 0;
-    }
-    Set<Long> subdirs = nsSummary.getChildDir();
-    int totalCnt = subdirs.size();
-    for (long subdir : subdirs) {
-      totalCnt += getTotalDirCount(subdir);
-    }
-    return totalCnt;
-  }
-
-  @Override
   public OmKeyInfo getKeyInfo(String[] names) throws IOException {
     // The object ID for the directory that the key is directly in
     long parentObjectId = getDirObjectId(names,
@@ -327,14 +286,7 @@ public class FSOBucketHandler extends BucketHandler {
     String ozoneKey =
         getOmMetadataManager().getOzonePathKey(volumeId, bucketId,
         parentObjectId, fileName);
-    OmKeyInfo keyInfo = getKeyTable().getSkipCache(ozoneKey);
+    OmKeyInfo keyInfo = getOmMetadataManager().getFileTable().getSkipCache(ozoneKey);
     return keyInfo;
-  }
-
-  @Override
-  public Table<String, OmKeyInfo> getKeyTable() {
-    Table keyTable =
-        getOmMetadataManager().getFileTable();
-    return keyTable;
   }
 }

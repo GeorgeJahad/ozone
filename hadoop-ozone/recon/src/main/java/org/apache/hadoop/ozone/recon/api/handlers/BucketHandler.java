@@ -89,11 +89,6 @@ public abstract class BucketHandler {
   public abstract EntityType determineKeyPath(String keyName)
       throws IOException;
 
-  public abstract Table<String, OmKeyInfo> getKeyTable();
-
-  public abstract long calculateDUForVolume(String volumeName)
-      throws IOException;
-
   public abstract long calculateDUUnderObject(long parentId)
       throws IOException;
 
@@ -109,9 +104,6 @@ public abstract class BucketHandler {
           throws IOException;
 
   public abstract BucketLayout getBucketLayout();
-
-  public abstract int getTotalDirCount(long objectId)
-      throws IOException;
 
   public abstract OmKeyInfo getKeyInfo(String[] names)
       throws IOException;

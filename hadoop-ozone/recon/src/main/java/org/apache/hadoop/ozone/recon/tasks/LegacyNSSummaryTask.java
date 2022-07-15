@@ -47,9 +47,9 @@ import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.KEY_TABLE;
  */
 public class LegacyNSSummaryTask extends NSSummaryTask {
 
-  private BucketLayout bucketLayout;
+  private final BucketLayout bucketLayout;
 
-  private ReconOMMetadataManager reconOMMetadataManager;
+  private final ReconOMMetadataManager reconOMMetadataManager;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(LegacyNSSummaryTask.class);

@@ -62,7 +62,7 @@ public class RootEntityHandler extends EntityHandler {
           BucketHandler.getBucketHandler(
               getReconNamespaceSummaryManager(),
               getOmMetadataManager(), getReconSCM(), bucket);
-      totalNumDir += bucketHandler.getTotalDirCount(bucketObjectId);
+      totalNumDir += getTotalDirCount(bucketObjectId);
       totalNumKey += getTotalKeyCount(bucketObjectId);
     }
 
@@ -92,21 +92,26 @@ public class RootEntityHandler extends EntityHandler {
       long dataSize = 0;
       diskUsage.setSubpath(subpath);
       BucketHandler bucketHandler = null;
+      long volumeDU = 0;
       // iterate all buckets per volume to get total data size
       for (OmBucketInfo bucket: listBucketsUnderVolume(volumeName)) {
         long bucketObjectID = bucket.getObjectID();
         dataSize += getTotalSize(bucketObjectID);
-        bucketHandler =
+        // count replicas
+        // TODO: to be dropped or optimized in the future
+        if (withReplica) {
+          bucketHandler =
             BucketHandler.getBucketHandler(
-                getReconNamespaceSummaryManager(),
-                getOmMetadataManager(), getReconSCM(), bucket);
+              getReconNamespaceSummaryManager(),
+              getOmMetadataManager(), getReconSCM(), bucket);
+          volumeDU += bucketHandler.calculateDUUnderObject(bucketObjectID);
+        }
       }
       totalDataSize += dataSize;
 
       // count replicas
       // TODO: to be dropped or optimized in the future
       if (withReplica) {
-        long volumeDU = bucketHandler.calculateDUForVolume(volumeName);
         totalDataSizeWithReplica += volumeDU;
         diskUsage.setSizeWithReplica(volumeDU);
       }

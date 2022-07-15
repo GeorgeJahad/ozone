@@ -41,9 +41,9 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
  */
 public class LegacyBucketHandler extends BucketHandler {
 
-  private String vol;
-  private String bucket;
-  private OmBucketInfo omBucketInfo;
+  private final String vol;
+  private final String bucket;
+  private final OmBucketInfo omBucketInfo;
 
   public LegacyBucketHandler(
       ReconNamespaceSummaryManager reconNamespaceSummaryManager,
@@ -95,31 +95,6 @@ public class LegacyBucketHandler extends BucketHandler {
       }
     }
     return EntityType.UNKNOWN;
-  }
-
-  @Override
-  public long calculateDUForVolume(String volumeName)
-      throws IOException {
-    long result = 0L;
-
-    Table keyTable = getKeyTable();
-
-    TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
-        iterator = keyTable.iterator();
-
-    while (iterator.hasNext()) {
-      Table.KeyValue<String, OmKeyInfo> kv = iterator.next();
-      OmKeyInfo keyInfo = kv.getValue();
-
-      if (keyInfo != null) {
-        if (!keyInfo.getKeyName().endsWith(OM_KEY_PREFIX)) {
-          if (volumeName.equals(keyInfo.getVolumeName())) {
-            result += getKeySizeWithReplication(keyInfo);
-          }
-        }
-      }
-    }
-    return result;
   }
 
   // KeyTable's key is in the format of "vol/bucket/keyName"
@@ -314,21 +289,6 @@ public class LegacyBucketHandler extends BucketHandler {
   }
 
   @Override
-  public int getTotalDirCount(long objectId) throws IOException {
-    NSSummary nsSummary =
-        getReconNamespaceSummaryManager().getNSSummary(objectId);
-    if (nsSummary == null) {
-      return 0;
-    }
-    Set<Long> subdirs = nsSummary.getChildDir();
-    int totalCnt = subdirs.size();
-    for (long subdir : subdirs) {
-      totalCnt += getTotalDirCount(subdir);
-    }
-    return totalCnt;
-  }
-
-  @Override
   public OmKeyInfo getKeyInfo(String[] names) throws IOException {
     StringBuilder bld = new StringBuilder();
     for (int i = 0; i < names.length; i++) {
@@ -340,7 +300,6 @@ public class LegacyBucketHandler extends BucketHandler {
     return keyInfo;
   }
 
-  @Override
   public Table<String, OmKeyInfo> getKeyTable() {
     Table keyTable =
         getOmMetadataManager().getKeyTable(getBucketLayout());

@@ -58,7 +58,7 @@ public class DirectoryEntityHandler extends EntityHandler {
     NamespaceSummaryResponse namespaceSummaryResponse =
             new NamespaceSummaryResponse(EntityType.DIRECTORY);
     namespaceSummaryResponse
-        .setNumTotalDir(getBucketHandler().getTotalDirCount(dirObjectId));
+        .setNumTotalDir(getTotalDirCount(dirObjectId));
     namespaceSummaryResponse.setNumTotalKey(getTotalKeyCount(dirObjectId));
 
     return namespaceSummaryResponse;

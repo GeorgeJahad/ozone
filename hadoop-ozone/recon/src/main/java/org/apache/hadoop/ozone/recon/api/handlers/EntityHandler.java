@@ -37,6 +37,7 @@ import java.io.IOException;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 
@@ -49,7 +50,7 @@ public abstract class EntityHandler {
 
   private final ReconOMMetadataManager omMetadataManager;
 
-  private BucketHandler bucketHandler;
+  private final BucketHandler bucketHandler;
 
   private final OzoneStorageContainerManager reconSCM;
 
@@ -198,6 +199,20 @@ public abstract class EntityHandler {
       }
     }
     return res;
+  }
+
+  protected int getTotalDirCount(long objectId) throws IOException {
+    NSSummary nsSummary =
+        getReconNamespaceSummaryManager().getNSSummary(objectId);
+    if (nsSummary == null) {
+      return 0;
+    }
+    Set<Long> subdirs = nsSummary.getChildDir();
+    int totalCnt = subdirs.size();
+    for (long subdir : subdirs) {
+      totalCnt += getTotalDirCount(subdir);
+    }
+    return totalCnt;
   }
 
   /**

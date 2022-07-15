@@ -57,7 +57,7 @@ public class BucketEntityHandler extends EntityHandler {
     assert (names.length == 2);
     long bucketObjectId = getBucketHandler().getBucketObjectId(names);
     namespaceSummaryResponse
-        .setNumTotalDir(getBucketHandler().getTotalDirCount(bucketObjectId));
+      .setNumTotalDir(getTotalDirCount(bucketObjectId));
     namespaceSummaryResponse.setNumTotalKey(getTotalKeyCount(bucketObjectId));
 
     return namespaceSummaryResponse;
