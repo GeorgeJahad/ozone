@@ -40,9 +40,9 @@ public class VolumeEntityHandler extends EntityHandler {
   public VolumeEntityHandler(
       ReconNamespaceSummaryManager reconNamespaceSummaryManager,
       ReconOMMetadataManager omMetadataManager,
-      OzoneStorageContainerManager reconSCM) {
+      OzoneStorageContainerManager reconSCM, String path) {
     super(reconNamespaceSummaryManager, omMetadataManager,
-            reconSCM, null);
+          reconSCM, null, path);
   }
 
   @Override

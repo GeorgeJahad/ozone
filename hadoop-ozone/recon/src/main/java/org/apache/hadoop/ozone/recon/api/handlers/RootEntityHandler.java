@@ -40,9 +40,9 @@ public class RootEntityHandler extends EntityHandler {
   public RootEntityHandler(
       ReconNamespaceSummaryManager reconNamespaceSummaryManager,
       ReconOMMetadataManager omMetadataManager,
-      OzoneStorageContainerManager reconSCM) {
+      OzoneStorageContainerManager reconSCM, String path) {
     super(reconNamespaceSummaryManager, omMetadataManager,
-            reconSCM, null);
+          reconSCM, null, path);
   }
 
   @Override

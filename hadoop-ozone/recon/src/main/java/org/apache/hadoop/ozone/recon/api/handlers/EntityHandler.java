@@ -54,18 +54,21 @@ public abstract class EntityHandler {
 
   private final OzoneStorageContainerManager reconSCM;
 
-  private static String normalizedPath;
-  private static String[] names;
+  private final String normalizedPath;
+  private final String[] names;
 
   public EntityHandler(
           ReconNamespaceSummaryManager reconNamespaceSummaryManager,
           ReconOMMetadataManager omMetadataManager,
           OzoneStorageContainerManager reconSCM,
-          BucketHandler bucketHandler) {
+          BucketHandler bucketHandler, String path) {
     this.reconNamespaceSummaryManager = reconNamespaceSummaryManager;
     this.omMetadataManager = omMetadataManager;
     this.reconSCM = reconSCM;
     this.bucketHandler = bucketHandler;
+    normalizedPath = normalizePath(path);
+    names = parseRequestPath(normalizedPath);
+
   }
 
   public abstract NamespaceSummaryResponse getSummaryResponse()
@@ -121,25 +124,24 @@ public abstract class EntityHandler {
           String path) throws IOException {
     BucketHandler bucketHandler;
 
-    normalizedPath = normalizePath(path);
-    names = parseRequestPath(normalizedPath);
-
+    String normalizedPath = normalizePath(path);
+    String []names = parseRequestPath(normalizedPath);
     if (path.equals(OM_KEY_PREFIX)) {
       return EntityType.ROOT.create(reconNamespaceSummaryManager,
-              omMetadataManager, reconSCM, null);
+              omMetadataManager, reconSCM, null, path);
     }
 
     if (names.length == 0) {
       return EntityType.UNKNOWN.create(reconNamespaceSummaryManager,
-              omMetadataManager, reconSCM, null);
+              omMetadataManager, reconSCM, null, path);
     } else if (names.length == 1) { // volume level check
       String volName = names[0];
       if (!volumeExists(omMetadataManager, volName)) {
         return EntityType.UNKNOWN.create(reconNamespaceSummaryManager,
-                omMetadataManager, reconSCM, null);
+                omMetadataManager, reconSCM, null, path);
       }
       return EntityType.VOLUME.create(reconNamespaceSummaryManager,
-              omMetadataManager, reconSCM, null);
+              omMetadataManager, reconSCM, null, path);
     } else if (names.length == 2) { // bucket level check
       String volName = names[0];
       String bucketName = names[1];
@@ -152,10 +154,10 @@ public abstract class EntityHandler {
       if (bucketHandler == null
           || !bucketHandler.bucketExists(volName, bucketName)) {
         return EntityType.UNKNOWN.create(reconNamespaceSummaryManager,
-                omMetadataManager, reconSCM, null);
+                omMetadataManager, reconSCM, null, path);
       }
       return EntityType.BUCKET.create(reconNamespaceSummaryManager,
-              omMetadataManager, reconSCM, bucketHandler);
+              omMetadataManager, reconSCM, bucketHandler, path);
     } else { // length > 3. check dir or key existence
       String volName = names[0];
       String bucketName = names[1];
@@ -172,11 +174,11 @@ public abstract class EntityHandler {
           || !volumeExists(omMetadataManager, volName)
           || !bucketHandler.bucketExists(volName, bucketName)) {
         return EntityType.UNKNOWN.create(reconNamespaceSummaryManager,
-                omMetadataManager, reconSCM, null);
+                omMetadataManager, reconSCM, null, path);
       }
       return bucketHandler.determineKeyPath(keyName)
           .create(reconNamespaceSummaryManager,
-              omMetadataManager, reconSCM, bucketHandler);
+          omMetadataManager, reconSCM, bucketHandler, path);
     }
   }
 
@@ -325,8 +327,8 @@ public abstract class EntityHandler {
     if (path.startsWith(OM_KEY_PREFIX)) {
       path = path.substring(1);
     }
-    names = path.split(OM_KEY_PREFIX);
-    return names.clone();
+    String [] names = path.split(OM_KEY_PREFIX);
+    return names;
   }
 
   private static String normalizePath(String path) {

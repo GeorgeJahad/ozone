@@ -38,9 +38,9 @@ public class KeyEntityHandler extends EntityHandler {
       ReconNamespaceSummaryManager reconNamespaceSummaryManager,
       ReconOMMetadataManager omMetadataManager,
       OzoneStorageContainerManager reconSCM,
-      BucketHandler bucketHandler) {
+      BucketHandler bucketHandler, String path) {
     super(reconNamespaceSummaryManager, omMetadataManager,
-            reconSCM, bucketHandler);
+          reconSCM, bucketHandler, path);
   }
 
   @Override
