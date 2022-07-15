@@ -45,9 +45,6 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
  */
 public class FSOBucketHandler extends BucketHandler {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(FSOBucketHandler.class);
-
   private final long volumeId;
   private final long bucketId;
   

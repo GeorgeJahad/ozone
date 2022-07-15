@@ -91,12 +91,7 @@ public class BucketEntityHandler extends EntityHandler {
               .getNSSummary(subdirObjectId);
 
       // get directory's name and generate the next-level subpath.
-      Path dirPath = Paths.get(subdirNSSummary.getDirName());
-      Path dirFileName = dirPath.getFileName();
-      String dirName = "";
-      if (dirFileName != null) {
-        dirName += dirFileName.toString();
-      }
+      String dirName = subdirNSSummary.getDirName();
       String subpath = BucketHandler.buildSubpath(getNormalizedPath(), dirName);
       // we need to reformat the subpath in the response in a
       // format with leading slash and without trailing slash

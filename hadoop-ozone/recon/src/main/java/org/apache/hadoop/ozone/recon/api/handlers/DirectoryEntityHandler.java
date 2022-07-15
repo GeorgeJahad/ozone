@@ -91,12 +91,7 @@ public class DirectoryEntityHandler extends EntityHandler {
     for (long subdirObjectId: subdirs) {
       NSSummary subdirNSSummary =
               getReconNamespaceSummaryManager().getNSSummary(subdirObjectId);
-      Path subdirPath = Paths.get(subdirNSSummary.getDirName());
-      Path subdirFileName = subdirPath.getFileName();
-      String subdirName = "";
-      if (subdirFileName != null) {
-        subdirName += subdirFileName.toString();
-      }
+      String subdirName = subdirNSSummary.getDirName();
       // build the path for subdirectory
       String subpath = BucketHandler
               .buildSubpath(getNormalizedPath(), subdirName);
