@@ -48,10 +48,8 @@ import java.io.IOException;
 @AdminOnly
 public class NSSummaryEndpoint {
 
-  @Inject
   private final ReconNamespaceSummaryManager reconNamespaceSummaryManager;
 
-  @Inject
   private final ReconOMMetadataManager omMetadataManager;
 
   private final OzoneStorageContainerManager reconSCM;
