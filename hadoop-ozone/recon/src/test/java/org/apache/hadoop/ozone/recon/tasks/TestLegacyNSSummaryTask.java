@@ -112,9 +112,9 @@ public final class TestLegacyNSSummaryTask {
   private static final long KEY_FOUR_SIZE = 2050L;
   private static final long KEY_FIVE_SIZE = 100L;
 
-  private static Set<Long> bucketOneAns = new HashSet<>();
-  private static Set<Long> bucketTwoAns = new HashSet<>();
-  private static Set<Long> dirOneAns = new HashSet<>();
+  private static final Set<Long> bucketOneAns = new HashSet<>();
+  private static final Set<Long> bucketTwoAns = new HashSet<>();
+  private static final Set<Long> dirOneAns = new HashSet<>();
 
   private TestLegacyNSSummaryTask() {
     throw new UnsupportedOperationException(

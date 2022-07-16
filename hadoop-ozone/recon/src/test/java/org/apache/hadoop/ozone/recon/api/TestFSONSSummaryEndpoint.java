@@ -105,10 +105,7 @@ public class TestFSONSSummaryEndpoint {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private ReconNamespaceSummaryManager reconNamespaceSummaryManager;
-  private OMMetadataManager omMetadataManager;
   private ReconOMMetadataManager reconOMMetadataManager;
-  private OzoneManagerServiceProviderImpl ozoneManagerServiceProvider;
   private NSSummaryEndpoint nsSummaryEndpoint;
 
   private static final String TEST_PATH_UTILITY =
@@ -333,10 +330,10 @@ public class TestFSONSSummaryEndpoint {
 
   @Before
   public void setUp() throws Exception {
-    omMetadataManager = initializeNewOmMetadataManager(
-            temporaryFolder.newFolder());
-    ozoneManagerServiceProvider =
-            getMockOzoneManagerServiceProviderWithFSO();
+    OMMetadataManager omMetadataManager = initializeNewOmMetadataManager(
+        temporaryFolder.newFolder());
+    OzoneManagerServiceProviderImpl ozoneManagerServiceProvider =
+        getMockOzoneManagerServiceProviderWithFSO();
     reconOMMetadataManager = getTestReconOmMetadataManager(omMetadataManager,
             temporaryFolder.newFolder());
 
@@ -352,8 +349,8 @@ public class TestFSONSSummaryEndpoint {
                             mock(StorageContainerServiceProviderImpl.class))
                     .addBinding(NSSummaryEndpoint.class)
                     .build();
-    reconNamespaceSummaryManager =
-            reconTestInjector.getInstance(ReconNamespaceSummaryManager.class);
+    ReconNamespaceSummaryManager reconNamespaceSummaryManager =
+        reconTestInjector.getInstance(ReconNamespaceSummaryManager.class);
     nsSummaryEndpoint = reconTestInjector.getInstance(NSSummaryEndpoint.class);
 
     // populate OM DB and reprocess into Recon RocksDB

@@ -29,8 +29,6 @@ import org.apache.hadoop.ozone.recon.api.types.EntityType;
 import org.apache.hadoop.ozone.recon.api.types.NSSummary;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.apache.hadoop.ozone.recon.spi.ReconNamespaceSummaryManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -126,17 +124,13 @@ public class FSOBucketHandler extends BucketHandler {
     TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
             iterator = keyTable.iterator();
 
-    StringBuilder builder = new StringBuilder();
-
-    builder.append(OM_KEY_PREFIX)
-        .append(volumeId)
-        .append(OM_KEY_PREFIX)
-        .append(bucketId)
-        .append(OM_KEY_PREFIX)
-        .append(parentId)
-        .append(OM_KEY_PREFIX);
-
-    String seekPrefix = builder.toString();
+    String seekPrefix = OM_KEY_PREFIX +
+        volumeId +
+        OM_KEY_PREFIX +
+        bucketId +
+        OM_KEY_PREFIX +
+        parentId +
+        OM_KEY_PREFIX;
     iterator.seek(seekPrefix);
     long totalDU = 0L;
     // handle direct keys
@@ -189,17 +183,13 @@ public class FSOBucketHandler extends BucketHandler {
     TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
             iterator = keyTable.iterator();
 
-    StringBuilder builder = new StringBuilder();
-
-    builder.append(OM_KEY_PREFIX)
-        .append(volumeId)
-        .append(OM_KEY_PREFIX)
-        .append(bucketId)
-        .append(OM_KEY_PREFIX)
-        .append(parentId)
-        .append(OM_KEY_PREFIX);
-
-    String seekPrefix = builder.toString();
+    String seekPrefix = OM_KEY_PREFIX +
+        volumeId +
+        OM_KEY_PREFIX +
+        bucketId +
+        OM_KEY_PREFIX +
+        parentId +
+        OM_KEY_PREFIX;
     iterator.seek(seekPrefix);
 
     long keyDataSizeWithReplica = 0L;
@@ -283,7 +273,6 @@ public class FSOBucketHandler extends BucketHandler {
     String ozoneKey =
         getOmMetadataManager().getOzonePathKey(volumeId, bucketId,
         parentObjectId, fileName);
-    OmKeyInfo keyInfo = getOmMetadataManager().getFileTable().getSkipCache(ozoneKey);
-    return keyInfo;
+    return getOmMetadataManager().getFileTable().getSkipCache(ozoneKey);
   }
 }
