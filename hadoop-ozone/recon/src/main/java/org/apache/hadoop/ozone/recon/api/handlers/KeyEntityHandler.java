@@ -60,8 +60,7 @@ public class KeyEntityHandler extends EntityHandler {
     duResponse.setPath(getNormalizedPath());
     // DU for key doesn't have subpaths
     duResponse.setCount(0);
-    String[] names = getNames();
-    OmKeyInfo keyInfo = getBucketHandler().getKeyInfo(names);
+    OmKeyInfo keyInfo = getBucketHandler().getKeyInfo(getNames());
 
     duResponse.setSize(keyInfo.getDataSize());
     if (withReplica) {
