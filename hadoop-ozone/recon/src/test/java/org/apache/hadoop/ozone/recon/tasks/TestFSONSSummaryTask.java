@@ -114,18 +114,16 @@ public final class TestFSONSSummaryTask {
   private static Set<Long> dirOneAns = new HashSet<>();
 
   private TestFSONSSummaryTask() {
-    throw new UnsupportedOperationException(
-        "This is a utility test class and cannot be instantiated");
   }
 
   @BeforeClass
   public static void setUp() throws Exception {
     omMetadataManager = initializeNewOmMetadataManager(
-        TEMPORARY_FOLDER.newFolder());
+            TEMPORARY_FOLDER.newFolder());
     ozoneManagerServiceProvider =
-        getMockOzoneManagerServiceProviderWithFSO();
+            getMockOzoneManagerServiceProviderWithFSO();
     reconOMMetadataManager = getTestReconOmMetadataManager(omMetadataManager,
-        TEMPORARY_FOLDER.newFolder());
+            TEMPORARY_FOLDER.newFolder());
 
     ReconTestInjector reconTestInjector =
         new ReconTestInjector.Builder(TEMPORARY_FOLDER)
@@ -135,10 +133,11 @@ public final class TestFSONSSummaryTask {
             .withContainerDB()
             .build();
     reconNamespaceSummaryManager =
-        reconTestInjector.getInstance(ReconNamespaceSummaryManager.class);
+            reconTestInjector.getInstance(ReconNamespaceSummaryManager.class);
+
 
     NSSummary nonExistentSummary =
-        reconNamespaceSummaryManager.getNSSummary(BUCKET_ONE_OBJECT_ID);
+            reconNamespaceSummaryManager.getNSSummary(BUCKET_ONE_OBJECT_ID);
     Assert.assertNull(nonExistentSummary);
 
     populateOMDB();
@@ -165,6 +164,8 @@ public final class TestFSONSSummaryTask {
           staleNSSummary);
       reconNamespaceSummaryManager.commitBatchOperation(rdbBatchOperation);
 
+      // Verify commit
+      Assert.assertNotNull(reconNamespaceSummaryManager.getNSSummary(-1L));
       fsoNSSummaryTask.reprocess(reconOMMetadataManager);
       Assert.assertNull(reconNamespaceSummaryManager.getNSSummary(-1L));
 
@@ -272,19 +273,12 @@ public final class TestFSONSSummaryTask {
     }
 
     private static OMUpdateEventBatch processEventBatch() throws IOException {
-      OMDBUpdateEvent keyEvent1;
-      OMDBUpdateEvent keyEvent2;
-      OMDBUpdateEvent keyEvent3;
-      OMDBUpdateEvent keyEvent4;
-      OMDBUpdateEvent keyEvent5;
-      OMDBUpdateEvent keyEvent6;
-      OMDBUpdateEvent keyEvent7;
       // Events for keyTable change:
       // put file5 under bucket 2
       String omPutKey = BUCKET_TWO_OBJECT_ID + OM_KEY_PREFIX + FILE_FIVE;
       OmKeyInfo omPutKeyInfo = buildOmKeyInfo(VOL, BUCKET_TWO, KEY_FIVE,
           FILE_FIVE, KEY_FIVE_OBJECT_ID, BUCKET_TWO_OBJECT_ID, KEY_FIVE_SIZE);
-      keyEvent1 = new OMDBUpdateEvent.
+      OMDBUpdateEvent keyEvent1 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmKeyInfo>()
           .setKey(omPutKey)
           .setValue(omPutKeyInfo)
@@ -298,7 +292,7 @@ public final class TestFSONSSummaryTask {
       OmKeyInfo omDeleteInfo = buildOmKeyInfo(
           VOL, BUCKET_ONE, KEY_ONE, FILE_ONE,
           KEY_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID);
-      keyEvent2 = new OMDBUpdateEvent.
+      OMDBUpdateEvent keyEvent2 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmKeyInfo>()
           .setKey(omDeleteKey)
           .setValue(omDeleteInfo)
@@ -315,7 +309,7 @@ public final class TestFSONSSummaryTask {
       OmKeyInfo omUpdateInfo = buildOmKeyInfo(
           VOL, BUCKET_TWO, KEY_TWO, FILE_TWO,
           KEY_TWO_OBJECT_ID, BUCKET_TWO_OBJECT_ID, KEY_TWO_UPDATE_SIZE);
-      keyEvent3 = new OMDBUpdateEvent.
+      OMDBUpdateEvent keyEvent3 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmKeyInfo>()
           .setKey(omUpdateKey)
           .setValue(omUpdateInfo)
@@ -330,7 +324,7 @@ public final class TestFSONSSummaryTask {
       String omDirPutKey1 = BUCKET_ONE_OBJECT_ID + OM_KEY_PREFIX + DIR_FOUR;
       OmDirectoryInfo omDirPutValue1 = buildOmDirInfo(DIR_FOUR,
           DIR_FOUR_OBJECT_ID, BUCKET_ONE_OBJECT_ID);
-      keyEvent4 = new OMDBUpdateEvent.
+      OMDBUpdateEvent keyEvent4 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmDirectoryInfo>()
           .setKey(omDirPutKey1)
           .setValue(omDirPutValue1)
@@ -342,7 +336,7 @@ public final class TestFSONSSummaryTask {
       String omDirPutKey2 = BUCKET_TWO_OBJECT_ID + OM_KEY_PREFIX + DIR_FIVE;
       OmDirectoryInfo omDirPutValue2 = buildOmDirInfo(DIR_FIVE,
           DIR_FIVE_OBJECT_ID, BUCKET_TWO_OBJECT_ID);
-      keyEvent5 = new OMDBUpdateEvent.
+      OMDBUpdateEvent keyEvent5 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmDirectoryInfo>()
           .setKey(omDirPutKey2)
           .setValue(omDirPutValue2)
@@ -354,7 +348,7 @@ public final class TestFSONSSummaryTask {
       String omDirDeleteKey = DIR_ONE_OBJECT_ID + OM_KEY_PREFIX + DIR_THREE;
       OmDirectoryInfo omDirDeleteValue = buildOmDirInfo(DIR_THREE,
           DIR_THREE_OBJECT_ID, DIR_ONE_OBJECT_ID);
-      keyEvent6 = new OMDBUpdateEvent.
+      OMDBUpdateEvent keyEvent6 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmDirectoryInfo>()
           .setKey(omDirDeleteKey)
           .setValue(omDirDeleteValue)
@@ -368,7 +362,7 @@ public final class TestFSONSSummaryTask {
           DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID);
       OmDirectoryInfo omDirUpdateValue = buildOmDirInfo(DIR_ONE_RENAME,
           DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID);
-      keyEvent7 = new OMDBUpdateEvent.
+      OMDBUpdateEvent keyEvent7 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmDirectoryInfo>()
           .setKey(omDirUpdateKey)
           .setValue(omDirUpdateValue)
@@ -377,8 +371,8 @@ public final class TestFSONSSummaryTask {
           .setTable(omMetadataManager.getDirectoryTable().getName())
           .build();
 
-      OMUpdateEventBatch omUpdateEventBatch = new OMUpdateEventBatch(
-          new ArrayList<OMDBUpdateEvent>() {{
+    OMUpdateEventBatch omUpdateEventBatch = new OMUpdateEventBatch(
+            new ArrayList<OMDBUpdateEvent>() {{
               add(keyEvent1);
               add(keyEvent2);
               add(keyEvent3);
@@ -509,26 +503,26 @@ public final class TestFSONSSummaryTask {
                                           long objectID,
                                           long parentObjectId) {
     return new OmKeyInfo.Builder()
-        .setBucketName(bucket)
-        .setVolumeName(volume)
-        .setKeyName(key)
-        .setFileName(fileName)
-        .setReplicationConfig(
-            StandaloneReplicationConfig.getInstance(
-                HddsProtos.ReplicationFactor.ONE))
-        .setObjectID(objectID)
-        .setParentObjectID(parentObjectId)
-        .build();
+            .setBucketName(bucket)
+            .setVolumeName(volume)
+            .setKeyName(key)
+            .setFileName(fileName)
+            .setReplicationConfig(
+                    StandaloneReplicationConfig.getInstance(
+                            HddsProtos.ReplicationFactor.ONE))
+            .setObjectID(objectID)
+            .setParentObjectID(parentObjectId)
+            .build();
   }
 
   private static OmDirectoryInfo buildOmDirInfo(String dirName,
                                                 long objectId,
                                                 long parentObjectId) {
     return new OmDirectoryInfo.Builder()
-        .setName(dirName)
-        .setObjectID(objectId)
-        .setParentObjectID(parentObjectId)
-        .build();
+            .setName(dirName)
+            .setObjectID(objectId)
+            .setParentObjectID(parentObjectId)
+            .build();
   }
 
   /**
@@ -591,14 +585,14 @@ public final class TestFSONSSummaryTask {
         KEY_FOUR_SIZE,
         getBucketLayout());
     writeDirToOm(reconOMMetadataManager, DIR_ONE_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
-        VOL_OBJECT_ID, DIR_ONE);
+            BUCKET_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
+            VOL_OBJECT_ID, DIR_ONE);
     writeDirToOm(reconOMMetadataManager, DIR_TWO_OBJECT_ID,
-        DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
-        VOL_OBJECT_ID, DIR_TWO);
+            DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
+            VOL_OBJECT_ID, DIR_TWO);
     writeDirToOm(reconOMMetadataManager, DIR_THREE_OBJECT_ID,
-        DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
-        VOL_OBJECT_ID, DIR_THREE);
+            DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
+            VOL_OBJECT_ID, DIR_THREE);
   }
 
   private static BucketLayout getBucketLayout() {
