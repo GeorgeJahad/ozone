@@ -391,7 +391,7 @@ public class TestFSONSSummaryEndpoint {
     // Test volume basics
     Response volResponse = nsSummaryEndpoint.getBasicInfo(VOL_PATH);
     NamespaceSummaryResponse volResponseObj =
-        (NamespaceSummaryResponse) volResponse.getEntity();
+            (NamespaceSummaryResponse) volResponse.getEntity();
     Assert.assertEquals(EntityType.VOLUME, volResponseObj.getEntityType());
     Assert.assertEquals(2, volResponseObj.getNumBucket());
     Assert.assertEquals(4, volResponseObj.getNumTotalDir());
@@ -402,9 +402,9 @@ public class TestFSONSSummaryEndpoint {
   public void testGetBasicInfoBucketOne() throws Exception {
     // Test bucket 1's basics
     Response bucketOneResponse =
-        nsSummaryEndpoint.getBasicInfo(BUCKET_ONE_PATH);
+            nsSummaryEndpoint.getBasicInfo(BUCKET_ONE_PATH);
     NamespaceSummaryResponse bucketOneObj =
-        (NamespaceSummaryResponse) bucketOneResponse.getEntity();
+            (NamespaceSummaryResponse) bucketOneResponse.getEntity();
     Assert.assertEquals(EntityType.BUCKET, bucketOneObj.getEntityType());
     Assert.assertEquals(4, bucketOneObj.getNumTotalDir());
     Assert.assertEquals(4, bucketOneObj.getNumTotalKey());
@@ -414,9 +414,9 @@ public class TestFSONSSummaryEndpoint {
   public void testGetBasicInfoBucketTwo() throws Exception {
     // Test bucket 2's basics
     Response bucketTwoResponse =
-        nsSummaryEndpoint.getBasicInfo(BUCKET_TWO_PATH);
+            nsSummaryEndpoint.getBasicInfo(BUCKET_TWO_PATH);
     NamespaceSummaryResponse bucketTwoObj =
-        (NamespaceSummaryResponse) bucketTwoResponse.getEntity();
+            (NamespaceSummaryResponse) bucketTwoResponse.getEntity();
     Assert.assertEquals(EntityType.BUCKET, bucketTwoObj.getEntityType());
     Assert.assertEquals(0, bucketTwoObj.getNumTotalDir());
     Assert.assertEquals(2, bucketTwoObj.getNumTotalKey());
@@ -438,7 +438,7 @@ public class TestFSONSSummaryEndpoint {
     // Test invalid path
     Response invalidResponse = nsSummaryEndpoint.getBasicInfo(INVALID_PATH);
     NamespaceSummaryResponse invalidObj =
-        (NamespaceSummaryResponse) invalidResponse.getEntity();
+            (NamespaceSummaryResponse) invalidResponse.getEntity();
     Assert.assertEquals(ResponseStatus.PATH_NOT_FOUND,
         invalidObj.getStatus());
   }
@@ -448,7 +448,7 @@ public class TestFSONSSummaryEndpoint {
     // Test key
     Response keyResponse = nsSummaryEndpoint.getBasicInfo(KEY_PATH);
     NamespaceSummaryResponse keyResObj =
-        (NamespaceSummaryResponse) keyResponse.getEntity();
+            (NamespaceSummaryResponse) keyResponse.getEntity();
     Assert.assertEquals(EntityType.KEY, keyResObj.getEntityType());
   }
 
@@ -608,15 +608,13 @@ public class TestFSONSSummaryEndpoint {
 
     // volume level quota usage
     Response volResponse = nsSummaryEndpoint.getQuotaUsage(VOL_PATH);
-    QuotaUsageResponse quVolRes =
-        (QuotaUsageResponse) volResponse.getEntity();
+    QuotaUsageResponse quVolRes = (QuotaUsageResponse) volResponse.getEntity();
     Assert.assertEquals(VOL_QUOTA, quVolRes.getQuota());
     Assert.assertEquals(VOL_DATA_SIZE, quVolRes.getQuotaUsed());
 
     // bucket level quota usage
     Response bucketRes = nsSummaryEndpoint.getQuotaUsage(BUCKET_ONE_PATH);
-    QuotaUsageResponse quBucketRes =
-        (QuotaUsageResponse) bucketRes.getEntity();
+    QuotaUsageResponse quBucketRes = (QuotaUsageResponse) bucketRes.getEntity();
     Assert.assertEquals(BUCKET_ONE_QUOTA, quBucketRes.getQuota());
     Assert.assertEquals(BUCKET_ONE_DATA_SIZE, quBucketRes.getQuotaUsed());
 
@@ -679,22 +677,22 @@ public class TestFSONSSummaryEndpoint {
    * @throws Exception
    */
   private void populateOMDB() throws Exception {
-    // write all 4 directories
+    // write all directories
     writeDirToOm(reconOMMetadataManager, DIR_ONE_OBJECT_ID,
-          BUCKET_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
-          VOL_OBJECT_ID, DIR_ONE);
+            BUCKET_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
+            VOL_OBJECT_ID, DIR_ONE);
     writeDirToOm(reconOMMetadataManager, DIR_TWO_OBJECT_ID,
-          DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
-          VOL_OBJECT_ID, DIR_TWO);
+            DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
+            VOL_OBJECT_ID, DIR_TWO);
     writeDirToOm(reconOMMetadataManager, DIR_THREE_OBJECT_ID,
-          DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
-          VOL_OBJECT_ID, DIR_THREE);
+            DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
+            VOL_OBJECT_ID, DIR_THREE);
     writeDirToOm(reconOMMetadataManager, DIR_FOUR_OBJECT_ID,
-          DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
-          VOL_OBJECT_ID, DIR_FOUR);
+            DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID,
+            VOL_OBJECT_ID, DIR_FOUR);
     writeDirToOm(reconOMMetadataManager, DIR_FIVE_OBJECT_ID,
-          BUCKET_THREE_OBJECT_ID, BUCKET_THREE_OBJECT_ID,
-          VOL_TWO_OBJECT_ID, DIR_FIVE);
+            BUCKET_THREE_OBJECT_ID, BUCKET_THREE_OBJECT_ID,
+            VOL_TWO_OBJECT_ID, DIR_FIVE);
 
     // write all keys
     writeKeyToOm(reconOMMetadataManager,
@@ -816,13 +814,13 @@ public class TestFSONSSummaryEndpoint {
    * @throws IOException ioEx
    */
   private static OMMetadataManager initializeNewOmMetadataManager(
-      File omDbDir)
-      throws IOException {
+          File omDbDir)
+          throws IOException {
     OzoneConfiguration omConfiguration = new OzoneConfiguration();
     omConfiguration.set(OZONE_OM_DB_DIRS,
-        omDbDir.getAbsolutePath());
+            omDbDir.getAbsolutePath());
     OMMetadataManager omMetadataManager = new OmMetadataManagerImpl(
-        omConfiguration);
+            omConfiguration);
 
     String volumeKey = omMetadataManager.getVolumeKey(VOL);
     OmVolumeArgs args =
@@ -880,7 +878,7 @@ public class TestFSONSSummaryEndpoint {
         .build();
 
     String bucketKey = omMetadataManager.getBucketKey(
-        bucketInfo.getVolumeName(), bucketInfo.getBucketName());
+            bucketInfo.getVolumeName(), bucketInfo.getBucketName());
     String bucketKey2 = omMetadataManager.getBucketKey(
         bucketInfo2.getVolumeName(), bucketInfo2.getBucketName());
     String bucketKey3 = omMetadataManager.getBucketKey(
@@ -903,23 +901,23 @@ public class TestFSONSSummaryEndpoint {
     BlockID block3 = new BlockID(CONTAINER_THREE_ID, 0L);
 
     OmKeyLocationInfo location1 = new OmKeyLocationInfo.Builder()
-        .setBlockID(block1)
-        .setLength(BLOCK_ONE_LENGTH)
-        .build();
+            .setBlockID(block1)
+            .setLength(BLOCK_ONE_LENGTH)
+            .build();
     OmKeyLocationInfo location2 = new OmKeyLocationInfo.Builder()
-        .setBlockID(block2)
-        .setLength(BLOCK_TWO_LENGTH)
-        .build();
+            .setBlockID(block2)
+            .setLength(BLOCK_TWO_LENGTH)
+            .build();
     OmKeyLocationInfo location3 = new OmKeyLocationInfo.Builder()
-        .setBlockID(block3)
-        .setLength(BLOCK_THREE_LENGTH)
-        .build();
+            .setBlockID(block3)
+            .setLength(BLOCK_THREE_LENGTH)
+            .build();
     locationInfoList.add(location1);
     locationInfoList.add(location2);
     locationInfoList.add(location3);
 
     OmKeyLocationInfoGroup locationInfoGroup =
-        new OmKeyLocationInfoGroup(0L, locationInfoList);
+            new OmKeyLocationInfoGroup(0L, locationInfoList);
 
     // add the multi-block key to Recon's OM
     writeKeyToOm(reconOMMetadataManager,
@@ -1124,24 +1122,24 @@ public class TestFSONSSummaryEndpoint {
    * @return a set of container replica for testing
    */
   private static Set<ContainerReplica> generateMockContainerReplicas(
-      int replicationFactor, ContainerID containerID) {
+          int replicationFactor, ContainerID containerID) {
     Set<ContainerReplica> result = new HashSet<>();
     for (int i = 0; i < replicationFactor; ++i) {
       DatanodeDetails randomDatanode = randomDatanodeDetails();
       ContainerReplica replica = new ContainerReplica.ContainerReplicaBuilder()
-          .setContainerID(containerID)
-          .setContainerState(State.OPEN)
-          .setDatanodeDetails(randomDatanode)
-          .build();
+              .setContainerID(containerID)
+              .setContainerState(State.OPEN)
+              .setDatanodeDetails(randomDatanode)
+              .build();
       result.add(replica);
     }
     return result;
   }
 
   private static ReconStorageContainerManagerFacade getMockReconSCM()
-      throws ContainerNotFoundException {
+          throws ContainerNotFoundException {
     ReconStorageContainerManagerFacade reconSCM =
-        mock(ReconStorageContainerManagerFacade.class);
+            mock(ReconStorageContainerManagerFacade.class);
     ContainerManager containerManager = mock(ContainerManager.class);
 
     // Container 1 is 3-way replicated
@@ -1149,14 +1147,14 @@ public class TestFSONSSummaryEndpoint {
     Set<ContainerReplica> containerReplicas1 = generateMockContainerReplicas(
         CONTAINER_ONE_REPLICA_COUNT, containerID1);
     when(containerManager.getContainerReplicas(containerID1))
-        .thenReturn(containerReplicas1);
+            .thenReturn(containerReplicas1);
 
     // Container 2 is under replicated with 2 replica
     ContainerID containerID2 = new ContainerID(CONTAINER_TWO_ID);
     Set<ContainerReplica> containerReplicas2 = generateMockContainerReplicas(
         CONTAINER_TWO_REPLICA_COUNT, containerID2);
     when(containerManager.getContainerReplicas(containerID2))
-        .thenReturn(containerReplicas2);
+            .thenReturn(containerReplicas2);
 
     // Container 3 is over replicated with 4 replica
     ContainerID containerID3 = new ContainerID(CONTAINER_THREE_ID);
