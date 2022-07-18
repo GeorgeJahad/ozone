@@ -170,9 +170,9 @@ public abstract class BucketHandler {
    * @throws IOException
    */
   public long getVolumeObjectId(String[] names) throws IOException {
-    String bucketKey = omMetadataManager.getVolumeKey(names[0]);
+    String volumeKey = omMetadataManager.getVolumeKey(names[0]);
     OmVolumeArgs volumeInfo = omMetadataManager
-            .getVolumeTable().getSkipCache(bucketKey);
+            .getVolumeTable().getSkipCache(volumeKey);
     return volumeInfo.getObjectID();
   }
 
@@ -211,8 +211,9 @@ public abstract class BucketHandler {
       OzoneStorageContainerManager reconSCM,
       String volumeName, String bucketName) throws IOException {
 
-    OmBucketInfo bucketInfo = OzoneManagerUtils
-          .getOmBucketInfo(omMetadataManager, volumeName, bucketName);
+    String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
+    OmBucketInfo bucketInfo = omMetadataManager
+        .getBucketTable().getSkipCache(bucketKey);
 
     if (bucketInfo == null) {
       return null;
