@@ -29,8 +29,8 @@ ${SUMMARY_URL}              ${ADMIN_NAMESPACE_URL}/summary
 ${DISK_USAGE_URL}           ${ADMIN_NAMESPACE_URL}/du
 ${QUOTA_USAGE_URL}          ${ADMIN_NAMESPACE_URL}/quota
 ${FILE_SIZE_DIST_URL}       ${ADMIN_NAMESPACE_URL}/dist
-${VOLUME}                   
-${BUCKET}                   
+${VOLUME}
+${BUCKET}
 
 *** Keywords ***
 Create volume
@@ -76,10 +76,24 @@ Check http return code
                             Should contain      ${result}       200
                             END
 
+Check Access
+    [Arguments]         ${url}
+    Execute    kdestroy
+    Check http return code      ${url}       401
+
+    kinit as non admin
+    Check http return code      ${url}       403
+
+    kinit as ozone admin
+    Check http return code      ${url}       200
+
+    kinit as recon admin
+    Check http return code      ${url}       200
+
 Test Summary                            
     [Arguments]         ${url}        ${expected}
            ${result} =         Execute                              curl --negotiate -u : -LSs ${url}
-                               Should contain      ${result}       OK
+                               Should contain      ${result}       \"status\":\"OK\"
                                Should contain      ${result}       ${expected}
 
 *** Test Cases ***
@@ -95,59 +109,18 @@ Check keys creation
     Create keys
 
 Check Summary api access
-    Execute    kdestroy
-    Check http return code      ${SUMMARY_URL}?path=/       401
-
-    kinit as non admin
-    Check http return code      ${SUMMARY_URL}?path=/       403
-
-    kinit as ozone admin
-    Check http return code      ${SUMMARY_URL}?path=/       200
-
-    kinit as recon admin
-    Check http return code      ${SUMMARY_URL}?path=/       200
+    Check access      ${SUMMARY_URL}?path=/
 
 Check Disk Usage api access
-    Execute    kdestroy
-    Check http return code      ${DISK_USAGE_URL}?path=/       401
-
-    kinit as non admin
-    Check http return code      ${DISK_USAGE_URL}?path=/       403
-
-    kinit as ozone admin
-    Check http return code      ${DISK_USAGE_URL}?path=/       200
-
-    kinit as recon admin
-    Check http return code      ${DISK_USAGE_URL}?path=/       200
+    Check access       ${DISK_USAGE_URL}?path=/
 
 Check Quota Usage api access
-    Execute    kdestroy
-    Check http return code      ${QUOTA_USAGE_URL}?path=/       401
-
-    kinit as non admin
-    Check http return code      ${QUOTA_USAGE_URL}?path=/       403
-
-    kinit as ozone admin
-    Check http return code      ${QUOTA_USAGE_URL}?path=/       200
-
-    kinit as recon admin
-    Check http return code      ${QUOTA_USAGE_URL}?path=/       200
+    Check access       ${QUOTA_USAGE_URL}?path=/
 
 Check File Size Distribution api access
-    Execute    kdestroy
-    Check http return code      ${FILE_SIZE_DIST_URL}?path=/       401
+    Check access       ${FILE_SIZE_DIST_URL}?path=/
 
-    kinit as non admin
-    Check http return code      ${FILE_SIZE_DIST_URL}?path=/       403
-
-    kinit as ozone admin
-    Check http return code      ${FILE_SIZE_DIST_URL}?path=/       200
-
-    kinit as recon admin
-    Check http return code      ${FILE_SIZE_DIST_URL}?path=/       200
-
-
-Check Recon Namespace Summary Root gbj
+Check Recon Namespace Summary Root
     Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${SUMMARY_URL}?path=/       ROOT
 
 Check Recon Namespace Summary Volume
@@ -163,47 +136,13 @@ Check Recon Namespace Summary Directory
     Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${SUMMARY_URL}?path=/${VOLUME}/${BUCKET}/dir1/dir2   DIRECTORY
 
 Check Recon Namespace Disk Usage
-    FOR    ${index}    IN RANGE    9999999
-           ${result} =         Execute                              curl --negotiate -u : -LSs ${DISK_USAGE_URL}?path=/${VOLUME}/${BUCKET}&files=true&replica=true
-                ${success} =    Run Keyword And Return Status       Should contain      ${result}       OK
-                    IF      ${success}
-                            Should contain      ${result}       \"sizeWithReplica\"
-                            Should contain      ${result}       \"subPathCount\"
-                            Should contain      ${result}       \"subPaths\"
-                            Exit For Loop
-                    END
-    END
-    [Timeout]           2 minute
+    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${DISK_USAGE_URL}?path=/${VOLUME}/${BUCKET}&files=true&replica=true     \"sizeWithReplica\"
 
 Check Recon Namespace Volume Quota Usage
-    FOR    ${index}    IN RANGE    9999999
-           ${result} =         Execute                              curl --negotiate -u : -LSs ${QUOTA_USAGE_URL}?path=/${VOLUME}
-                ${success} =    Run Keyword And Return Status       Should contain      ${result}       OK
-                    IF      ${success}
-                            Should contain      ${result}       \"used\"
-                            Exit For Loop
-                    END
-    END
-    [Timeout]           2 minute
+    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${QUOTA_USAGE_URL}?path=/${VOLUME}             \"used\"
 
 Check Recon Namespace Bucket Quota Usage
-    FOR    ${index}    IN RANGE    9999999
-           ${result} =         Execute                              curl --negotiate -u : -LSs ${QUOTA_USAGE_URL}?path=/${VOLUME}/${BUCKET}
-                ${success} =    Run Keyword And Return Status       Should contain      ${result}       OK
-                    IF      ${success}
-                            Should contain      ${result}       \"used\"
-                            Exit For Loop
-                    END
-    END
-    [Timeout]           2 minute
+    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${QUOTA_USAGE_URL}?path=/${VOLUME}/${BUCKET}   \"used\"
 
 Check Recon Namespace File Size Distribution Root
-    FOR    ${index}    IN RANGE    9999999
-           ${result} =         Execute                              curl --negotiate -u : -LSs ${FILE_SIZE_DIST_URL}?path=/
-                ${success} =    Run Keyword And Return Status       Should contain      ${result}       OK
-                    IF      ${success}
-                            Should contain      ${result}       \"dist\"
-                            Exit For Loop
-                    END
-    END
-    [Timeout]           2 minute
+    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${FILE_SIZE_DIST_URL}?path=/                   \"dist\"
