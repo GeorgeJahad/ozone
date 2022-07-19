@@ -50,13 +50,6 @@ Create keys
                     Should not contain  ${result}       Failed
     ${result} =     Execute             ozone sh key put /${VOLUME}/${BUCKET}/dir1/dir2/file2 HISTORY.md
                     Should not contain  ${result}       Failed
-    ${result} =     Execute             ozone sh key put /${VOLUME}/${BUCKET}/dir1/dir3/file3 CONTRIBUTING.md
-                    Should not contain  ${result}       Failed
-    ${result} =     Execute             ozone sh key put /${VOLUME}/${BUCKET}/dir1/dir4/file4 NOTICE.txt
-                    Should not contain  ${result}       Failed
-    ${result} =     Execute             ozone sh key put /${VOLUME}/${BUCKET}/dir1/dir4/file5 LICENSE.txt
-                    Should not contain  ${result}       Failed
-
 Kinit as non admin
     Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit test user     scm     scm.keytab
 
@@ -74,7 +67,7 @@ Check http return code
                         ELSE
                             # All access should succeed without security.
                             Should contain      ${result}       200
-                            END
+                        END
 
 Check Access
     [Arguments]         ${url}
