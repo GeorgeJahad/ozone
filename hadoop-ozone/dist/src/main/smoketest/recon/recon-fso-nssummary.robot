@@ -84,19 +84,6 @@ Check bucket creation
 Check keys creation
     Create keys
 
-Check if Recon Web UI is up
-    Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit HTTP user
-    ${result} =         Execute                             curl --negotiate -u : -LSs ${ENDPOINT_URL}
-                        Should contain      ${result}       Ozone Recon
-
-Check Recon web UI access
-    # Unauthenticated user cannot access web UI, but any authenticated user can.
-    Execute    kdestroy
-    Check http return code      ${ENDPOINT_URL}     401
-
-    kinit as non admin
-    Check http return code      ${ENDPOINT_URL}     200
-
 Check Summary api access
     Execute    kdestroy
     Check http return code      ${SUMMARY_URL}?path=/       401

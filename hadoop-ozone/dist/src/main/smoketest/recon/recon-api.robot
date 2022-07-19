@@ -84,6 +84,19 @@ Check if Recon picks up DN heartbeats
     ${result} =         Execute                             curl --negotiate -u : -LSs ${API_ENDPOINT_URL}/containers/1/replicaHistory
                         Should contain      ${result}       \"containerId\":1
 
+Check if Recon Web UI is up
+    Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit HTTP user
+    ${result} =         Execute                             curl --negotiate -u : -LSs ${ENDPOINT_URL}
+                        Should contain      ${result}       Ozone Recon
+
+Check web UI access
+    # Unauthenticated user cannot access web UI, but any authenticated user can.
+    Execute    kdestroy
+    Check http return code      ${ENDPOINT_URL}     401
+
+    kinit as non admin
+    Check http return code      ${ENDPOINT_URL}     200
+
 Check admin only api access
     Execute    kdestroy
     Check http return code      ${ADMIN_API_ENDPOINT_URL}       401
