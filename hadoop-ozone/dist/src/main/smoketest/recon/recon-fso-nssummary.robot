@@ -29,28 +29,32 @@ ${SUMMARY_URL}              ${ADMIN_NAMESPACE_URL}/summary
 ${DISK_USAGE_URL}           ${ADMIN_NAMESPACE_URL}/du
 ${QUOTA_USAGE_URL}          ${ADMIN_NAMESPACE_URL}/quota
 ${FILE_SIZE_DIST_URL}       ${ADMIN_NAMESPACE_URL}/dist
-${volume}                   volume1
-${bucket}                   bucket1
+${VOLUME}                   
+${BUCKET}                   
 
 *** Keywords ***
 Create volume
-    ${result} =     Execute             ozone sh volume create /${volume}
+    ${random} =     Generate Random String  5  [LOWER]
+                    Set Suite Variable     ${VOLUME}    vol-${random}
+    ${result} =     Execute             ozone sh volume create /${VOLUME}
                     Should not contain  ${result}       Failed
 
 Create bucket
-    ${result} =     Execute             ozone sh bucket create -l FILE_SYSTEM_OPTIMIZED /${volume}/${bucket}
+    ${random} =     Generate Random String  5  [LOWER]
+                    Set Suite Variable     ${BUCKET}    buc-${random}
+    ${result} =     Execute             ozone sh bucket create -l FILE_SYSTEM_OPTIMIZED /${VOLUME}/${BUCKET}
                     Should not contain  ${result}       Failed
 
 Create keys
-    ${result} =     Execute             ozone sh key put /${volume}/${bucket}/file1 README.md
+    ${result} =     Execute             ozone sh key put /${VOLUME}/${BUCKET}/file1 README.md
                     Should not contain  ${result}       Failed
-    ${result} =     Execute             ozone sh key put /${volume}/${bucket}/dir1/dir2/file2 HISTORY.md
+    ${result} =     Execute             ozone sh key put /${VOLUME}/${BUCKET}/dir1/dir2/file2 HISTORY.md
                     Should not contain  ${result}       Failed
-    ${result} =     Execute             ozone sh key put /${volume}/${bucket}/dir1/dir3/file3 CONTRIBUTING.md
+    ${result} =     Execute             ozone sh key put /${VOLUME}/${BUCKET}/dir1/dir3/file3 CONTRIBUTING.md
                     Should not contain  ${result}       Failed
-    ${result} =     Execute             ozone sh key put /${volume}/${bucket}/dir1/dir4/file4 NOTICE.txt
+    ${result} =     Execute             ozone sh key put /${VOLUME}/${BUCKET}/dir1/dir4/file4 NOTICE.txt
                     Should not contain  ${result}       Failed
-    ${result} =     Execute             ozone sh key put /${volume}/${bucket}/dir1/dir4/file5 LICENSE.txt
+    ${result} =     Execute             ozone sh key put /${VOLUME}/${BUCKET}/dir1/dir4/file5 LICENSE.txt
                     Should not contain  ${result}       Failed
 
 Kinit as non admin
@@ -70,7 +74,13 @@ Check http return code
                         ELSE
                             # All access should succeed without security.
                             Should contain      ${result}       200
-                        END
+                            END
+
+Test Summary                            
+    [Arguments]         ${url}        ${expected}
+           ${result} =         Execute                              curl --negotiate -u : -LSs ${url}
+                               Should contain      ${result}       OK
+                               Should contain      ${result}       ${expected}
 
 *** Test Cases ***
 
@@ -137,64 +147,24 @@ Check File Size Distribution api access
     Check http return code      ${FILE_SIZE_DIST_URL}?path=/       200
 
 
-Check Recon Namespace Summary Root
-    FOR    ${index}    IN RANGE    9999999
-           ${result} =         Execute                              curl --negotiate -u : -LSs ${SUMMARY_URL}?path=/
-                ${success} =    Run Keyword And Return Status       Should contain      ${result}       OK
-                    IF      ${success}
-                            Should contain      ${result}       ROOT
-                            Exit For Loop
-                    END
-    END
-    [Timeout]           2 minute
+Check Recon Namespace Summary Root gbj
+    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${SUMMARY_URL}?path=/       ROOT
 
 Check Recon Namespace Summary Volume
-    FOR    ${index}    IN RANGE    9999999
-           ${result} =         Execute                              curl --negotiate -u : -LSs ${SUMMARY_URL}?path=/${volume}
-                ${success} =    Run Keyword And Return Status       Should contain      ${result}       OK
-                    IF      ${success}
-                            Should contain      ${result}       VOLUME
-                            Exit For Loop
-                    END
-    END
-    [Timeout]           2 minute
+    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${SUMMARY_URL}?path=/${VOLUME}   VOLUME
 
 Check Recon Namespace Summary Bucket
-    FOR    ${index}    IN RANGE    9999999
-           ${result} =         Execute                              curl --negotiate -u : -LSs ${SUMMARY_URL}?path=/${volume}/${bucket}
-                ${success} =    Run Keyword And Return Status       Should contain      ${result}       OK
-                    IF      ${success}
-                            Should contain      ${result}       BUCKET
-                            Exit For Loop
-                    END
-    END
-    [Timeout]           2 minute
+    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${SUMMARY_URL}?path=/${VOLUME}/${BUCKET}    BUCKET
 
 Check Recon Namespace Summary Key
-    FOR    ${index}    IN RANGE    9999999
-           ${result} =         Execute                              curl --negotiate -u : -LSs ${SUMMARY_URL}?path=/${volume}/${bucket}/file1
-                ${success} =    Run Keyword And Return Status       Should contain      ${result}       OK
-                    IF      ${success}
-                            Should contain      ${result}       KEY
-                            Exit For Loop
-                    END
-    END
-    [Timeout]           2 minute
+    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${SUMMARY_URL}?path=/${VOLUME}/${BUCKET}/file1   KEY
 
 Check Recon Namespace Summary Directory
-    FOR    ${index}    IN RANGE    9999999
-           ${result} =         Execute                              curl --negotiate -u : -LSs ${SUMMARY_URL}?path=/${volume}/${bucket}/dir1/dir2
-                ${success} =    Run Keyword And Return Status       Should contain      ${result}       OK
-                    IF      ${success}
-                            Should contain      ${result}       DIRECTORY
-                            Exit For Loop
-                    END
-    END
-    [Timeout]           2 minute
+    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${SUMMARY_URL}?path=/${VOLUME}/${BUCKET}/dir1/dir2   DIRECTORY
 
 Check Recon Namespace Disk Usage
     FOR    ${index}    IN RANGE    9999999
-           ${result} =         Execute                              curl --negotiate -u : -LSs ${DISK_USAGE_URL}?path=/${volume}/${bucket}&files=true&replica=true
+           ${result} =         Execute                              curl --negotiate -u : -LSs ${DISK_USAGE_URL}?path=/${VOLUME}/${BUCKET}&files=true&replica=true
                 ${success} =    Run Keyword And Return Status       Should contain      ${result}       OK
                     IF      ${success}
                             Should contain      ${result}       \"sizeWithReplica\"
@@ -207,7 +177,7 @@ Check Recon Namespace Disk Usage
 
 Check Recon Namespace Volume Quota Usage
     FOR    ${index}    IN RANGE    9999999
-           ${result} =         Execute                              curl --negotiate -u : -LSs ${QUOTA_USAGE_URL}?path=/${volume}
+           ${result} =         Execute                              curl --negotiate -u : -LSs ${QUOTA_USAGE_URL}?path=/${VOLUME}
                 ${success} =    Run Keyword And Return Status       Should contain      ${result}       OK
                     IF      ${success}
                             Should contain      ${result}       \"used\"
@@ -218,7 +188,7 @@ Check Recon Namespace Volume Quota Usage
 
 Check Recon Namespace Bucket Quota Usage
     FOR    ${index}    IN RANGE    9999999
-           ${result} =         Execute                              curl --negotiate -u : -LSs ${QUOTA_USAGE_URL}?path=/${volume}/${bucket}
+           ${result} =         Execute                              curl --negotiate -u : -LSs ${QUOTA_USAGE_URL}?path=/${VOLUME}/${BUCKET}
                 ${success} =    Run Keyword And Return Status       Should contain      ${result}       OK
                     IF      ${success}
                             Should contain      ${result}       \"used\"
