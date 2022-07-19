@@ -86,6 +86,7 @@ Check Access
 Test Summary                            
     [Arguments]         ${url}        ${expected}
            ${result} =         Execute                              curl --negotiate -u : -LSs ${url}
+                               Log     ${result}   console=yes
                                Should contain      ${result}       \"status\":\"OK\"
                                Should contain      ${result}       ${expected}
 
