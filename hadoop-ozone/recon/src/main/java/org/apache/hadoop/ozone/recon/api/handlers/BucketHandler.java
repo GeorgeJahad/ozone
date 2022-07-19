@@ -195,14 +195,8 @@ public abstract class BucketHandler {
                 OzoneStorageContainerManager reconSCM,
                 OmBucketInfo bucketInfo) throws IOException {
 
-    if (bucketInfo.getBucketLayout()
-            .equals(BucketLayout.FILE_SYSTEM_OPTIMIZED)) {
-      return new FSOBucketHandler(reconNamespaceSummaryManager,
+    return new FSOBucketHandler(reconNamespaceSummaryManager,
               omMetadataManager, reconSCM, bucketInfo);
-    } else {
-      return new LegacyBucketHandler(reconNamespaceSummaryManager,
-              omMetadataManager, reconSCM, bucketInfo);
-    }
   }
 
   public static BucketHandler getBucketHandler(
