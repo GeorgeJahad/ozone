@@ -479,8 +479,14 @@ public class NSSummaryEndpoint {
     duResponse.setPath(getNormalizedPath());
     // DU for key doesn't have subpaths
     duResponse.setCount(0);
-    OmKeyInfo keyInfo = getBucketHandler().getKeyInfo(getNames());
-
+    // The object ID for the directory that the key is directly in
+    long parentObjectId = getDirObjectId(names,
+        names.length - 1);
+    String fileName = names[names.length - 1];
+    String ozoneKey =
+        getOmMetadataManager().getOzonePathKey(volumeId, bucketId,
+        parentObjectId, fileName);
+    return getOmMetadataManager().getFileTable().getSkipCache(ozoneKey);
     duResponse.setSize(keyInfo.getDataSize());
     if (withReplica) {
       long keySizeWithReplica = getBucketHandler()
@@ -488,7 +494,6 @@ public class NSSummaryEndpoint {
       duResponse.setSizeWithReplica(keySizeWithReplica);
     }
     return duResponse;
-  }
     case UNKNOWN:
   public DUResponse getDuResponse(
           boolean listFile, boolean withReplica)
