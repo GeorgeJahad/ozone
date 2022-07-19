@@ -538,15 +538,10 @@ public class TestFSONSSummaryEndpoint {
             replicaDUResponse.getSizeWithReplica());
   }
 
-  /**
-   * Testing RootEntityHandler.getDUResponse()
-   * when withReplica parameter is true to
-   * test EntityHandler.CalculateDUForVolume().
-   * @throws IOException
-   */
   @Test
   public void testDataSizeUnderRootWithReplication() throws IOException {
     setUpMultiBlockReplicatedKeys();
+    //   withReplica is true
     Response rootResponse = nsSummaryEndpoint.getDiskUsage(ROOT_PATH,
         false, true);
     DUResponse replicaDUResponse = (DUResponse) rootResponse.getEntity();

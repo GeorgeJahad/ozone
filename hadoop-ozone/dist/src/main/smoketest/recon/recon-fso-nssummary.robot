@@ -37,6 +37,7 @@ Create volume
     ${random} =     Generate Random String  5  [LOWER]
                     Set Suite Variable     ${VOLUME}    vol-${random}
     ${result} =     Execute             ozone sh volume create /${VOLUME}
+                    Log     gbj-${result}   console=yes
                     Should not contain  ${result}       Failed
 
 Create bucket
