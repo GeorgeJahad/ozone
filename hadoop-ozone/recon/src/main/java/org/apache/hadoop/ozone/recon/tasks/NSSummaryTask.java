@@ -72,7 +72,7 @@ public class NSSummaryTask implements ReconOmTask {
 
   @Override
   public String getTaskName() {
-    return "NSSummaryTask";
+    return "FSONSSummaryTask";
   }
 
   // We only listen to updates from FSO-enabled KeyTable(FileTable) and DirTable
@@ -91,7 +91,7 @@ public class NSSummaryTask implements ReconOmTask {
               WithParentObjectId> omdbUpdateEvent = eventIterator.next();
       OMDBUpdateEvent.OMDBUpdateAction action = omdbUpdateEvent.getAction();
 
-      // we only process updates on OM's KeyTable and Dirtable
+      // we only process updates on OM's FileTable and Dirtable
       String table = omdbUpdateEvent.getTable();
       boolean updateOnFileTable = table.equals(FILE_TABLE);
       if (!taskTables.contains(table)) {
@@ -178,7 +178,7 @@ public class NSSummaryTask implements ReconOmTask {
       return new ImmutablePair<>(getTaskName(), false);
     }
 
-    LOG.info("Completed a process run of NSSummaryTask");
+    LOG.info("Completed a process run of FSONSSummaryTask");
     return new ImmutablePair<>(getTaskName(), true);
   }
 
@@ -188,9 +188,10 @@ public class NSSummaryTask implements ReconOmTask {
 
     try {
       // reinit Recon RocksDB's namespace CF.
-      reconNamespaceSummaryManager.clearNSSummaryTable();
+      getReconNamespaceSummaryManager().clearNSSummaryTable();
 
-      Table dirTable = omMetadataManager.getDirectoryTable();
+      Table<String, OmDirectoryInfo> dirTable =
+          omMetadataManager.getDirectoryTable();
       TableIterator<String, ? extends Table.KeyValue<String, OmDirectoryInfo>>
               dirTableIter = dirTable.iterator();
 
@@ -201,7 +202,7 @@ public class NSSummaryTask implements ReconOmTask {
       }
 
       // Get fileTable used by FSO
-      Table keyTable = omMetadataManager.getFileTable();
+      Table<String, OmKeyInfo> keyTable = omMetadataManager.getFileTable();
 
       TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
               keyTableIter = keyTable.iterator();
@@ -224,11 +225,11 @@ public class NSSummaryTask implements ReconOmTask {
       LOG.error("Unable to write Namespace Summary data in Recon DB.", e);
       return new ImmutablePair<>(getTaskName(), false);
     }
-    LOG.info("Completed a reprocess run of NSSummaryTask");
+    LOG.info("Completed a reprocess run of FSONSSummaryTask");
     return new ImmutablePair<>(getTaskName(), true);
   }
 
-  private void writeNSSummariesToDB(Map<Long, NSSummary> nsSummaryMap)
+  protected void writeNSSummariesToDB(Map<Long, NSSummary> nsSummaryMap)
       throws IOException {
     RDBBatchOperation rdbBatchOperation = new RDBBatchOperation();
     nsSummaryMap.keySet().forEach((Long key) -> {
@@ -243,7 +244,7 @@ public class NSSummaryTask implements ReconOmTask {
     reconNamespaceSummaryManager.commitBatchOperation(rdbBatchOperation);
   }
 
-  private void handlePutKeyEvent(OmKeyInfo keyInfo, Map<Long,
+  protected void handlePutKeyEvent(OmKeyInfo keyInfo, Map<Long,
       NSSummary> nsSummaryMap) throws IOException {
     long parentObjectId = keyInfo.getParentObjectID();
     // Try to get the NSSummary from our local map that maps NSSummaries to IDs
@@ -270,7 +271,7 @@ public class NSSummaryTask implements ReconOmTask {
     nsSummaryMap.put(parentObjectId, nsSummary);
   }
 
-  private void handlePutDirEvent(OmDirectoryInfo directoryInfo,
+  protected void handlePutDirEvent(OmDirectoryInfo directoryInfo,
                                  Map<Long, NSSummary> nsSummaryMap)
           throws IOException {
     long parentObjectId = directoryInfo.getParentObjectID();
@@ -307,7 +308,7 @@ public class NSSummaryTask implements ReconOmTask {
     nsSummaryMap.put(parentObjectId, nsSummary);
   }
 
-  private void handleDeleteKeyEvent(OmKeyInfo keyInfo,
+  protected void handleDeleteKeyEvent(OmKeyInfo keyInfo,
                                     Map<Long, NSSummary> nsSummaryMap)
           throws IOException {
     long parentObjectId = keyInfo.getParentObjectID();
@@ -340,7 +341,7 @@ public class NSSummaryTask implements ReconOmTask {
     nsSummaryMap.put(parentObjectId, nsSummary);
   }
 
-  private void handleDeleteDirEvent(OmDirectoryInfo directoryInfo,
+  protected void handleDeleteDirEvent(OmDirectoryInfo directoryInfo,
                                     Map<Long, NSSummary> nsSummaryMap)
           throws IOException {
     long parentObjectId = directoryInfo.getParentObjectID();
