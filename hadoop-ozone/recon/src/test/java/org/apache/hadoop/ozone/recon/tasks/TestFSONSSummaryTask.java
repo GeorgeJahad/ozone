@@ -264,7 +264,13 @@ public final class TestFSONSSummaryTask {
    * Nested class for testing FSONSSummaryTask process.
    */
   public static class TestProcess {
-
+    private static OMDBUpdateEvent keyEvent1;
+    private static OMDBUpdateEvent keyEvent2;
+    private static OMDBUpdateEvent keyEvent3;
+    private static OMDBUpdateEvent keyEvent4;
+    private static OMDBUpdateEvent keyEvent5;
+    private static OMDBUpdateEvent keyEvent6;
+    private static OMDBUpdateEvent keyEvent7;
     @BeforeClass
     public static void setUp() throws IOException {
       fsoNSSummaryTask.reprocess(reconOMMetadataManager);
@@ -277,7 +283,7 @@ public final class TestFSONSSummaryTask {
       String omPutKey = BUCKET_TWO_OBJECT_ID + OM_KEY_PREFIX + FILE_FIVE;
       OmKeyInfo omPutKeyInfo = buildOmKeyInfo(VOL, BUCKET_TWO, KEY_FIVE,
           FILE_FIVE, KEY_FIVE_OBJECT_ID, BUCKET_TWO_OBJECT_ID, KEY_FIVE_SIZE);
-      OMDBUpdateEvent<String, OmKeyInfo> keyEvent1 = new OMDBUpdateEvent.
+      keyEvent1 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmKeyInfo>()
           .setKey(omPutKey)
           .setValue(omPutKeyInfo)
@@ -291,7 +297,7 @@ public final class TestFSONSSummaryTask {
       OmKeyInfo omDeleteInfo = buildOmKeyInfo(
           VOL, BUCKET_ONE, KEY_ONE, FILE_ONE,
           KEY_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID);
-      OMDBUpdateEvent<String, OmKeyInfo> keyEvent2 = new OMDBUpdateEvent.
+      keyEvent2 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmKeyInfo>()
           .setKey(omDeleteKey)
           .setValue(omDeleteInfo)
@@ -308,7 +314,7 @@ public final class TestFSONSSummaryTask {
       OmKeyInfo omUpdateInfo = buildOmKeyInfo(
           VOL, BUCKET_TWO, KEY_TWO, FILE_TWO,
           KEY_TWO_OBJECT_ID, BUCKET_TWO_OBJECT_ID, KEY_TWO_UPDATE_SIZE);
-      OMDBUpdateEvent<String, OmKeyInfo> keyEvent3 = new OMDBUpdateEvent.
+      keyEvent3 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmKeyInfo>()
           .setKey(omUpdateKey)
           .setValue(omUpdateInfo)
@@ -323,7 +329,7 @@ public final class TestFSONSSummaryTask {
       String omDirPutKey1 = BUCKET_ONE_OBJECT_ID + OM_KEY_PREFIX + DIR_FOUR;
       OmDirectoryInfo omDirPutValue1 = buildOmDirInfo(DIR_FOUR,
           DIR_FOUR_OBJECT_ID, BUCKET_ONE_OBJECT_ID);
-      OMDBUpdateEvent<String, OmDirectoryInfo> keyEvent4 = new OMDBUpdateEvent.
+      keyEvent4 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmDirectoryInfo>()
           .setKey(omDirPutKey1)
           .setValue(omDirPutValue1)
@@ -335,7 +341,7 @@ public final class TestFSONSSummaryTask {
       String omDirPutKey2 = BUCKET_TWO_OBJECT_ID + OM_KEY_PREFIX + DIR_FIVE;
       OmDirectoryInfo omDirPutValue2 = buildOmDirInfo(DIR_FIVE,
           DIR_FIVE_OBJECT_ID, BUCKET_TWO_OBJECT_ID);
-      OMDBUpdateEvent<String, OmDirectoryInfo> keyEvent5 = new OMDBUpdateEvent.
+      keyEvent5 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmDirectoryInfo>()
           .setKey(omDirPutKey2)
           .setValue(omDirPutValue2)
@@ -347,7 +353,7 @@ public final class TestFSONSSummaryTask {
       String omDirDeleteKey = DIR_ONE_OBJECT_ID + OM_KEY_PREFIX + DIR_THREE;
       OmDirectoryInfo omDirDeleteValue = buildOmDirInfo(DIR_THREE,
           DIR_THREE_OBJECT_ID, DIR_ONE_OBJECT_ID);
-      OMDBUpdateEvent<String, OmDirectoryInfo> keyEvent6 = new OMDBUpdateEvent.
+      keyEvent6 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmDirectoryInfo>()
           .setKey(omDirDeleteKey)
           .setValue(omDirDeleteValue)
@@ -361,7 +367,7 @@ public final class TestFSONSSummaryTask {
           DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID);
       OmDirectoryInfo omDirUpdateValue = buildOmDirInfo(DIR_ONE_RENAME,
           DIR_ONE_OBJECT_ID, BUCKET_ONE_OBJECT_ID);
-      OMDBUpdateEvent<String, OmDirectoryInfo> keyEvent7 = new OMDBUpdateEvent.
+      keyEvent7 = new OMDBUpdateEvent.
           OMUpdateEventBuilder<String, OmDirectoryInfo>()
           .setKey(omDirUpdateKey)
           .setValue(omDirUpdateValue)
