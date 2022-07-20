@@ -175,7 +175,7 @@ public class FSONSSummaryTask extends NSSummaryTask {
       // reinit Recon RocksDB's namespace CF.
       getReconNamespaceSummaryManager().clearNSSummaryTable();
 
-      Table dirTable = omMetadataManager.getDirectoryTable();
+      Table<String, OmDirectoryInfo> dirTable = omMetadataManager.getDirectoryTable();
       TableIterator<String, ? extends Table.KeyValue<String, OmDirectoryInfo>>
               dirTableIter = dirTable.iterator();
 
@@ -186,7 +186,7 @@ public class FSONSSummaryTask extends NSSummaryTask {
       }
 
       // Get fileTable used by FSO
-      Table keyTable = omMetadataManager.getFileTable();
+      Table<String, OmKeyInfo> keyTable = omMetadataManager.getFileTable();
 
       TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
               keyTableIter = keyTable.iterator();

@@ -990,7 +990,6 @@ public class TestFSONSSummaryEndpoint {
    *        file9    file10
    * Write these keys to OM and
    * replicate them.
-   * @throws IOException
    */
   private OmKeyLocationInfoGroup getLocationInfoGroup2() {
     List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();

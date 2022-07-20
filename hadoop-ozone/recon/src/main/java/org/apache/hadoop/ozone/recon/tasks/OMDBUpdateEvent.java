@@ -81,7 +81,8 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    OMDBUpdateEvent that = (OMDBUpdateEvent) o;
+    @SuppressWarnings("unchecked")  // o is checked above
+    OMDBUpdateEvent<KEY, VALUE> that = (OMDBUpdateEvent<KEY, VALUE>) o;
     return this.updatedKey.equals(that.updatedKey) &&
         this.table.equals(that.table) &&
         this.action.equals(that.action);
@@ -106,32 +107,32 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
     private VALUE updatedValue;
     private long lastSequenceNumber;
 
-    OMUpdateEventBuilder setAction(OMDBUpdateAction omdbUpdateAction) {
+    OMUpdateEventBuilder<KEY, VALUE> setAction(OMDBUpdateAction omdbUpdateAction) {
       this.action = omdbUpdateAction;
       return this;
     }
 
-    OMUpdateEventBuilder setTable(String tableName) {
+    OMUpdateEventBuilder<KEY,VALUE> setTable(String tableName) {
       this.table = tableName;
       return this;
     }
 
-    OMUpdateEventBuilder setKey(KEY key) {
+    OMUpdateEventBuilder<KEY, VALUE> setKey(KEY key) {
       this.updatedKey = key;
       return this;
     }
 
-    OMUpdateEventBuilder setValue(VALUE value) {
+    OMUpdateEventBuilder<KEY, VALUE> setValue(VALUE value) {
       this.updatedValue = value;
       return this;
     }
 
-    OMUpdateEventBuilder setOldValue(VALUE value) {
+    OMUpdateEventBuilder<KEY, VALUE> setOldValue(VALUE value) {
       this.oldValue = value;
       return this;
     }
 
-    OMUpdateEventBuilder setSequenceNumber(long sequenceNumber) {
+    OMUpdateEventBuilder<KEY, VALUE> setSequenceNumber(long sequenceNumber) {
       this.lastSequenceNumber = sequenceNumber;
       return this;
     }
@@ -140,8 +141,8 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
      * Build an OM update event.
      * @return OMDBUpdateEvent
      */
-    public OMDBUpdateEvent build() {
-      return new OMDBUpdateEvent<KEY, VALUE>(
+    public OMDBUpdateEvent<KEY, VALUE> build() {
+      return new OMDBUpdateEvent<>(
           action,
           table,
           updatedKey,

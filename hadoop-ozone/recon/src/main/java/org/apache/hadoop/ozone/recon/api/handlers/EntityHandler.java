@@ -224,7 +224,7 @@ public abstract class EntityHandler {
    */
   List<OmVolumeArgs> listVolumes() throws IOException {
     List<OmVolumeArgs> result = new ArrayList<>();
-    Table volumeTable = omMetadataManager.getVolumeTable();
+    Table<String, OmVolumeArgs> volumeTable = omMetadataManager.getVolumeTable();
     TableIterator<String, ? extends Table.KeyValue<String, OmVolumeArgs>>
         iterator = volumeTable.iterator();
 
@@ -252,7 +252,7 @@ public abstract class EntityHandler {
     // if volume name is null, seek prefix is an empty string
     String seekPrefix = "";
 
-    Table bucketTable = omMetadataManager.getBucketTable();
+    Table<String, OmBucketInfo> bucketTable = omMetadataManager.getBucketTable();
 
     TableIterator<String, ? extends Table.KeyValue<String, OmBucketInfo>>
         iterator = bucketTable.iterator();
