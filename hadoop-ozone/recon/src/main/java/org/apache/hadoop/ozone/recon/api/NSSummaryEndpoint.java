@@ -77,7 +77,7 @@ public class NSSummaryEndpoint {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
 
-    NamespaceSummaryResponse namespaceSummaryResponse;
+    NamespaceSummaryResponse namespaceSummaryResponse = null;
     if (!isInitializationComplete()) {
       namespaceSummaryResponse =
           new NamespaceSummaryResponse(EntityType.UNKNOWN);
@@ -100,7 +100,7 @@ public class NSSummaryEndpoint {
    * @param listFile show subpath/disk usage for each key
    * @param withReplica count actual DU with replication
    * @return DU response
-   * @throws IOException IOE
+   * @throws IOException
    */
   @GET
   @Path("/du")
@@ -136,7 +136,7 @@ public class NSSummaryEndpoint {
    * bytes.
    * @param path request path
    * @return Quota Usage response
-   * @throws IOException IOE
+   * @throws IOException
    */
   @GET
   @Path("/quota")
@@ -166,7 +166,7 @@ public class NSSummaryEndpoint {
    * Endpoint that returns aggregate file size distribution under a path.
    * @param path request path
    * @return File size distribution response
-   * @throws IOException IOE
+   * @throws IOException
    */
   @GET
   @Path("/dist")
