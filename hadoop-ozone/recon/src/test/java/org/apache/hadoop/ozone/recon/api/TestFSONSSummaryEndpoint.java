@@ -213,38 +213,41 @@ public class TestFSONSSummaryEndpoint {
   private static final long KEY_NINE_SIZE = 2 * OzoneConsts.KB + 1; // bin 2
   private static final long KEY_TEN_SIZE = 2 * OzoneConsts.KB + 1; // bin 2
   private static final long KEY_ELEVEN_SIZE = OzoneConsts.KB + 1; // bin 1
-  private static final long MULTI_BLOCK_KEY_SIZE_WITH_REPLICA
+  private static final long LOCATION_INFO_GROUP_ONE_SIZE
           = CONTAINER_ONE_REPLICA_COUNT * BLOCK_ONE_LENGTH
           + CONTAINER_TWO_REPLICA_COUNT * BLOCK_TWO_LENGTH
           + CONTAINER_THREE_REPLICA_COUNT * BLOCK_THREE_LENGTH;
 
-  private static final long MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA
+  private static final long MULTI_BLOCK_KEY_SIZE_WITH_REPLICA
+          = LOCATION_INFO_GROUP_ONE_SIZE;
+
+  private static final long LOCATION_INFO_GROUP_TWO_SIZE
       = CONTAINER_FOUR_REPLICA_COUNT * BLOCK_FOUR_LENGTH
       + CONTAINER_FIVE_REPLICA_COUNT * BLOCK_FIVE_LENGTH
       + CONTAINER_SIX_REPLICA_COUNT * BLOCK_SIX_LENGTH;
 
   private static final long FILE1_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_ONE_SIZE;
   private static final long FILE2_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_TWO_SIZE;
   private static final long FILE3_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_ONE_SIZE;
   private static final long FILE4_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_TWO_SIZE;
   private static final long FILE5_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_ONE_SIZE;
   private static final long FILE6_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_TWO_SIZE;
   private static final long FILE7_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_ONE_SIZE;
   private static final long FILE8_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_TWO_SIZE;
   private static final long FILE9_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_ONE_SIZE;
   private static final long FILE10_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_TWO_SIZE;
   private static final long FILE11_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_ONE_SIZE;
 
   private static final long
       MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_ROOT
@@ -925,6 +928,24 @@ public class TestFSONSSummaryEndpoint {
   }
 
   private void setUpMultiBlockKey() throws IOException {
+    OmKeyLocationInfoGroup locationInfoGroup =
+      getLocationInfoGroup1();
+
+    // add the multi-block key to Recon's OM
+    writeKeyToOm(reconOMMetadataManager,
+        MULTI_BLOCK_KEY,
+        BUCKET_ONE,
+        VOL,
+        MULTI_BLOCK_FILE,
+        MULTI_BLOCK_KEY_OBJECT_ID,
+        DIR_ONE_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup),
+        getBucketLayout());
+  }
+
+  private OmKeyLocationInfoGroup getLocationInfoGroup1() {
     List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
     BlockID block1 = new BlockID(CONTAINER_ONE_ID, 0L);
     BlockID block2 = new BlockID(CONTAINER_TWO_ID, 0L);
@@ -946,21 +967,7 @@ public class TestFSONSSummaryEndpoint {
     locationInfoList.add(location2);
     locationInfoList.add(location3);
 
-    OmKeyLocationInfoGroup locationInfoGroup =
-            new OmKeyLocationInfoGroup(0L, locationInfoList);
-
-    // add the multi-block key to Recon's OM
-    writeKeyToOm(reconOMMetadataManager,
-        MULTI_BLOCK_KEY,
-        BUCKET_ONE,
-        VOL,
-        MULTI_BLOCK_FILE,
-        MULTI_BLOCK_KEY_OBJECT_ID,
-        DIR_ONE_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        VOL_OBJECT_ID,
-        Collections.singletonList(locationInfoGroup),
-        getBucketLayout());
+    return new OmKeyLocationInfoGroup(0L, locationInfoList);
   }
 
   /**
@@ -985,8 +992,7 @@ public class TestFSONSSummaryEndpoint {
    * replicate them.
    * @throws IOException
    */
-  @SuppressWarnings("checkstyle:MethodLength")
-  private void setUpMultiBlockReplicatedKeys() throws IOException {
+  private OmKeyLocationInfoGroup getLocationInfoGroup2() {
     List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
     BlockID block4 = new BlockID(CONTAINER_FOUR_ID, 0L);
     BlockID block5 = new BlockID(CONTAINER_FIVE_ID, 0L);
@@ -1007,9 +1013,16 @@ public class TestFSONSSummaryEndpoint {
     locationInfoList.add(location4);
     locationInfoList.add(location5);
     locationInfoList.add(location6);
+    return new OmKeyLocationInfoGroup(0L, locationInfoList);
 
-    OmKeyLocationInfoGroup locationInfoGroup =
-        new OmKeyLocationInfoGroup(0L, locationInfoList);
+  }
+
+  @SuppressWarnings("checkstyle:MethodLength")
+  private void setUpMultiBlockReplicatedKeys() throws IOException {
+    OmKeyLocationInfoGroup locationInfoGroup1 =
+      getLocationInfoGroup1();
+    OmKeyLocationInfoGroup locationInfoGroup2 =
+      getLocationInfoGroup2();
 
     //vol/bucket1/file1
     writeKeyToOm(reconOMMetadataManager,
@@ -1021,7 +1034,7 @@ public class TestFSONSSummaryEndpoint {
         BUCKET_ONE_OBJECT_ID,
         BUCKET_ONE_OBJECT_ID,
         VOL_OBJECT_ID,
-        Collections.singletonList(locationInfoGroup),
+        Collections.singletonList(locationInfoGroup1),
         getBucketLayout());
 
     //vol/bucket1/dir1/dir2/file2
@@ -1034,7 +1047,7 @@ public class TestFSONSSummaryEndpoint {
         DIR_TWO_OBJECT_ID,
         BUCKET_ONE_OBJECT_ID,
         VOL_OBJECT_ID,
-        Collections.singletonList(locationInfoGroup),
+        Collections.singletonList(locationInfoGroup2),
         getBucketLayout());
 
     //vol/bucket1/dir1/dir3/file3
@@ -1047,7 +1060,7 @@ public class TestFSONSSummaryEndpoint {
         DIR_THREE_OBJECT_ID,
         BUCKET_ONE_OBJECT_ID,
         VOL_OBJECT_ID,
-        Collections.singletonList(locationInfoGroup),
+        Collections.singletonList(locationInfoGroup1),
         getBucketLayout());
 
     //vol/bucket2/file4
@@ -1060,7 +1073,7 @@ public class TestFSONSSummaryEndpoint {
         BUCKET_TWO_OBJECT_ID,
         BUCKET_TWO_OBJECT_ID,
         VOL_OBJECT_ID,
-        Collections.singletonList(locationInfoGroup),
+        Collections.singletonList(locationInfoGroup2),
         getBucketLayout());
 
     //vol/bucket2/file5
@@ -1073,7 +1086,7 @@ public class TestFSONSSummaryEndpoint {
         BUCKET_TWO_OBJECT_ID,
         BUCKET_TWO_OBJECT_ID,
         VOL_OBJECT_ID,
-        Collections.singletonList(locationInfoGroup),
+        Collections.singletonList(locationInfoGroup1),
         getBucketLayout());
 
     //vol/bucket1/dir1/dir4/file6
@@ -1086,7 +1099,7 @@ public class TestFSONSSummaryEndpoint {
         DIR_FOUR_OBJECT_ID,
         BUCKET_ONE_OBJECT_ID,
         VOL_OBJECT_ID,
-        Collections.singletonList(locationInfoGroup),
+        Collections.singletonList(locationInfoGroup2),
         getBucketLayout());
 
     //vol/bucket1/dir1/file7
@@ -1099,7 +1112,7 @@ public class TestFSONSSummaryEndpoint {
         DIR_ONE_OBJECT_ID,
         BUCKET_ONE_OBJECT_ID,
         VOL_OBJECT_ID,
-        Collections.singletonList(locationInfoGroup),
+        Collections.singletonList(locationInfoGroup1),
         getBucketLayout());
 
     //vol2/bucket3/file8
@@ -1112,7 +1125,7 @@ public class TestFSONSSummaryEndpoint {
         BUCKET_THREE_OBJECT_ID,
         BUCKET_THREE_OBJECT_ID,
         VOL_TWO_OBJECT_ID,
-        Collections.singletonList(locationInfoGroup),
+        Collections.singletonList(locationInfoGroup2),
         getBucketLayout());
 
     //vol2/bucket3/dir5/file9
@@ -1125,7 +1138,7 @@ public class TestFSONSSummaryEndpoint {
         DIR_FIVE_OBJECT_ID,
         BUCKET_THREE_OBJECT_ID,
         VOL_TWO_OBJECT_ID,
-        Collections.singletonList(locationInfoGroup),
+        Collections.singletonList(locationInfoGroup1),
         getBucketLayout());
 
     //vol2/bucket3/dir5/file10
@@ -1138,7 +1151,7 @@ public class TestFSONSSummaryEndpoint {
         DIR_FIVE_OBJECT_ID,
         BUCKET_THREE_OBJECT_ID,
         VOL_TWO_OBJECT_ID,
-        Collections.singletonList(locationInfoGroup),
+        Collections.singletonList(locationInfoGroup2),
         getBucketLayout());
 
     //vol2/bucket4/file11
@@ -1151,7 +1164,7 @@ public class TestFSONSSummaryEndpoint {
         BUCKET_FOUR_OBJECT_ID,
         BUCKET_FOUR_OBJECT_ID,
         VOL_TWO_OBJECT_ID,
-        Collections.singletonList(locationInfoGroup),
+        Collections.singletonList(locationInfoGroup1),
         getBucketLayout());
   }
 
