@@ -81,8 +81,7 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    @SuppressWarnings("unchecked")  // o is checked above
-    OMDBUpdateEvent<KEY, VALUE> that = (OMDBUpdateEvent<KEY, VALUE>) o;
+    OMDBUpdateEvent that = (OMDBUpdateEvent) o;
     return this.updatedKey.equals(that.updatedKey) &&
         this.table.equals(that.table) &&
         this.action.equals(that.action);
@@ -107,32 +106,32 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
     private VALUE updatedValue;
     private long lastSequenceNumber;
 
-    OMUpdateEventBuilder<KEY, VALUE> setAction(OMDBUpdateAction omdbUpdateAction) {
+    OMUpdateEventBuilder setAction(OMDBUpdateAction omdbUpdateAction) {
       this.action = omdbUpdateAction;
       return this;
     }
 
-    OMUpdateEventBuilder<KEY,VALUE> setTable(String tableName) {
+    OMUpdateEventBuilder setTable(String tableName) {
       this.table = tableName;
       return this;
     }
 
-    OMUpdateEventBuilder<KEY, VALUE> setKey(KEY key) {
+    OMUpdateEventBuilder setKey(KEY key) {
       this.updatedKey = key;
       return this;
     }
 
-    OMUpdateEventBuilder<KEY, VALUE> setValue(VALUE value) {
+    OMUpdateEventBuilder setValue(VALUE value) {
       this.updatedValue = value;
       return this;
     }
 
-    OMUpdateEventBuilder<KEY, VALUE> setOldValue(VALUE value) {
+    OMUpdateEventBuilder setOldValue(VALUE value) {
       this.oldValue = value;
       return this;
     }
 
-    OMUpdateEventBuilder<KEY, VALUE> setSequenceNumber(long sequenceNumber) {
+    OMUpdateEventBuilder setSequenceNumber(long sequenceNumber) {
       this.lastSequenceNumber = sequenceNumber;
       return this;
     }
@@ -141,8 +140,8 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
      * Build an OM update event.
      * @return OMDBUpdateEvent
      */
-    public OMDBUpdateEvent<KEY, VALUE> build() {
-      return new OMDBUpdateEvent<>(
+    public OMDBUpdateEvent build() {
+      return new OMDBUpdateEvent<KEY, VALUE>(
           action,
           table,
           updatedKey,
