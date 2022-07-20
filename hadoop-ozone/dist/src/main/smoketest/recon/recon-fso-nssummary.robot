@@ -93,7 +93,7 @@ Test Summary
 *** Test Cases ***
 
 Check volume creation
-    Kinit as non admin
+    Kinit as ozone admin
     Create volume
 
 Check bucket creation
