@@ -77,7 +77,7 @@ public class NSSummaryEndpoint {
       return Response.status(Response.Status.BAD_REQUEST).build();
     }
 
-    NamespaceSummaryResponse namespaceSummaryResponse = null;
+    NamespaceSummaryResponse namespaceSummaryResponse;
     if (!isInitializationComplete()) {
       namespaceSummaryResponse =
           new NamespaceSummaryResponse(EntityType.UNKNOWN);

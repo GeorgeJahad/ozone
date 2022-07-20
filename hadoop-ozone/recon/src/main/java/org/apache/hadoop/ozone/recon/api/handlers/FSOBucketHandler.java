@@ -119,7 +119,7 @@ public class FSOBucketHandler extends BucketHandler {
   @Override
   public long calculateDUUnderObject(long parentId)
       throws IOException {
-    Table keyTable = getOmMetadataManager().getFileTable();
+    Table<String, OmKeyInfo> keyTable = getOmMetadataManager().getFileTable();
 
     TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
             iterator = keyTable.iterator();
@@ -179,7 +179,7 @@ public class FSOBucketHandler extends BucketHandler {
                                List<DUResponse.DiskUsage> duData,
                                String normalizedPath) throws IOException {
 
-    Table keyTable = getOmMetadataManager().getFileTable();
+    Table<String, OmKeyInfo> keyTable = getOmMetadataManager().getFileTable();
     TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
             iterator = keyTable.iterator();
 
@@ -248,7 +248,7 @@ public class FSOBucketHandler extends BucketHandler {
   @Override
   public long getDirObjectId(String[] names, int cutoff) throws IOException {
     long dirObjectId = getBucketObjectId(names);
-    String dirKey = null;
+    String dirKey;
     for (int i = 2; i < cutoff; ++i) {
       dirKey = getOmMetadataManager().getOzonePathKey(getVolumeObjectId(names),
               getBucketObjectId(names), dirObjectId, names[i]);

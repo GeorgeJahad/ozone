@@ -87,7 +87,7 @@ public class RootEntityHandler extends EntityHandler {
       DUResponse.DiskUsage diskUsage = new DUResponse.DiskUsage();
       long dataSize = 0;
       diskUsage.setSubpath(subpath);
-      BucketHandler bucketHandler = null;
+      BucketHandler bucketHandler;
       long volumeDU = 0;
       // iterate all buckets per volume to get total data size
       for (OmBucketInfo bucket: listBucketsUnderVolume(volumeName)) {
