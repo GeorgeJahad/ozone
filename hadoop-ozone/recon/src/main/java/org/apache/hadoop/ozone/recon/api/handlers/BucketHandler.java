@@ -77,14 +77,6 @@ public abstract class BucketHandler {
     return reconNamespaceSummaryManager;
   }
 
-  public ContainerManager getContainerManager() {
-    return containerManager;
-  }
-
-  public OzoneStorageContainerManager getReconSCM() {
-    return reconSCM;
-  }
-
   public abstract EntityType determineKeyPath(String keyName)
       throws IOException;
 

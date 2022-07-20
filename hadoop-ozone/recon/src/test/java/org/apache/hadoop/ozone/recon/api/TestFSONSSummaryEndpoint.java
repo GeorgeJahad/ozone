@@ -679,30 +679,26 @@ public class TestFSONSSummaryEndpoint {
             invalidResObj.getResponseCode());
   }
 
-  /**
-   * Bin 0: 2 -> file1 and file5.
-   * Bin 1: 1 -> file2.
-   * Bin 2: 2 -> file4 and file6.
-   * Bin 3: 1 -> file3.
-   * @throws Exception
-   */
+
   @Test
   public void testFileSizeDist() throws Exception {
-    Response volRes = nsSummaryEndpoint.getFileSizeDistribution(VOL_PATH);
-    FileSizeDistributionResponse volFileSizeDistResObj =
-            (FileSizeDistributionResponse) volRes.getEntity();
-    // If the volume has the correct file size distribution,
-    // other lower level should be correct as well, given all
-    // other previous tests have passed.
-    int[] volFileSizeDist = volFileSizeDistResObj.getFileSizeDist();
-    for (int i = 0; i < ReconConstants.NUM_OF_BINS; ++i) {
-      if (i == 0 || i == 2) {
-        Assert.assertEquals(2, volFileSizeDist[i]);
-      } else if (i == 1 || i == 3) {
-        Assert.assertEquals(1, volFileSizeDist[i]);
-      } else {
-        Assert.assertEquals(0, volFileSizeDist[i]);
-      }
+    checkFileSizeDist(ROOT_PATH, 2, 3, 4, 1);
+    checkFileSizeDist(VOL_PATH, 2, 1, 2, 1);
+    checkFileSizeDist(BUCKET_ONE_PATH, 1, 1, 1, 1);
+    checkFileSizeDist(DIR_ONE_PATH, 0, 1, 1, 1);
+  }
+
+  public void checkFileSizeDist(String path, int bin0, int bin1, int bin2, int bin3) throws Exception {
+    Response res = nsSummaryEndpoint.getFileSizeDistribution(path);
+    FileSizeDistributionResponse fileSizeDistResObj =
+            (FileSizeDistributionResponse) res.getEntity();
+    int[] fileSizeDist = fileSizeDistResObj.getFileSizeDist();
+    Assert.assertEquals(bin0, fileSizeDist[0]);
+    Assert.assertEquals(bin1, fileSizeDist[1]);
+    Assert.assertEquals(bin2, fileSizeDist[2]);
+    Assert.assertEquals(bin3, fileSizeDist[3]);
+    for (int i = 4; i < ReconConstants.NUM_OF_BINS; ++i) {
+      Assert.assertEquals(0, fileSizeDist[i]);
     }
   }
 
@@ -1015,30 +1011,6 @@ public class TestFSONSSummaryEndpoint {
     OmKeyLocationInfoGroup locationInfoGroup =
         new OmKeyLocationInfoGroup(0L, locationInfoList);
 
-    //vol/bucket2/file4
-    writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_TWO_OBJECT_ID,
-        BUCKET_TWO_OBJECT_ID,
-        KEY_FOUR_OBJECT_ID,
-        VOL, BUCKET_TWO,
-        KEY_FOUR,
-        FILE_FOUR,
-        Collections.singletonList(locationInfoGroup),
-        getBucketLayout());
-
-    //vol/bucket2/file5
-    writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_TWO_OBJECT_ID,
-        BUCKET_TWO_OBJECT_ID,
-        KEY_FIVE_OBJECT_ID,
-        VOL, BUCKET_TWO,
-        KEY_FIVE,
-        FILE_FIVE,
-        Collections.singletonList(locationInfoGroup),
-        getBucketLayout());
-
     //vol/bucket1/file1
     writeKeyToOm(reconOMMetadataManager,
         VOL_OBJECT_ID,
@@ -1072,6 +1044,30 @@ public class TestFSONSSummaryEndpoint {
         VOL, BUCKET_ONE,
         KEY_THREE,
         FILE_THREE,
+        Collections.singletonList(locationInfoGroup),
+        getBucketLayout());
+
+    //vol/bucket2/file4
+    writeKeyToOm(reconOMMetadataManager,
+        VOL_OBJECT_ID,
+        BUCKET_TWO_OBJECT_ID,
+        BUCKET_TWO_OBJECT_ID,
+        KEY_FOUR_OBJECT_ID,
+        VOL, BUCKET_TWO,
+        KEY_FOUR,
+        FILE_FOUR,
+        Collections.singletonList(locationInfoGroup),
+        getBucketLayout());
+
+    //vol/bucket2/file5
+    writeKeyToOm(reconOMMetadataManager,
+        VOL_OBJECT_ID,
+        BUCKET_TWO_OBJECT_ID,
+        BUCKET_TWO_OBJECT_ID,
+        KEY_FIVE_OBJECT_ID,
+        VOL, BUCKET_TWO,
+        KEY_FIVE,
+        FILE_FIVE,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
 
