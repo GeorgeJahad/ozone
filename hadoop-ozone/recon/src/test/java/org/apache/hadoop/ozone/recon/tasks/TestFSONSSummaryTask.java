@@ -377,15 +377,15 @@ public final class TestFSONSSummaryTask {
           .build();
 
       OMUpdateEventBatch omUpdateEventBatch = new OMUpdateEventBatch(
-            new ArrayList<OMDBUpdateEvent>() {{
-            add(keyEvent1);
-            add(keyEvent2);
-            add(keyEvent3);
-            add(keyEvent4);
-            add(keyEvent5);
-            add(keyEvent6);
-            add(keyEvent7);
-            }});
+              new ArrayList<OMDBUpdateEvent>() {{
+              add(keyEvent1);
+              add(keyEvent2);
+              add(keyEvent3);
+              add(keyEvent4);
+              add(keyEvent5);
+              add(keyEvent6);
+              add(keyEvent7);
+              }});
 
       return omUpdateEventBatch;
     }
