@@ -29,8 +29,8 @@ import org.apache.hadoop.ozone.recon.ReconConstants;
 import org.apache.hadoop.ozone.recon.ReconTestInjector;
 import org.apache.hadoop.ozone.recon.api.types.NSSummary;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
+import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.ReconNamespaceSummaryManager;
-import org.apache.hadoop.ozone.recon.spi.impl.OzoneManagerServiceProviderImpl;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.ClassRule;
@@ -119,7 +119,7 @@ public final class TestFSONSSummaryTask {
   public static void setUp() throws Exception {
     omMetadataManager = initializeNewOmMetadataManager(
             TEMPORARY_FOLDER.newFolder());
-    OzoneManagerServiceProviderImpl ozoneManagerServiceProvider =
+    OzoneManagerServiceProvider ozoneManagerServiceProvider =
         getMockOzoneManagerServiceProviderWithFSO();
     reconOMMetadataManager = getTestReconOmMetadataManager(omMetadataManager,
             TEMPORARY_FOLDER.newFolder());
@@ -388,7 +388,6 @@ public final class TestFSONSSummaryTask {
     public void testProcessUpdateFileSize() throws IOException {
       NSSummary nsSummaryForBucket1 =
           reconNamespaceSummaryManager.getNSSummary(BUCKET_ONE_OBJECT_ID);
-      Assert.assertNotNull(nsSummaryForBucket1);
       // file 1 is gone, so bucket 1 is empty now
       Assert.assertNotNull(nsSummaryForBucket1);
       Assert.assertEquals(0, nsSummaryForBucket1.getNumOfFiles());
@@ -406,7 +405,6 @@ public final class TestFSONSSummaryTask {
     public void testProcessBucket() throws IOException {
       NSSummary nsSummaryForBucket2 =
           reconNamespaceSummaryManager.getNSSummary(BUCKET_TWO_OBJECT_ID);
-      Assert.assertNotNull(nsSummaryForBucket2);
       // file 5 is added under bucket 2, so bucket 2 has 3 keys now
       // file 2 is updated with new datasize,
       // so file size dist for bucket 2 should be updated

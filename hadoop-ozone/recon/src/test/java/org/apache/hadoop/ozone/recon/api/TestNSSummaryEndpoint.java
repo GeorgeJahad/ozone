@@ -213,38 +213,41 @@ public class TestFSONSSummaryEndpoint {
   private static final long KEY_NINE_SIZE = 2 * OzoneConsts.KB + 1; // bin 2
   private static final long KEY_TEN_SIZE = 2 * OzoneConsts.KB + 1; // bin 2
   private static final long KEY_ELEVEN_SIZE = OzoneConsts.KB + 1; // bin 1
-  private static final long MULTI_BLOCK_KEY_SIZE_WITH_REPLICA
+  private static final long LOCATION_INFO_GROUP_ONE_SIZE
           = CONTAINER_ONE_REPLICA_COUNT * BLOCK_ONE_LENGTH
           + CONTAINER_TWO_REPLICA_COUNT * BLOCK_TWO_LENGTH
           + CONTAINER_THREE_REPLICA_COUNT * BLOCK_THREE_LENGTH;
 
-  private static final long MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA
+  private static final long MULTI_BLOCK_KEY_SIZE_WITH_REPLICA
+          = LOCATION_INFO_GROUP_ONE_SIZE;
+
+  private static final long LOCATION_INFO_GROUP_TWO_SIZE
       = CONTAINER_FOUR_REPLICA_COUNT * BLOCK_FOUR_LENGTH
       + CONTAINER_FIVE_REPLICA_COUNT * BLOCK_FIVE_LENGTH
       + CONTAINER_SIX_REPLICA_COUNT * BLOCK_SIX_LENGTH;
 
   private static final long FILE1_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_ONE_SIZE;
   private static final long FILE2_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_TWO_SIZE;
   private static final long FILE3_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_ONE_SIZE;
   private static final long FILE4_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_TWO_SIZE;
   private static final long FILE5_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_ONE_SIZE;
   private static final long FILE6_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_TWO_SIZE;
   private static final long FILE7_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_ONE_SIZE;
   private static final long FILE8_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_TWO_SIZE;
   private static final long FILE9_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_ONE_SIZE;
   private static final long FILE10_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_TWO_SIZE;
   private static final long FILE11_SIZE_WITH_REPLICA =
-      MULTI_BLOCK_OBJECT_SIZE_WITH_REPLICA;
+      LOCATION_INFO_GROUP_ONE_SIZE;
 
   private static final long
       MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_ROOT
@@ -284,6 +287,14 @@ public class TestFSONSSummaryEndpoint {
       + FILE3_SIZE_WITH_REPLICA
       + FILE6_SIZE_WITH_REPLICA
       + FILE7_SIZE_WITH_REPLICA;
+
+  private static final long
+      MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_DIR2
+      = FILE2_SIZE_WITH_REPLICA;
+
+  private static final long
+      MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_KEY
+      = FILE4_SIZE_WITH_REPLICA;
 
   // quota in bytes
   private static final long ROOT_QUOTA = 2 * (2 * OzoneConsts.MB);
@@ -450,7 +461,7 @@ public class TestFSONSSummaryEndpoint {
   }
 
   @Test
-  public void testDiskUsage() throws Exception {
+  public void testDiskUsageRoot() throws Exception {
     // root level DU
     Response rootResponse = nsSummaryEndpoint.getDiskUsage(ROOT_PATH,
         false, false);
@@ -466,7 +477,9 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(VOL_TWO_PATH, duVol2.getSubpath());
     Assert.assertEquals(VOL_DATA_SIZE, duVol1.getSize());
     Assert.assertEquals(VOL_TWO_DATA_SIZE, duVol2.getSize());
-
+  }
+  @Test
+  public void testDiskUsageVolume() throws Exception {
     // volume level DU
     Response volResponse = nsSummaryEndpoint.getDiskUsage(VOL_PATH,
             false, false);
@@ -483,6 +496,9 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(BUCKET_ONE_DATA_SIZE, duBucket1.getSize());
     Assert.assertEquals(BUCKET_TWO_DATA_SIZE, duBucket2.getSize());
 
+  }
+  @Test
+  public void testDiskUsageBucket() throws Exception {
     // bucket level DU
     Response bucketResponse = nsSummaryEndpoint.getDiskUsage(BUCKET_ONE_PATH,
             false, false);
@@ -492,6 +508,9 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(DIR_ONE_PATH, duDir1.getSubpath());
     Assert.assertEquals(DIR_ONE_DATA_SIZE, duDir1.getSize());
 
+  }
+  @Test
+  public void testDiskUsageDir() throws Exception {
     // dir level DU
     Response dirResponse = nsSummaryEndpoint.getDiskUsage(DIR_ONE_PATH,
             false, false);
@@ -512,6 +531,9 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(DIR_FOUR_PATH, duDir4.getSubpath());
     Assert.assertEquals(KEY_SIX_SIZE, duDir4.getSize());
 
+  }
+  @Test
+  public void testDiskUsageKey() throws Exception {
     // key level DU
     Response keyResponse = nsSummaryEndpoint.getDiskUsage(KEY_PATH,
             false, false);
@@ -519,6 +541,9 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(0, keyObj.getCount());
     Assert.assertEquals(KEY_FOUR_SIZE, keyObj.getSize());
 
+  }
+  @Test
+  public void testDiskUsageUnknown() throws Exception {
     // invalid path check
     Response invalidResponse = nsSummaryEndpoint.getDiskUsage(INVALID_PATH,
             false, false);
@@ -538,21 +563,19 @@ public class TestFSONSSummaryEndpoint {
             replicaDUResponse.getSizeWithReplica());
   }
 
-  /**
-   * Testing RootEntityHandler.getDUResponse()
-   * when withReplica parameter is true to
-   * test EntityHandler.CalculateDUForVolume().
-   * @throws IOException
-   */
   @Test
   public void testDataSizeUnderRootWithReplication() throws IOException {
     setUpMultiBlockReplicatedKeys();
+    //   withReplica is true
     Response rootResponse = nsSummaryEndpoint.getDiskUsage(ROOT_PATH,
         false, true);
     DUResponse replicaDUResponse = (DUResponse) rootResponse.getEntity();
     Assert.assertEquals(ResponseStatus.OK, replicaDUResponse.getStatus());
     Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_ROOT,
         replicaDUResponse.getSizeWithReplica());
+    Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_VOL,
+        replicaDUResponse.getDuData().get(0).getSizeWithReplica());
+
   }
 
   @Test
@@ -564,6 +587,8 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(ResponseStatus.OK, replicaDUResponse.getStatus());
     Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_VOL,
         replicaDUResponse.getSizeWithReplica());
+    Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_BUCKET1,
+        replicaDUResponse.getDuData().get(0).getSizeWithReplica());
   }
 
   @Test
@@ -575,6 +600,8 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(ResponseStatus.OK, replicaDUResponse.getStatus());
     Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_BUCKET1,
         replicaDUResponse.getSizeWithReplica());
+    Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_DIR1,
+        replicaDUResponse.getDuData().get(0).getSizeWithReplica());
   }
 
   /**
@@ -591,6 +618,19 @@ public class TestFSONSSummaryEndpoint {
     DUResponse replicaDUResponse = (DUResponse) dir1Response.getEntity();
     Assert.assertEquals(ResponseStatus.OK, replicaDUResponse.getStatus());
     Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_DIR1,
+        replicaDUResponse.getSizeWithReplica());
+    Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_DIR2,
+        replicaDUResponse.getDuData().get(0).getSizeWithReplica());
+  }
+
+  @Test
+  public void testDataSizeUnderKeyWithReplication() throws IOException {
+    setUpMultiBlockReplicatedKeys();
+    Response keyResponse = nsSummaryEndpoint.getDiskUsage(KEY_PATH,
+        false, true);
+    DUResponse replicaDUResponse = (DUResponse) keyResponse.getEntity();
+    Assert.assertEquals(ResponseStatus.OK, replicaDUResponse.getStatus());
+    Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_KEY,
         replicaDUResponse.getSizeWithReplica());
   }
 
@@ -642,30 +682,26 @@ public class TestFSONSSummaryEndpoint {
             invalidResObj.getResponseCode());
   }
 
-  /**
-   * Bin 0: 2 -> file1 and file5.
-   * Bin 1: 1 -> file2.
-   * Bin 2: 2 -> file4 and file6.
-   * Bin 3: 1 -> file3.
-   * @throws Exception
-   */
+
   @Test
   public void testFileSizeDist() throws Exception {
-    Response volRes = nsSummaryEndpoint.getFileSizeDistribution(VOL_PATH);
-    FileSizeDistributionResponse volFileSizeDistResObj =
-            (FileSizeDistributionResponse) volRes.getEntity();
-    // If the volume has the correct file size distribution,
-    // other lower level should be correct as well, given all
-    // other previous tests have passed.
-    int[] volFileSizeDist = volFileSizeDistResObj.getFileSizeDist();
-    for (int i = 0; i < ReconConstants.NUM_OF_BINS; ++i) {
-      if (i == 0 || i == 2) {
-        Assert.assertEquals(2, volFileSizeDist[i]);
-      } else if (i == 1 || i == 3) {
-        Assert.assertEquals(1, volFileSizeDist[i]);
-      } else {
-        Assert.assertEquals(0, volFileSizeDist[i]);
-      }
+    checkFileSizeDist(ROOT_PATH, 2, 3, 4, 1);
+    checkFileSizeDist(VOL_PATH, 2, 1, 2, 1);
+    checkFileSizeDist(BUCKET_ONE_PATH, 1, 1, 1, 1);
+    checkFileSizeDist(DIR_ONE_PATH, 0, 1, 1, 1);
+  }
+
+  public void checkFileSizeDist(String path, int bin0, int bin1, int bin2, int bin3) throws Exception {
+    Response res = nsSummaryEndpoint.getFileSizeDistribution(path);
+    FileSizeDistributionResponse fileSizeDistResObj =
+            (FileSizeDistributionResponse) res.getEntity();
+    int[] fileSizeDist = fileSizeDistResObj.getFileSizeDist();
+    Assert.assertEquals(bin0, fileSizeDist[0]);
+    Assert.assertEquals(bin1, fileSizeDist[1]);
+    Assert.assertEquals(bin2, fileSizeDist[2]);
+    Assert.assertEquals(bin3, fileSizeDist[3]);
+    for (int i = 4; i < ReconConstants.NUM_OF_BINS; ++i) {
+      Assert.assertEquals(0, fileSizeDist[i]);
     }
   }
 
@@ -892,6 +928,24 @@ public class TestFSONSSummaryEndpoint {
   }
 
   private void setUpMultiBlockKey() throws IOException {
+    OmKeyLocationInfoGroup locationInfoGroup =
+      getLocationInfoGroup1();
+
+    // add the multi-block key to Recon's OM
+    writeKeyToOm(reconOMMetadataManager,
+        MULTI_BLOCK_KEY,
+        BUCKET_ONE,
+        VOL,
+        MULTI_BLOCK_FILE,
+        MULTI_BLOCK_KEY_OBJECT_ID,
+        DIR_ONE_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup),
+        getBucketLayout());
+  }
+
+  private OmKeyLocationInfoGroup getLocationInfoGroup1() {
     List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
     BlockID block1 = new BlockID(CONTAINER_ONE_ID, 0L);
     BlockID block2 = new BlockID(CONTAINER_TWO_ID, 0L);
@@ -913,27 +967,13 @@ public class TestFSONSSummaryEndpoint {
     locationInfoList.add(location2);
     locationInfoList.add(location3);
 
-    OmKeyLocationInfoGroup locationInfoGroup =
-            new OmKeyLocationInfoGroup(0L, locationInfoList);
-
-    // add the multi-block key to Recon's OM
-    writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        DIR_ONE_OBJECT_ID,
-        MULTI_BLOCK_KEY_OBJECT_ID,
-        VOL, BUCKET_ONE,
-        MULTI_BLOCK_KEY,
-        MULTI_BLOCK_FILE,
-        Collections.singletonList(locationInfoGroup),
-        getBucketLayout());
+    return new OmKeyLocationInfoGroup(0L, locationInfoList);
   }
 
   /**
    * Testing the following case.
    *                     vol
-   *               /             \
-   *        bucket1               bucket2
+   *               /             \   *        bucket1               bucket2
    *        /    \                /     \
    *     file1      dir1        file4  file5
    *           /   \   \     \
@@ -952,8 +992,7 @@ public class TestFSONSSummaryEndpoint {
    * replicate them.
    * @throws IOException
    */
-  @SuppressWarnings("checkstyle:MethodLength")
-  private void setUpMultiBlockReplicatedKeys() throws IOException {
+  private OmKeyLocationInfoGroup getLocationInfoGroup2() {
     List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
     BlockID block4 = new BlockID(CONTAINER_FOUR_ID, 0L);
     BlockID block5 = new BlockID(CONTAINER_FIVE_ID, 0L);
@@ -974,140 +1013,158 @@ public class TestFSONSSummaryEndpoint {
     locationInfoList.add(location4);
     locationInfoList.add(location5);
     locationInfoList.add(location6);
+    return new OmKeyLocationInfoGroup(0L, locationInfoList);
 
-    OmKeyLocationInfoGroup locationInfoGroup =
-        new OmKeyLocationInfoGroup(0L, locationInfoList);
+  }
 
-    //vol/bucket2/file4
-    writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_TWO_OBJECT_ID,
-        BUCKET_TWO_OBJECT_ID,
-        KEY_FOUR_OBJECT_ID,
-        VOL, BUCKET_TWO,
-        KEY_FOUR,
-        FILE_FOUR,
-        Collections.singletonList(locationInfoGroup),
-        getBucketLayout());
-
-    //vol/bucket2/file5
-    writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_TWO_OBJECT_ID,
-        BUCKET_TWO_OBJECT_ID,
-        KEY_FIVE_OBJECT_ID,
-        VOL, BUCKET_TWO,
-        KEY_FIVE,
-        FILE_FIVE,
-        Collections.singletonList(locationInfoGroup),
-        getBucketLayout());
+  @SuppressWarnings("checkstyle:MethodLength")
+  private void setUpMultiBlockReplicatedKeys() throws IOException {
+    OmKeyLocationInfoGroup locationInfoGroup1 =
+      getLocationInfoGroup1();
+    OmKeyLocationInfoGroup locationInfoGroup2 =
+      getLocationInfoGroup2();
 
     //vol/bucket1/file1
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        KEY_ONE_OBJECT_ID,
-        VOL, BUCKET_ONE,
         KEY_ONE,
+        BUCKET_ONE,
+        VOL,
         FILE_ONE,
-        Collections.singletonList(locationInfoGroup),
+        KEY_ONE_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup1),
         getBucketLayout());
 
     //vol/bucket1/dir1/dir2/file2
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        DIR_TWO_OBJECT_ID,
-        KEY_TWO_OBJECT_ID,
-        VOL, BUCKET_ONE,
         KEY_TWO,
+        BUCKET_ONE,
+        VOL,
         FILE_TWO,
-        Collections.singletonList(locationInfoGroup),
+        KEY_TWO_OBJECT_ID,
+        DIR_TWO_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup2),
         getBucketLayout());
 
     //vol/bucket1/dir1/dir3/file3
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        DIR_THREE_OBJECT_ID,
-        KEY_THREE_OBJECT_ID,
-        VOL, BUCKET_ONE,
         KEY_THREE,
+        BUCKET_ONE,
+        VOL,
         FILE_THREE,
-        Collections.singletonList(locationInfoGroup),
+        KEY_THREE_OBJECT_ID,
+        DIR_THREE_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup1),
+        getBucketLayout());
+
+    //vol/bucket2/file4
+    writeKeyToOm(reconOMMetadataManager,
+        KEY_FOUR,
+        BUCKET_TWO,
+        VOL,
+        FILE_FOUR,
+        KEY_FOUR_OBJECT_ID,
+        BUCKET_TWO_OBJECT_ID,
+        BUCKET_TWO_OBJECT_ID,
+        VOL_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup2),
+        getBucketLayout());
+
+    //vol/bucket2/file5
+    writeKeyToOm(reconOMMetadataManager,
+        KEY_FIVE,
+        BUCKET_TWO,
+        VOL,
+        FILE_FIVE,
+        KEY_FIVE_OBJECT_ID,
+        BUCKET_TWO_OBJECT_ID,
+        BUCKET_TWO_OBJECT_ID,
+        VOL_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup1),
         getBucketLayout());
 
     //vol/bucket1/dir1/dir4/file6
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        DIR_FOUR_OBJECT_ID,
-        KEY_SIX_OBJECT_ID,
-        VOL, BUCKET_ONE,
         KEY_SIX,
+        BUCKET_ONE,
+        VOL,
         FILE_SIX,
-        Collections.singletonList(locationInfoGroup),
+        KEY_SIX_OBJECT_ID,
+        DIR_FOUR_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup2),
         getBucketLayout());
 
     //vol/bucket1/dir1/file7
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        DIR_ONE_OBJECT_ID,
-        KEY_SEVEN_OBJECT_ID,
-        VOL, BUCKET_ONE,
         KEY_SEVEN,
+        BUCKET_ONE,
+        VOL,
         FILE_SEVEN,
-        Collections.singletonList(locationInfoGroup),
+        KEY_SEVEN_OBJECT_ID,
+        DIR_ONE_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup1),
         getBucketLayout());
 
     //vol2/bucket3/file8
     writeKeyToOm(reconOMMetadataManager,
-        VOL_TWO_OBJECT_ID,
-        BUCKET_THREE_OBJECT_ID,
-        BUCKET_THREE_OBJECT_ID,
-        KEY_EIGHT_OBJECT_ID,
-        VOL_TWO, BUCKET_THREE,
         KEY_EIGHT,
+        BUCKET_THREE,
+        VOL_TWO,
         FILE_EIGHT,
-        Collections.singletonList(locationInfoGroup),
+        KEY_EIGHT_OBJECT_ID,
+        BUCKET_THREE_OBJECT_ID,
+        BUCKET_THREE_OBJECT_ID,
+        VOL_TWO_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup2),
         getBucketLayout());
 
     //vol2/bucket3/dir5/file9
     writeKeyToOm(reconOMMetadataManager,
-        VOL_TWO_OBJECT_ID,
-        BUCKET_THREE_OBJECT_ID,
-        DIR_FIVE_OBJECT_ID,
-        KEY_NINE_OBJECT_ID,
-        VOL_TWO, BUCKET_THREE,
         KEY_NINE,
+        BUCKET_THREE,
+        VOL_TWO,
         FILE_NINE,
-        Collections.singletonList(locationInfoGroup),
+        KEY_NINE_OBJECT_ID,
+        DIR_FIVE_OBJECT_ID,
+        BUCKET_THREE_OBJECT_ID,
+        VOL_TWO_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup1),
         getBucketLayout());
 
     //vol2/bucket3/dir5/file10
     writeKeyToOm(reconOMMetadataManager,
-        VOL_TWO_OBJECT_ID,
-        BUCKET_THREE_OBJECT_ID,
-        DIR_FIVE_OBJECT_ID,
-        KEY_TEN_OBJECT_ID,
-        VOL_TWO, BUCKET_THREE,
         KEY_TEN,
+        BUCKET_THREE,
+        VOL_TWO,
         FILE_TEN,
-        Collections.singletonList(locationInfoGroup),
+        KEY_TEN_OBJECT_ID,
+        DIR_FIVE_OBJECT_ID,
+        BUCKET_THREE_OBJECT_ID,
+        VOL_TWO_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup2),
         getBucketLayout());
 
     //vol2/bucket4/file11
     writeKeyToOm(reconOMMetadataManager,
-        VOL_TWO_OBJECT_ID,
-        BUCKET_FOUR_OBJECT_ID,
-        BUCKET_FOUR_OBJECT_ID,
-        KEY_ELEVEN_OBJECT_ID,
-        VOL_TWO, BUCKET_FOUR,
         KEY_ELEVEN,
+        BUCKET_FOUR,
+        VOL_TWO,
         FILE_ELEVEN,
-        Collections.singletonList(locationInfoGroup),
+        KEY_ELEVEN_OBJECT_ID,
+        BUCKET_FOUR_OBJECT_ID,
+        BUCKET_FOUR_OBJECT_ID,
+        VOL_TWO_OBJECT_ID,
+        Collections.singletonList(locationInfoGroup1),
         getBucketLayout());
   }
 

@@ -480,8 +480,7 @@ public class NSSummaryEndpoint {
     // DU for key doesn't have subpaths
     duResponse.setCount(0);
     // The object ID for the directory that the key is directly in
-    long parentObjectId = getDirObjectId(names,
-        names.length - 1);
+    long parentObjectId = getDirObjectId(names, names.length - 1);
     String fileName = names[names.length - 1];
     String ozoneKey =
         getOmMetadataManager().getOzonePathKey(volumeId, bucketId,
