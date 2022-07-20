@@ -37,7 +37,6 @@ Create volume
     ${random} =     Generate Random String  5  [LOWER]
                     Set Suite Variable     ${VOLUME}    vol-${random}
     ${result} =     Execute             ozone sh volume create /${VOLUME}
-                    Log     gbj-${result}   console=yes
                     Should not contain  ${result}       Failed
 
 Create bucket
@@ -90,9 +89,14 @@ Test Summary
                                Should contain      ${result}       \"status\":\"OK\"
                                Should contain      ${result}       ${expected}
 
+Wait For Summary
+    [Arguments]         ${url}        ${expected}
+    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${url}        ${expected}
+
 *** Test Cases ***
 
 Check volume creation
+    Execute    kdestroy
     Kinit as ozone admin
     Create volume
 
@@ -115,28 +119,28 @@ Check File Size Distribution api access
     Check access       ${FILE_SIZE_DIST_URL}?path=/
 
 Check Recon Namespace Summary Root
-    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${SUMMARY_URL}?path=/       ROOT
+    Wait For Summary      ${SUMMARY_URL}?path=/       ROOT
 
 Check Recon Namespace Summary Volume
-    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${SUMMARY_URL}?path=/${VOLUME}   VOLUME
+    Wait For Summary      ${SUMMARY_URL}?path=/${VOLUME}   VOLUME
 
 Check Recon Namespace Summary Bucket
-    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${SUMMARY_URL}?path=/${VOLUME}/${BUCKET}    BUCKET
+    Wait For Summary      ${SUMMARY_URL}?path=/${VOLUME}/${BUCKET}    BUCKET
 
 Check Recon Namespace Summary Key
-    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${SUMMARY_URL}?path=/${VOLUME}/${BUCKET}/file1   KEY
+    Wait For Summary      ${SUMMARY_URL}?path=/${VOLUME}/${BUCKET}/file1   KEY
 
 Check Recon Namespace Summary Directory
-    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${SUMMARY_URL}?path=/${VOLUME}/${BUCKET}/dir1/dir2   DIRECTORY
+    Wait For Summary      ${SUMMARY_URL}?path=/${VOLUME}/${BUCKET}/dir1/dir2   DIRECTORY
 
 Check Recon Namespace Disk Usage
-    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${DISK_USAGE_URL}?path=/${VOLUME}/${BUCKET}&files=true&replica=true     \"sizeWithReplica\"
+    Wait For Summary      ${DISK_USAGE_URL}?path=/${VOLUME}/${BUCKET}&files=true&replica=true     \"sizeWithReplica\"
 
 Check Recon Namespace Volume Quota Usage
-    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${QUOTA_USAGE_URL}?path=/${VOLUME}             \"used\"
+    Wait For Summary      ${QUOTA_USAGE_URL}?path=/${VOLUME}             \"used\"
 
 Check Recon Namespace Bucket Quota Usage
-    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${QUOTA_USAGE_URL}?path=/${VOLUME}/${BUCKET}   \"used\"
+    Wait For Summary      ${QUOTA_USAGE_URL}?path=/${VOLUME}/${BUCKET}   \"used\"
 
 Check Recon Namespace File Size Distribution Root
-    Wait Until Keyword Succeeds     90sec      10sec        Test Summary      ${FILE_SIZE_DIST_URL}?path=/                   \"dist\"
+    Wait For Summary      ${FILE_SIZE_DIST_URL}?path=/                   \"dist\"
