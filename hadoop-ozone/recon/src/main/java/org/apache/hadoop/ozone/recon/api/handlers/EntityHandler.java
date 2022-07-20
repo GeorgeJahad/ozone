@@ -125,7 +125,7 @@ public abstract class EntityHandler {
     BucketHandler bucketHandler;
 
     String normalizedPath = normalizePath(path);
-    String []names = parseRequestPath(normalizedPath);
+    String[] names = parseRequestPath(normalizedPath);
     if (path.equals(OM_KEY_PREFIX)) {
       return EntityType.ROOT.create(reconNamespaceSummaryManager,
               omMetadataManager, reconSCM, null, path);
@@ -224,7 +224,8 @@ public abstract class EntityHandler {
    */
   List<OmVolumeArgs> listVolumes() throws IOException {
     List<OmVolumeArgs> result = new ArrayList<>();
-    Table<String, OmVolumeArgs> volumeTable = omMetadataManager.getVolumeTable();
+    Table<String, OmVolumeArgs> volumeTable =
+        omMetadataManager.getVolumeTable();
     TableIterator<String, ? extends Table.KeyValue<String, OmVolumeArgs>>
         iterator = volumeTable.iterator();
 
@@ -252,7 +253,8 @@ public abstract class EntityHandler {
     // if volume name is null, seek prefix is an empty string
     String seekPrefix = "";
 
-    Table<String, OmBucketInfo> bucketTable = omMetadataManager.getBucketTable();
+    Table<String, OmBucketInfo> bucketTable =
+        omMetadataManager.getBucketTable();
 
     TableIterator<String, ? extends Table.KeyValue<String, OmBucketInfo>>
         iterator = bucketTable.iterator();
@@ -327,7 +329,7 @@ public abstract class EntityHandler {
     if (path.startsWith(OM_KEY_PREFIX)) {
       path = path.substring(1);
     }
-    String [] names = path.split(OM_KEY_PREFIX);
+    String[] names = path.split(OM_KEY_PREFIX);
     return names;
   }
 

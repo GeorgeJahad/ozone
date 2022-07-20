@@ -108,9 +108,9 @@ public final class TestFSONSSummaryTask {
   private static final long KEY_FOUR_SIZE = 2050L;
   private static final long KEY_FIVE_SIZE = 100L;
 
-  private static final Set<Long> bucketOneAns = new HashSet<>();
-  private static final Set<Long> bucketTwoAns = new HashSet<>();
-  private static final Set<Long> dirOneAns = new HashSet<>();
+  private static Set<Long> bucketOneAns = new HashSet<>();
+  private static Set<Long> bucketTwoAns = new HashSet<>();
+  private static Set<Long> dirOneAns = new HashSet<>();
 
   private TestFSONSSummaryTask() {
   }
@@ -376,16 +376,16 @@ public final class TestFSONSSummaryTask {
           .setTable(omMetadataManager.getDirectoryTable().getName())
           .build();
 
-    OMUpdateEventBatch omUpdateEventBatch = new OMUpdateEventBatch(
+      OMUpdateEventBatch omUpdateEventBatch = new OMUpdateEventBatch(
             new ArrayList<OMDBUpdateEvent>() {{
-              add(keyEvent1);
-              add(keyEvent2);
-              add(keyEvent3);
-              add(keyEvent4);
-              add(keyEvent5);
-              add(keyEvent6);
-              add(keyEvent7);
-              }});
+            add(keyEvent1);
+            add(keyEvent2);
+            add(keyEvent3);
+            add(keyEvent4);
+            add(keyEvent5);
+            add(keyEvent6);
+            add(keyEvent7);
+            }});
 
       return omUpdateEventBatch;
     }

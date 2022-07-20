@@ -93,14 +93,14 @@ public class VolumeEntityHandler extends EntityHandler {
       long dataSize = getTotalSize(bucketObjectID);
       volDataSize += dataSize;
       if (withReplica) {
-          BucketHandler bucketHandler =
+        BucketHandler bucketHandler =
               BucketHandler.getBucketHandler(
                   getReconNamespaceSummaryManager(),
                   getOmMetadataManager(), getReconSCM(), bucket);
-          long bucketDU = bucketHandler
+        long bucketDU = bucketHandler
               .calculateDUUnderObject(bucketObjectID);
-          diskUsage.setSizeWithReplica(bucketDU);
-          volDataSizeWithReplica += bucketDU;
+        diskUsage.setSizeWithReplica(bucketDU);
+        volDataSizeWithReplica += bucketDU;
       }
       diskUsage.setSize(dataSize);
       bucketDuData.add(diskUsage);

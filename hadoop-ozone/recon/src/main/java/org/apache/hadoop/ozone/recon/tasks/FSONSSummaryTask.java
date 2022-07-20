@@ -175,7 +175,8 @@ public class FSONSSummaryTask extends NSSummaryTask {
       // reinit Recon RocksDB's namespace CF.
       getReconNamespaceSummaryManager().clearNSSummaryTable();
 
-      Table<String, OmDirectoryInfo> dirTable = omMetadataManager.getDirectoryTable();
+      Table<String, OmDirectoryInfo> dirTable =
+          omMetadataManager.getDirectoryTable();
       TableIterator<String, ? extends Table.KeyValue<String, OmDirectoryInfo>>
               dirTableIter = dirTable.iterator();
 

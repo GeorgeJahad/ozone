@@ -691,7 +691,8 @@ public class TestFSONSSummaryEndpoint {
     checkFileSizeDist(DIR_ONE_PATH, 0, 1, 1, 1);
   }
 
-  public void checkFileSizeDist(String path, int bin0, int bin1, int bin2, int bin3) throws Exception {
+  public void checkFileSizeDist(String path, int bin0,
+      int bin1, int bin2, int bin3) throws Exception {
     Response res = nsSummaryEndpoint.getFileSizeDistribution(path);
     FileSizeDistributionResponse fileSizeDistResObj =
             (FileSizeDistributionResponse) res.getEntity();
@@ -929,7 +930,7 @@ public class TestFSONSSummaryEndpoint {
 
   private void setUpMultiBlockKey() throws IOException {
     OmKeyLocationInfoGroup locationInfoGroup =
-      getLocationInfoGroup1();
+        getLocationInfoGroup1();
 
     // add the multi-block key to Recon's OM
     writeKeyToOm(reconOMMetadataManager,
@@ -1019,9 +1020,9 @@ public class TestFSONSSummaryEndpoint {
   @SuppressWarnings("checkstyle:MethodLength")
   private void setUpMultiBlockReplicatedKeys() throws IOException {
     OmKeyLocationInfoGroup locationInfoGroup1 =
-      getLocationInfoGroup1();
+        getLocationInfoGroup1();
     OmKeyLocationInfoGroup locationInfoGroup2 =
-      getLocationInfoGroup2();
+        getLocationInfoGroup2();
 
     //vol/bucket1/file1
     writeKeyToOm(reconOMMetadataManager,
