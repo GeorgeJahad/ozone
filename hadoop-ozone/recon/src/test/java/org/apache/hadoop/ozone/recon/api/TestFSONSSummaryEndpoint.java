@@ -285,6 +285,14 @@ public class TestFSONSSummaryEndpoint {
       + FILE6_SIZE_WITH_REPLICA
       + FILE7_SIZE_WITH_REPLICA;
 
+  private static final long
+      MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_DIR2
+      = FILE2_SIZE_WITH_REPLICA;
+
+  private static final long
+      MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_KEY
+      = FILE4_SIZE_WITH_REPLICA;
+
   // quota in bytes
   private static final long ROOT_QUOTA = 2 * (2 * OzoneConsts.MB);
   private static final long VOL_QUOTA = 2 * OzoneConsts.MB;
@@ -450,7 +458,7 @@ public class TestFSONSSummaryEndpoint {
   }
 
   @Test
-  public void testDiskUsage() throws Exception {
+  public void testDiskUsageRoot() throws Exception {
     // root level DU
     Response rootResponse = nsSummaryEndpoint.getDiskUsage(ROOT_PATH,
         false, false);
@@ -466,7 +474,9 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(VOL_TWO_PATH, duVol2.getSubpath());
     Assert.assertEquals(VOL_DATA_SIZE, duVol1.getSize());
     Assert.assertEquals(VOL_TWO_DATA_SIZE, duVol2.getSize());
-
+  }
+  @Test
+  public void testDiskUsageVolume() throws Exception {
     // volume level DU
     Response volResponse = nsSummaryEndpoint.getDiskUsage(VOL_PATH,
             false, false);
@@ -483,6 +493,9 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(BUCKET_ONE_DATA_SIZE, duBucket1.getSize());
     Assert.assertEquals(BUCKET_TWO_DATA_SIZE, duBucket2.getSize());
 
+  }
+  @Test
+  public void testDiskUsageBucket() throws Exception {
     // bucket level DU
     Response bucketResponse = nsSummaryEndpoint.getDiskUsage(BUCKET_ONE_PATH,
             false, false);
@@ -492,6 +505,9 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(DIR_ONE_PATH, duDir1.getSubpath());
     Assert.assertEquals(DIR_ONE_DATA_SIZE, duDir1.getSize());
 
+  }
+  @Test
+  public void testDiskUsageDir() throws Exception {
     // dir level DU
     Response dirResponse = nsSummaryEndpoint.getDiskUsage(DIR_ONE_PATH,
             false, false);
@@ -512,6 +528,9 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(DIR_FOUR_PATH, duDir4.getSubpath());
     Assert.assertEquals(KEY_SIX_SIZE, duDir4.getSize());
 
+  }
+  @Test
+  public void testDiskUsageKey() throws Exception {
     // key level DU
     Response keyResponse = nsSummaryEndpoint.getDiskUsage(KEY_PATH,
             false, false);
@@ -519,6 +538,9 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(0, keyObj.getCount());
     Assert.assertEquals(KEY_FOUR_SIZE, keyObj.getSize());
 
+  }
+  @Test
+  public void testDiskUsageUnknown() throws Exception {
     // invalid path check
     Response invalidResponse = nsSummaryEndpoint.getDiskUsage(INVALID_PATH,
             false, false);
@@ -548,6 +570,9 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(ResponseStatus.OK, replicaDUResponse.getStatus());
     Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_ROOT,
         replicaDUResponse.getSizeWithReplica());
+    Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_VOL,
+        replicaDUResponse.getDuData().get(0).getSizeWithReplica());
+
   }
 
   @Test
@@ -559,6 +584,8 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(ResponseStatus.OK, replicaDUResponse.getStatus());
     Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_VOL,
         replicaDUResponse.getSizeWithReplica());
+    Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_BUCKET1,
+        replicaDUResponse.getDuData().get(0).getSizeWithReplica());
   }
 
   @Test
@@ -570,6 +597,8 @@ public class TestFSONSSummaryEndpoint {
     Assert.assertEquals(ResponseStatus.OK, replicaDUResponse.getStatus());
     Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_BUCKET1,
         replicaDUResponse.getSizeWithReplica());
+    Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_DIR1,
+        replicaDUResponse.getDuData().get(0).getSizeWithReplica());
   }
 
   /**
@@ -586,6 +615,19 @@ public class TestFSONSSummaryEndpoint {
     DUResponse replicaDUResponse = (DUResponse) dir1Response.getEntity();
     Assert.assertEquals(ResponseStatus.OK, replicaDUResponse.getStatus());
     Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_DIR1,
+        replicaDUResponse.getSizeWithReplica());
+    Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_DIR2,
+        replicaDUResponse.getDuData().get(0).getSizeWithReplica());
+  }
+
+  @Test
+  public void testDataSizeUnderKeyWithReplication() throws IOException {
+    setUpMultiBlockReplicatedKeys();
+    Response keyResponse = nsSummaryEndpoint.getDiskUsage(KEY_PATH,
+        false, true);
+    DUResponse replicaDUResponse = (DUResponse) keyResponse.getEntity();
+    Assert.assertEquals(ResponseStatus.OK, replicaDUResponse.getStatus());
+    Assert.assertEquals(MULTI_BLOCK_TOTAL_SIZE_WITH_REPLICA_UNDER_KEY,
         replicaDUResponse.getSizeWithReplica());
   }
 
