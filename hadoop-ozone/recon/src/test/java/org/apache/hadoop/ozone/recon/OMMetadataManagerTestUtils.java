@@ -224,14 +224,14 @@ public final class OMMetadataManagerTestUtils {
 
   @SuppressWarnings("checkstyle:parameternumber")
   public static void writeKeyToOm(OMMetadataManager omMetadataManager,
-                                  long volumeObjectId,
-                                  long bucketObjectId,
-                                  long parentObjectId,
-                                  long objectId,
-                                  String volName,
-                                  String bucketName,
                                   String keyName,
+                                  String bucketName,
+                                  String volName,
                                   String fileName,
+                                  long objectId,
+                                  long parentObjectId,
+                                  long bucketObjectId,
+                                  long volumeObjectId,
                                   List<OmKeyLocationInfoGroup> locationVersions,
                                   BucketLayout bucketLayout)
           throws IOException {

@@ -951,13 +951,14 @@ public class TestFSONSSummaryEndpoint {
 
     // add the multi-block key to Recon's OM
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        DIR_ONE_OBJECT_ID,
-        MULTI_BLOCK_KEY_OBJECT_ID,
-        VOL, BUCKET_ONE,
         MULTI_BLOCK_KEY,
+        BUCKET_ONE,
+        VOL,
         MULTI_BLOCK_FILE,
+        MULTI_BLOCK_KEY_OBJECT_ID,
+        DIR_ONE_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
   }
@@ -965,8 +966,7 @@ public class TestFSONSSummaryEndpoint {
   /**
    * Testing the following case.
    *                     vol
-   *               /             \
-   *        bucket1               bucket2
+   *               /             \   *        bucket1               bucket2
    *        /    \                /     \
    *     file1      dir1        file4  file5
    *           /   \   \     \
@@ -1013,133 +1013,144 @@ public class TestFSONSSummaryEndpoint {
 
     //vol/bucket1/file1
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        KEY_ONE_OBJECT_ID,
-        VOL, BUCKET_ONE,
         KEY_ONE,
+        BUCKET_ONE,
+        VOL,
         FILE_ONE,
+        KEY_ONE_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
 
     //vol/bucket1/dir1/dir2/file2
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        DIR_TWO_OBJECT_ID,
-        KEY_TWO_OBJECT_ID,
-        VOL, BUCKET_ONE,
         KEY_TWO,
+        BUCKET_ONE,
+        VOL,
         FILE_TWO,
+        KEY_TWO_OBJECT_ID,
+        DIR_TWO_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
 
     //vol/bucket1/dir1/dir3/file3
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        DIR_THREE_OBJECT_ID,
-        KEY_THREE_OBJECT_ID,
-        VOL, BUCKET_ONE,
         KEY_THREE,
+        BUCKET_ONE,
+        VOL,
         FILE_THREE,
+        KEY_THREE_OBJECT_ID,
+        DIR_THREE_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
 
     //vol/bucket2/file4
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_TWO_OBJECT_ID,
-        BUCKET_TWO_OBJECT_ID,
-        KEY_FOUR_OBJECT_ID,
-        VOL, BUCKET_TWO,
         KEY_FOUR,
+        BUCKET_TWO,
+        VOL,
         FILE_FOUR,
+        KEY_FOUR_OBJECT_ID,
+        BUCKET_TWO_OBJECT_ID,
+        BUCKET_TWO_OBJECT_ID,
+        VOL_OBJECT_ID,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
 
     //vol/bucket2/file5
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_TWO_OBJECT_ID,
-        BUCKET_TWO_OBJECT_ID,
-        KEY_FIVE_OBJECT_ID,
-        VOL, BUCKET_TWO,
         KEY_FIVE,
+        BUCKET_TWO,
+        VOL,
         FILE_FIVE,
+        KEY_FIVE_OBJECT_ID,
+        BUCKET_TWO_OBJECT_ID,
+        BUCKET_TWO_OBJECT_ID,
+        VOL_OBJECT_ID,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
 
     //vol/bucket1/dir1/dir4/file6
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        DIR_FOUR_OBJECT_ID,
-        KEY_SIX_OBJECT_ID,
-        VOL, BUCKET_ONE,
         KEY_SIX,
+        BUCKET_ONE,
+        VOL,
         FILE_SIX,
+        KEY_SIX_OBJECT_ID,
+        DIR_FOUR_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
 
     //vol/bucket1/dir1/file7
     writeKeyToOm(reconOMMetadataManager,
-        VOL_OBJECT_ID,
-        BUCKET_ONE_OBJECT_ID,
-        DIR_ONE_OBJECT_ID,
-        KEY_SEVEN_OBJECT_ID,
-        VOL, BUCKET_ONE,
         KEY_SEVEN,
+        BUCKET_ONE,
+        VOL,
         FILE_SEVEN,
+        KEY_SEVEN_OBJECT_ID,
+        DIR_ONE_OBJECT_ID,
+        BUCKET_ONE_OBJECT_ID,
+        VOL_OBJECT_ID,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
 
     //vol2/bucket3/file8
     writeKeyToOm(reconOMMetadataManager,
-        VOL_TWO_OBJECT_ID,
-        BUCKET_THREE_OBJECT_ID,
-        BUCKET_THREE_OBJECT_ID,
-        KEY_EIGHT_OBJECT_ID,
-        VOL_TWO, BUCKET_THREE,
         KEY_EIGHT,
+        BUCKET_THREE,
+        VOL_TWO,
         FILE_EIGHT,
+        KEY_EIGHT_OBJECT_ID,
+        BUCKET_THREE_OBJECT_ID,
+        BUCKET_THREE_OBJECT_ID,
+        VOL_TWO_OBJECT_ID,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
 
     //vol2/bucket3/dir5/file9
     writeKeyToOm(reconOMMetadataManager,
-        VOL_TWO_OBJECT_ID,
-        BUCKET_THREE_OBJECT_ID,
-        DIR_FIVE_OBJECT_ID,
-        KEY_NINE_OBJECT_ID,
-        VOL_TWO, BUCKET_THREE,
         KEY_NINE,
+        BUCKET_THREE,
+        VOL_TWO,
         FILE_NINE,
+        KEY_NINE_OBJECT_ID,
+        DIR_FIVE_OBJECT_ID,
+        BUCKET_THREE_OBJECT_ID,
+        VOL_TWO_OBJECT_ID,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
 
     //vol2/bucket3/dir5/file10
     writeKeyToOm(reconOMMetadataManager,
-        VOL_TWO_OBJECT_ID,
-        BUCKET_THREE_OBJECT_ID,
-        DIR_FIVE_OBJECT_ID,
-        KEY_TEN_OBJECT_ID,
-        VOL_TWO, BUCKET_THREE,
         KEY_TEN,
+        BUCKET_THREE,
+        VOL_TWO,
         FILE_TEN,
+        KEY_TEN_OBJECT_ID,
+        DIR_FIVE_OBJECT_ID,
+        BUCKET_THREE_OBJECT_ID,
+        VOL_TWO_OBJECT_ID,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
 
     //vol2/bucket4/file11
     writeKeyToOm(reconOMMetadataManager,
-        VOL_TWO_OBJECT_ID,
-        BUCKET_FOUR_OBJECT_ID,
-        BUCKET_FOUR_OBJECT_ID,
-        KEY_ELEVEN_OBJECT_ID,
-        VOL_TWO, BUCKET_FOUR,
         KEY_ELEVEN,
+        BUCKET_FOUR,
+        VOL_TWO,
         FILE_ELEVEN,
+        KEY_ELEVEN_OBJECT_ID,
+        BUCKET_FOUR_OBJECT_ID,
+        BUCKET_FOUR_OBJECT_ID,
+        VOL_TWO_OBJECT_ID,
         Collections.singletonList(locationInfoGroup),
         getBucketLayout());
   }
