@@ -69,11 +69,11 @@ import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_L
  */
 public final class SnapshotManager {
 
-    private final KeyManagerImpl keyManager;
-  private final PrefixManagerImpl prefixManager;
-  private final VolumeManagerImpl volumeManager;
-  private final BucketManagerImpl bucketManager;
-  private final OmMetadataManagerImpl smMetadataManager;
+  private final KeyManager keyManager;
+  private final PrefixManager prefixManager;
+  private final VolumeManager volumeManager;
+  private final BucketManager bucketManager;
+  private final OMMetadataManager smMetadataManager;
   private final OzoneConfiguration configuration;
   private final boolean isAclEnabled;
   private final IAccessAuthorizer accessAuthorizer;
@@ -90,11 +90,11 @@ public final class SnapshotManager {
   private static final Map<String, SnapshotManager> snapshotManagerCache = new HashMap<>();
 
   // private so as not to bypass cache
-  private SnapshotManager(KeyManagerImpl keyManager,
-                          PrefixManagerImpl prefixManager,
-                          VolumeManagerImpl volumeManager,
-                          BucketManagerImpl bucketManager,
-                          OmMetadataManagerImpl smMetadataManager,
+  public SnapshotManager(KeyManager keyManager,
+                          PrefixManager prefixManager,
+                          VolumeManager volumeManager,
+                          BucketManager bucketManager,
+                          OMMetadataManager smMetadataManager,
                           OzoneConfiguration conf,
                           InetSocketAddress omRpcAddress) {
     this.keyManager = keyManager;
@@ -132,7 +132,7 @@ public final class SnapshotManager {
 
   /**
    * Creates snapshot checkpoint that corresponds with SnapshotInfo.
-   * @param OMMetadataManager the metadata manager
+   * @param omMetadataManager the metadata manager
    * @param snapshotInfo The metadata of snapshot to be created
    * @return instance of DBCheckpoint
    */
@@ -164,8 +164,6 @@ public final class SnapshotManager {
     PrefixManagerImpl pm = new PrefixManagerImpl(smm, false);
     VolumeManagerImpl vm = new VolumeManagerImpl(smm, conf);
     BucketManagerImpl bm = new BucketManagerImpl(smm);
-    StorageContainerLocationProtocol
-        scmContainerClient = getScmContainerClient(conf);
     KeyManagerImpl km = new KeyManagerImpl(null, ozoneManager.getScmClient(), smm, conf, null,
         ozoneManager.getBlockTokenSecretManager(), ozoneManager.getKmsProvider(), pm );
     SnapshotManager sm = new SnapshotManager(km, pm, vm, bm, smm, conf, ozoneManager.getOmRpcServerAddr());

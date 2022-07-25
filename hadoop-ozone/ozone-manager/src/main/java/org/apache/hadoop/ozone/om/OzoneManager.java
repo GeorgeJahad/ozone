@@ -431,6 +431,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   private final boolean isSecurityEnabled;
 
+  private SnapshotManager snapshotManager;
+
+  
   @SuppressWarnings("methodlength")
   private OzoneManager(OzoneConfiguration conf, StartupOption startupOption)
       throws IOException, AuthenticationException {
@@ -746,6 +749,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } else {
       accessAuthorizer = null;
     }
+    snapshotManager = new SnapshotManager(keyManager, prefixManager, volumeManager, bucketManager, metadataManager, configuration, omRpcAddress);
   }
 
   /**
@@ -2797,33 +2801,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
-    ResolvedBucket bucket = resolveBucketLink(args);
-
-    if (isAclEnabled) {
-      checkAcls(ResourceType.KEY, StoreType.OZONE, ACLType.READ,
-          bucket.realVolume(), bucket.realBucket(), args.getKeyName());
-    }
-
-    boolean auditSuccess = true;
-    Map<String, String> auditMap = bucket.audit(args.toAuditMap());
-
-    args = bucket.update(args);
-
-    try {
-      metrics.incNumKeyLookups();
-      return keyManager.lookupKey(args, getClientAddress());
-    } catch (Exception ex) {
-      metrics.incNumKeyLookupFails();
-      auditSuccess = false;
-      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_KEY,
-          auditMap, ex));
-      throw ex;
-    } finally {
-      if (auditSuccess) {
-        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_KEY,
-            auditMap));
-      }
-    }
+    LOG.info("gbjLookupKey");
+    return snapshotManager.lookupKey(args);
   }
 
   @Override
