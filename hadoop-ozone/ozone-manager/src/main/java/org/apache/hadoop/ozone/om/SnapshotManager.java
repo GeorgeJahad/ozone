@@ -346,9 +346,10 @@ public final class SnapshotManager {
   }
 
   // This is an exact copy from OzoneManager.java
-  private void checkAcls(OzoneObj.ResourceType resType, OzoneObj.StoreType store,
+  public void checkAcls(OzoneObj.ResourceType resType, OzoneObj.StoreType store,
                          IAccessAuthorizer.ACLType acl, String vol, String bucket, String key)
       throws IOException {
+    LOG.info("gbjCheckAcls");
     UserGroupInformation user;
     if (getS3Auth() != null) {
       String principal =
