@@ -34,6 +34,7 @@ import org.apache.hadoop.hdds.utils.db.SequenceNumberNotFoundException;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.OzoneManagerPrepareState;
+import org.apache.hadoop.ozone.om.SnapshotManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.DBUpdates;
@@ -473,15 +474,18 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     LookupKeyResponse.Builder resp =
         LookupKeyResponse.newBuilder();
     KeyArgs keyArgs = request.getKeyArgs();
+    String keyname = keyArgs.getKeyName();
+    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager(), keyname);
+    keyname = SnapshotManager.fixKeyname(keyname);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-        .setKeyName(keyArgs.getKeyName())
+        .setKeyName(keyname)
         .setLatestVersionLocation(keyArgs.getLatestVersionLocation())
         .setSortDatanodesInPipeline(keyArgs.getSortDatanodes())
         .setHeadOp(keyArgs.getHeadOp())
         .build();
-    OmKeyInfo keyInfo = impl.lookupKey(omKeyArgs);
+    OmKeyInfo keyInfo = (sm != null) ? sm.lookupKey(omKeyArgs) : impl.lookupKey(omKeyArgs);
 
     resp.setKeyInfo(keyInfo.getProtobuf(keyArgs.getHeadOp(), clientVersion));
 
