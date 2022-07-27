@@ -195,7 +195,6 @@ public final class SnapshotManager {
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
     ResolvedBucket bucket = resolveBucketLink(args);
 
-    // Acls not working yet
     if (isAclEnabled) {
       checkAcls(OzoneObj.ResourceType.KEY, OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.READ,
           bucket.realVolume(), bucket.realBucket(), args.getKeyName());
@@ -224,62 +223,6 @@ public final class SnapshotManager {
     }
   }
 
-  // This is a copy from OzoneManager.java
-  // metrics are commented out because they aren't working yet
-  public OmVolumeArgs getVolumeInfo(String volume) throws IOException {
-    if (isAclEnabled) {
-      checkAcls(OzoneObj.ResourceType.VOLUME, OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.READ, volume,
-          null, null);
-    }
-
-    boolean auditSuccess = true;
-    Map<String, String> auditMap = buildAuditMap(volume);
-    try {
-      // metrics.incNumVolumeInfos();
-      return volumeManager.getVolumeInfo(volume);
-    } catch (Exception ex) {
-      //metrics.incNumVolumeInfoFails();
-      auditSuccess = false;
-      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_VOLUME,
-          auditMap, ex));
-      throw ex;
-    } finally {
-      if (auditSuccess) {
-        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_VOLUME,
-            auditMap));
-      }
-    }
-  }
-
-  // This is a copy from OzoneManager.java
-  // metrics are commented out because they aren't working yet
-  public OmBucketInfo getBucketInfo(String volume, String bucket)
-      throws IOException {
-    if (isAclEnabled) {
-      checkAcls(OzoneObj.ResourceType.BUCKET, OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.READ, volume,
-          bucket, null);
-    }
-    boolean auditSuccess = true;
-    Map<String, String> auditMap = buildAuditMap(volume);
-    auditMap.put(OzoneConsts.BUCKET, bucket);
-    try {
-      //metrics.incNumBucketInfos();
-      final OmBucketInfo bucketInfo =
-          bucketManager.getBucketInfo(volume, bucket);
-      return bucketInfo;
-    } catch (Exception ex) {
-      //metrics.incNumBucketInfoFails();
-      auditSuccess = false;
-      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_BUCKET,
-          auditMap, ex));
-      throw ex;
-    } finally {
-      if (auditSuccess) {
-        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_BUCKET,
-            auditMap));
-      }
-    }
-  }
 
   // This is an exact copy from OzoneManager.java
   public ResolvedBucket resolveBucketLink(OmKeyArgs args)
