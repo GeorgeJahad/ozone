@@ -27,6 +27,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.om.OmMReader;
 import org.apache.hadoop.ozone.om.OzoneManagerPrepareState;
 import org.apache.hadoop.ozone.om.ResolvedBucket;
 import org.apache.hadoop.ozone.om.KeyManager;
@@ -156,6 +157,9 @@ public class TestOMKeyRequest {
     when(ozoneManager.getOMNodeId()).thenReturn(UUID.randomUUID().toString());
     when(scmClient.getBlockClient()).thenReturn(scmBlockLocationProtocol);
     when(ozoneManager.getKeyManager()).thenReturn(keyManager);
+
+    OmMReader omMReader = Mockito.mock(OmMReader.class);
+    when(ozoneManager.getOmMReader()).thenReturn(omMReader);
 
     prepareState = new OzoneManagerPrepareState(ozoneConfiguration);
     when(ozoneManager.getPrepareState()).thenReturn(prepareState);

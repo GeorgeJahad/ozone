@@ -2,7 +2,6 @@ package org.apache.hadoop.ozone.om;
 
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.RDBStore;
-import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 
 import java.io.IOException;
 import org.apache.commons.lang3.tuple.Pair;
@@ -71,8 +70,7 @@ public class OmMReader {
   private final boolean isNativeAuthorizerEnabled;
   private final InetSocketAddress omRpcAddress;
 
-  public static final Logger LOG =
-      LoggerFactory.getLogger(SnapshotManager.class);
+  public final Logger LOG;
 
   private static final AuditLogger AUDIT = new AuditLogger(
       AuditLoggerType.OMLOGGER);
@@ -80,7 +78,8 @@ public class OmMReader {
   public OmMReader(KeyManager keyManager,
                           PrefixManager prefixManager,
                           OMMetadataManager metadataManager,
-                   OzoneManager ozoneManager) {
+                   OzoneManager ozoneManager,
+                   Logger LOG) {
     this.keyManager = keyManager;
     this.bucketManager = ozoneManager.getBucketManager();
     this.volumeManager = ozoneManager.getVolumeManager();
@@ -89,6 +88,7 @@ public class OmMReader {
     this.configuration = ozoneManager.getConfiguration();
     this.omRpcAddress = ozoneManager.getOmRpcServerAddr();
     this.isAclEnabled = ozoneManager.getAclsEnabled();
+    this.LOG = LOG;
     this.allowListAllVolumes = ozoneManager.getAllowListAllVolumes();
     if (isAclEnabled) {
       accessAuthorizer = getACLAuthorizerInstance(configuration);
@@ -100,7 +100,7 @@ public class OmMReader {
         authorizer.setBucketManager(bucketManager);
         authorizer.setKeyManager(keyManager);
         authorizer.setPrefixManager(prefixManager);
-        authorizer.setOzoneAdmins(configuration.getTrimmedStringCollection(OZONE_ADMINISTRATORS));
+        authorizer.setOzoneAdmins(ozoneManager.getOmAdminUsernames());
         authorizer.setAllowListAllVolumes(allowListAllVolumes);
       } else {
         isNativeAuthorizerEnabled = false;

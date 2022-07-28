@@ -733,7 +733,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       instantiatePrepareStateOnStartup();
     }
 
-    omMReader = new OmMReader(keyManager, prefixManager,  metadataManager, this);
+    omMReader = new OmMReader(keyManager, prefixManager,  metadataManager, this, LOG);
   }
 
   /**

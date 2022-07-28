@@ -71,13 +71,16 @@ public final class SnapshotManager {
 
   private static final Map<String, SnapshotManager> snapshotManagerCache = new HashMap<>();
 
+  public static final Logger LOG =
+      LoggerFactory.getLogger(SnapshotManager.class);
+
   private final OmMReader omMReader;
   // private so as not to bypass cache
   public SnapshotManager(KeyManager keyManager,
                           PrefixManager prefixManager,
                           OMMetadataManager omMetadataManager,
                           OzoneManager ozoneManager) {
-    omMReader = new OmMReader(keyManager, prefixManager, omMetadataManager, ozoneManager);
+    omMReader = new OmMReader(keyManager, prefixManager, omMetadataManager, ozoneManager, LOG);
   }
 
   /**

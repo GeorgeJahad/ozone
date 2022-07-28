@@ -29,6 +29,7 @@ import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
+import org.apache.hadoop.ozone.om.OmMReader;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -91,7 +92,9 @@ public class TestOMSnapshotCreateRequest {
     when(ozoneManager.isRatisEnabled()).thenReturn(true);
     when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(false);
     when(ozoneManager.isOwner(any(), any())).thenReturn(false);
-    when(ozoneManager.getOmMReader().getBucketOwner(any(), any(),
+    OmMReader omMReader = Mockito.mock(OmMReader.class);
+    when(ozoneManager.getOmMReader()).thenReturn(omMReader);
+    when(omMReader.getBucketOwner(any(), any(),
         any(), any())).thenReturn("dummyBucketOwner");
     OMLayoutVersionManager lvm = mock(OMLayoutVersionManager.class);
     when(lvm.getMetadataLayoutVersion()).thenReturn(0);
