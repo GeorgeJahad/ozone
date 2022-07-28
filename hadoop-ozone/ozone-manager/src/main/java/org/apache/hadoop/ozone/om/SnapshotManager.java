@@ -82,7 +82,7 @@ public final class SnapshotManager {
                           PrefixManager prefixManager,
                           OMMetadataManager omMetadataManager,
                           OzoneManager ozoneManager) {
-    omMReader = new OmMReader(keyManager, prefixManager, omMetadataManager, ozoneManager, LOG);
+    omMReader = new OmMReader(keyManager, prefixManager, omMetadataManager, ozoneManager, LOG, new OmSnapshotMetrics());
   }
 
   /**

@@ -119,7 +119,7 @@ public class TestOmMetrics {
 
 
 
-  //  @Test
+  @Test
   public void testVolumeOps() throws Exception {
     startCluster();
     VolumeManager volumeManager =
@@ -188,7 +188,7 @@ public class TestOmMetrics {
 
   }
 
-  //  @Test
+  @Test
   public void testBucketOps() throws Exception {
     startCluster();
     BucketManager bucketManager =
@@ -252,8 +252,7 @@ public class TestOmMetrics {
     assertCounter("NumBuckets", 2L, omMetrics);
   }
 
-  //  GBJ FIX:
-  //  @Test
+  @Test
   public void testKeyOps() throws Exception {
     // This test needs a cluster with DNs and SCM to wait on safemode
     clusterBuilder.setNumDatanodes(5);
@@ -308,8 +307,12 @@ public class TestOmMetrics {
         any(), any(), any(), any(), anyInt());
     Mockito.doThrow(exception).when(mockKm).listTrash(
         any(), any(), any(), any(), anyInt());
+    OmMReader omMReader = ozoneManager.getOmMReader();
     HddsWhiteboxTestUtils.setInternalState(
         ozoneManager, "keyManager", mockKm);
+
+    HddsWhiteboxTestUtils.setInternalState(
+        omMReader, "keyManager", mockKm);
 
     // inject exception to test for Failure Metrics on the write path
     mockWritePathExceptions(OmBucketInfo.class);
@@ -365,7 +368,7 @@ public class TestOmMetrics {
         ozoneManager, "metadataManager", mockMm);
   }
 
-  //  @Test
+  @Test
   public void testAclOperations() throws Exception {
     startCluster();
     try {
@@ -402,7 +405,7 @@ public class TestOmMetrics {
     }
   }
 
-  //  @Test
+  @Test
   public void testAclOperationsHA() throws Exception {
     // This test needs a cluster with DNs and SCM to wait on safemode
     clusterBuilder.setNumDatanodes(3);

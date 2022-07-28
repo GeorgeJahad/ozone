@@ -609,6 +609,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } else {
       omState = State.INITIALIZED;
     }
+    omMReader = new OmMReader(keyManager, prefixManager,  metadataManager, this, LOG, metrics);
   }
 
   public boolean isStopped() {
@@ -733,7 +734,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       instantiatePrepareStateOnStartup();
     }
 
-    omMReader = new OmMReader(keyManager, prefixManager,  metadataManager, this, LOG);
   }
 
   /**
@@ -1592,6 +1592,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
     startJVMPauseMonitor();
     setStartTime();
+    omMReader = new OmMReader(keyManager, prefixManager,  metadataManager, this, LOG, metrics);
     omState = State.RUNNING;
   }
 
@@ -3519,6 +3520,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     // Update OM snapshot index with the new snapshot index (from the new OM
     // DB state).
     omRatisSnapshotInfo.updateTermIndex(newSnapshotTermIndex, newSnapshotIndex);
+    omMReader = new OmMReader(keyManager, prefixManager,  metadataManager, this, LOG, metrics);
   }
 
   public static Logger getLogger() {

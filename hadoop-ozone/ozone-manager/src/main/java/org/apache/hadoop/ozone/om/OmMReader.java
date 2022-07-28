@@ -71,6 +71,7 @@ public class OmMReader {
   private final IAccessAuthorizer accessAuthorizer;
   private final boolean allowListAllVolumes;
   private final boolean isNativeAuthorizerEnabled;
+  private final OmMReaderMetrics metrics;
   //  private final InetSocketAddress omRpcAddress;
 
   public final Logger LOG;
@@ -82,7 +83,8 @@ public class OmMReader {
                           PrefixManager prefixManager,
                           OMMetadataManager metadataManager,
                    OzoneManager ozoneManager,
-                   Logger LOG) {
+                   Logger LOG,
+                   OmMReaderMetrics omMReaderMetrics) {
     this.keyManager = keyManager;
     this.bucketManager = ozoneManager.getBucketManager();
     this.volumeManager = ozoneManager.getVolumeManager();
@@ -94,6 +96,7 @@ public class OmMReader {
     this.isAclEnabled = ozoneManager.getAclsEnabled();
     this.LOG = LOG;
     this.allowListAllVolumes = ozoneManager.getAllowListAllVolumes();
+    metrics = omMReaderMetrics;
     if (isAclEnabled) {
       accessAuthorizer = getACLAuthorizerInstance(configuration);
       if (accessAuthorizer instanceof OzoneNativeAuthorizer) {
@@ -129,10 +132,10 @@ public class OmMReader {
     args = bucket.update(args);
 
     try {
-      //      metrics.incNumKeyLookups();
+      metrics.incNumKeyLookups();
       return keyManager.lookupKey(args, getClientAddress());
     } catch (Exception ex) {
-      //      metrics.incNumKeyLookupFails();
+      metrics.incNumKeyLookupFails();
       auditSuccess = false;
       AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_KEY,
           auditMap, ex));
@@ -162,11 +165,11 @@ public class OmMReader {
     args = bucket.update(args);
 
     try {
-      // metrics.incNumListStatus();
+      metrics.incNumListStatus();
       return keyManager.listStatus(args, recursive, startKey, numEntries,
               getClientAddress(), allowPartialPrefixes);
     } catch (Exception ex) {
-      // metrics.incNumListStatusFails();
+      metrics.incNumListStatusFails();
       auditSuccess = false;
       AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_STATUS,
           auditMap, ex));
@@ -188,10 +191,10 @@ public class OmMReader {
     args = bucket.update(args);
 
     try {
-      // metrics.incNumGetFileStatus();
+      metrics.incNumGetFileStatus();
       return keyManager.getFileStatus(args, getClientAddress());
     } catch (IOException ex) {
-      // metrics.incNumGetFileStatusFails();
+      metrics.incNumGetFileStatusFails();
       auditSuccess = false;
       AUDIT.logReadFailure(
           buildAuditMessageForFailure(OMAction.GET_FILE_STATUS, auditMap, ex));
@@ -219,10 +222,10 @@ public class OmMReader {
     args = bucket.update(args);
 
     try {
-      // metrics.incNumLookupFile();
+      metrics.incNumLookupFile();
       return keyManager.lookupFile(args, getClientAddress());
     } catch (Exception ex) {
-      // metrics.incNumLookupFileFails();
+      metrics.incNumLookupFileFails();
       auditSuccess = false;
       AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LOOKUP_FILE,
           auditMap, ex));
@@ -252,11 +255,11 @@ public class OmMReader {
     auditMap.put(OzoneConsts.KEY_PREFIX, keyPrefix);
 
     try {
-      // metrics.incNumKeyLists();
+      metrics.incNumKeyLists();
       return keyManager.listKeys(bucket.realVolume(), bucket.realBucket(),
           startKey, keyPrefix, maxKeys);
     } catch (IOException ex) {
-      // metrics.incNumKeyListFails();
+      metrics.incNumKeyListFails();
       auditSuccess = false;
       AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_KEYS,
           auditMap, ex));
@@ -277,7 +280,7 @@ public class OmMReader {
         checkAcls(obj.getResourceType(), obj.getStoreType(), ACLType.READ_ACL,
             obj.getVolumeName(), obj.getBucketName(), obj.getKeyName());
       }
-      //metrics.incNumGetAcl();
+      metrics.incNumGetAcl();
       switch (obj.getResourceType()) {
       case VOLUME:
         return volumeManager.getAcl(obj);
