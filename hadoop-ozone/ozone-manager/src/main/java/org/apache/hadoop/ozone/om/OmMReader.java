@@ -65,12 +65,13 @@ public class OmMReader {
   private final VolumeManager volumeManager;
   private final BucketManager bucketManager;
   private final OMMetadataManager metadataManager;
+  private final OzoneManager ozoneManager;
   private final OzoneConfiguration configuration;
   private final boolean isAclEnabled;
   private final IAccessAuthorizer accessAuthorizer;
   private final boolean allowListAllVolumes;
   private final boolean isNativeAuthorizerEnabled;
-  private final InetSocketAddress omRpcAddress;
+  //  private final InetSocketAddress omRpcAddress;
 
   public final Logger LOG;
 
@@ -88,7 +89,8 @@ public class OmMReader {
     this.prefixManager = prefixManager;
     this.metadataManager = metadataManager;
     this.configuration = ozoneManager.getConfiguration();
-    this.omRpcAddress = ozoneManager.getOmRpcServerAddr();
+    this.ozoneManager = ozoneManager;
+    //    this.omRpcAddress = ozoneManager.getOmRpcServerAddr();
     this.isAclEnabled = ozoneManager.getAclsEnabled();
     this.LOG = LOG;
     this.allowListAllVolumes = ozoneManager.getAllowListAllVolumes();
@@ -324,7 +326,7 @@ public class OmMReader {
           ugi,
           remoteIp,
           remoteIp != null ? remoteIp.getHostName() :
-              omRpcAddress.getHostName());
+              ozoneManager.getOmRpcServerAddr().getHostName());
     } else {
       resolved = resolveBucketLink(requested, new HashSet<>(),
           null, null, null);
@@ -408,8 +410,8 @@ public class OmMReader {
     OzoneAclUtils.checkAllAcls(this, resType, store, acl,
         vol, bucket, key, volumeOwner, bucketOwner,
         user != null ? user : getRemoteUser(),
-        remoteIp != null ? remoteIp : omRpcAddress.getAddress(),
-        remoteIp != null ? remoteIp.getHostName() : omRpcAddress.getHostName());
+        remoteIp != null ? remoteIp : ozoneManager.getOmRpcServerAddr().getAddress(),
+        remoteIp != null ? remoteIp.getHostName() : ozoneManager.getOmRpcServerAddr().getHostName());
   }
 
   
