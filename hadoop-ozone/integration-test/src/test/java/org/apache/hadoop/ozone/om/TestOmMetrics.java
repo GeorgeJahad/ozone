@@ -119,7 +119,7 @@ public class TestOmMetrics {
 
 
 
-  @Test
+  //  @Test
   public void testVolumeOps() throws Exception {
     startCluster();
     VolumeManager volumeManager =
@@ -188,7 +188,7 @@ public class TestOmMetrics {
 
   }
 
-  @Test
+  //  @Test
   public void testBucketOps() throws Exception {
     startCluster();
     BucketManager bucketManager =
@@ -365,7 +365,7 @@ public class TestOmMetrics {
         ozoneManager, "metadataManager", mockMm);
   }
 
-  @Test
+  //  @Test
   public void testAclOperations() throws Exception {
     startCluster();
     try {
@@ -402,7 +402,7 @@ public class TestOmMetrics {
     }
   }
 
-  @Test
+  //  @Test
   public void testAclOperationsHA() throws Exception {
     // This test needs a cluster with DNs and SCM to wait on safemode
     clusterBuilder.setNumDatanodes(3);
