@@ -101,7 +101,7 @@ public final class SnapshotManager {
   // Create the snapshot manager by finding the corresponding RocksDB instance,
   //  creating an OmMetadataManagerImpl instance based on that
   //  and creating the other manager instances based on that metadataManager
-  public static synchronized SnapshotManager createSnapshotManager(OzoneManager ozoneManager, String snapshotName){
+  public static synchronized SnapshotManager createSnapshotManager(OzoneManager ozoneManager, String volumeName, String bucketName, String snapshotName){
     if (snapshotName == null || snapshotName.isEmpty()) {
       return null;
     }
@@ -111,7 +111,7 @@ public final class SnapshotManager {
     }
     OzoneConfiguration conf = ozoneManager.getConfiguration();
     try {
-      smm = OmMetadataManagerImpl.createSnapshotMetadataManager(conf, "testgbj-bucket1_" + snapshotName);
+      smm = OmMetadataManagerImpl.createSnapshotMetadataManager(conf, volumeName + "-" + bucketName + "_" + snapshotName);
     } catch (IOException e) {
       // handle this
       e.printStackTrace();
@@ -125,11 +125,11 @@ public final class SnapshotManager {
   }
 
   // Get SnapshotManager based on keyname
-  public static SnapshotManager getSnapshotManager(OzoneManager ozoneManager,  String keyname) {
+  public static SnapshotManager getSnapshotManager(OzoneManager ozoneManager,  String volumeName, String bucketName, String keyname) {
     SnapshotManager sm = null;
     String[] keyParts = keyname.split("/");
     if ((keyParts.length > 2) &&keyParts[0].compareTo(".snapshot") == 0) {
-      sm = SnapshotManager.createSnapshotManager(ozoneManager, keyParts[1]);
+      sm = SnapshotManager.createSnapshotManager(ozoneManager, volumeName, bucketName, keyParts[1]);
     }
     return sm;
   }

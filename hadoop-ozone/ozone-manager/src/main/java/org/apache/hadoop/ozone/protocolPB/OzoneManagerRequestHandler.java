@@ -475,7 +475,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         LookupKeyResponse.newBuilder();
     KeyArgs keyArgs = request.getKeyArgs();
     String keyname = keyArgs.getKeyName();
-    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager(), keyname);
+    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
     keyname = SnapshotManager.fixKeyname(keyname);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
