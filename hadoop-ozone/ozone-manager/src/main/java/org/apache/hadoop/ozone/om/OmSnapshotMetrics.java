@@ -36,6 +36,21 @@ public class OmSnapshotMetrics implements OmMReaderMetrics {
   private static final String SOURCE_NAME =
       OmSnapshotMetrics.class.getSimpleName();
 
+  private OmSnapshotMetrics() {
+  }
+
+  private static OmSnapshotMetrics instance;
+  public static OmSnapshotMetrics getInstance() {
+    if (instance != null) {
+      return instance;
+    }
+    MetricsSystem ms = DefaultMetricsSystem.instance();
+    instance = ms.register(SOURCE_NAME,
+        "Snapshot Manager Metrics",
+        new OmSnapshotMetrics());
+    return instance;
+  }
+
   private @Metric
   MutableCounterLong numKeyLookup;
   private @Metric

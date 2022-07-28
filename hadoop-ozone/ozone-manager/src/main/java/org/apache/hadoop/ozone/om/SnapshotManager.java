@@ -82,7 +82,7 @@ public final class SnapshotManager {
                           PrefixManager prefixManager,
                           OMMetadataManager omMetadataManager,
                           OzoneManager ozoneManager) {
-    omMReader = new OmMReader(keyManager, prefixManager, omMetadataManager, ozoneManager, LOG, new OmSnapshotMetrics());
+    omMReader = new OmMReader(keyManager, prefixManager, omMetadataManager, ozoneManager, LOG, OmSnapshotMetrics.getInstance());
   }
 
   /**
@@ -105,13 +105,14 @@ public final class SnapshotManager {
     if (snapshotName == null || snapshotName.isEmpty()) {
       return null;
     }
+    String fullName = volumeName + "-" + bucketName + "_" + snapshotName;
     OmMetadataManagerImpl smm = null;
-    if (snapshotManagerCache.containsKey(snapshotName)) {
-      return snapshotManagerCache.get(snapshotName);
+    if (snapshotManagerCache.containsKey(fullName)) {
+      return snapshotManagerCache.get(fullName);
     }
     OzoneConfiguration conf = ozoneManager.getConfiguration();
     try {
-      smm = OmMetadataManagerImpl.createSnapshotMetadataManager(conf, volumeName + "-" + bucketName + "_" + snapshotName);
+      smm = OmMetadataManagerImpl.createSnapshotMetadataManager(conf, fullName);
     } catch (IOException e) {
       // handle this
       e.printStackTrace();
@@ -120,7 +121,7 @@ public final class SnapshotManager {
     KeyManagerImpl km = new KeyManagerImpl(null, ozoneManager.getScmClient(), smm, conf, null,
         ozoneManager.getBlockTokenSecretManager(), ozoneManager.getKmsProvider(), pm );
     SnapshotManager sm = new SnapshotManager(km, pm, smm, ozoneManager);
-    snapshotManagerCache.put(snapshotName, sm);
+    snapshotManagerCache.put(fullName, sm);
     return sm;
   }
 
