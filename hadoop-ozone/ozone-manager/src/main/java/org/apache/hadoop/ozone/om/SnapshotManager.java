@@ -20,6 +20,8 @@ package org.apache.hadoop.ozone.om;
 
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.RDBStore;
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 
 import java.io.IOException;
@@ -146,5 +148,35 @@ public final class SnapshotManager {
     return omMReader.lookupKey(args);
   }
 
+  public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
+                                          String startKey, long numEntries)
+      throws IOException {
+    return listStatus(args, recursive, startKey, numEntries, false);
+  }
+
+  public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
+      String startKey, long numEntries, boolean allowPartialPrefixes)
+      throws IOException {
+    return omMReader.listStatus(args, recursive, startKey, numEntries, allowPartialPrefixes);
+  }
+
+  public OzoneFileStatus getFileStatus(OmKeyArgs args) throws IOException {
+    return omMReader.getFileStatus(args);
+  }
+
+  public OmKeyInfo lookupFile(OmKeyArgs args) throws IOException {
+    return omMReader.lookupFile(args);
+  }
+
+  public List<OmKeyInfo> listKeys(String volumeName, String bucketName,
+      String startKey, String keyPrefix, int maxKeys) throws IOException {
+    return omMReader.listKeys(volumeName, bucketName, startKey, keyPrefix, maxKeys);
+  }
+
+  public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
+    return omMReader.getAcl(obj);
+  }
+
+  
 
 }

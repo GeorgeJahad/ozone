@@ -11,6 +11,7 @@ import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.*;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -18,6 +19,7 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.security.acl.*;
@@ -137,6 +139,166 @@ public class OmMReader {
       if (auditSuccess) {
         AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_KEY,
             auditMap));
+      }
+    }
+  }
+
+  public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
+                                          String startKey, long numEntries, boolean allowPartialPrefixes)
+      throws IOException {
+
+    ResolvedBucket bucket = resolveBucketLink(args);
+
+    if (isAclEnabled) {
+      checkAcls(getResourceType(args), StoreType.OZONE, ACLType.READ,
+          bucket.realVolume(), bucket.realBucket(), args.getKeyName());
+    }
+
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = bucket.audit(args.toAuditMap());
+
+    args = bucket.update(args);
+
+    try {
+      // metrics.incNumListStatus();
+      return keyManager.listStatus(args, recursive, startKey, numEntries,
+              getClientAddress(), allowPartialPrefixes);
+    } catch (Exception ex) {
+      // metrics.incNumListStatusFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_STATUS,
+          auditMap, ex));
+      throw ex;
+    } finally {
+      if (auditSuccess) {
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(
+            OMAction.LIST_STATUS, auditMap));
+      }
+    }
+  }
+  
+  public OzoneFileStatus getFileStatus(OmKeyArgs args) throws IOException {
+    ResolvedBucket bucket = resolveBucketLink(args);
+
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = bucket.audit(args.toAuditMap());
+
+    args = bucket.update(args);
+
+    try {
+      // metrics.incNumGetFileStatus();
+      return keyManager.getFileStatus(args, getClientAddress());
+    } catch (IOException ex) {
+      // metrics.incNumGetFileStatusFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(
+          buildAuditMessageForFailure(OMAction.GET_FILE_STATUS, auditMap, ex));
+      throw ex;
+    } finally {
+      if (auditSuccess) {
+        AUDIT.logReadSuccess(
+            buildAuditMessageForSuccess(OMAction.GET_FILE_STATUS, auditMap));
+      }
+    }
+  }
+
+  public OmKeyInfo lookupFile(OmKeyArgs args) throws IOException {
+    ResolvedBucket bucket = resolveBucketLink(args);
+
+    if (isAclEnabled) {
+      LOG.info("gbjAcl2");
+      checkAcls(ResourceType.KEY, StoreType.OZONE, ACLType.READ,
+          bucket.realVolume(), bucket.realBucket(), args.getKeyName());
+    }
+
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = bucket.audit(args.toAuditMap());
+
+    args = bucket.update(args);
+
+    try {
+      // metrics.incNumLookupFile();
+      return keyManager.lookupFile(args, getClientAddress());
+    } catch (Exception ex) {
+      // metrics.incNumLookupFileFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LOOKUP_FILE,
+          auditMap, ex));
+      throw ex;
+    } finally {
+      if (auditSuccess) {
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(
+            OMAction.LOOKUP_FILE, auditMap));
+      }
+    }
+  }
+
+  public List<OmKeyInfo> listKeys(String volumeName, String bucketName,
+      String startKey, String keyPrefix, int maxKeys) throws IOException {
+
+    ResolvedBucket bucket = resolveBucketLink(Pair.of(volumeName, bucketName));
+
+    if (isAclEnabled) {
+      checkAcls(ResourceType.BUCKET, StoreType.OZONE, ACLType.LIST,
+          bucket.realVolume(), bucket.realBucket(), keyPrefix);
+    }
+
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = bucket.audit();
+    auditMap.put(OzoneConsts.START_KEY, startKey);
+    auditMap.put(OzoneConsts.MAX_KEYS, String.valueOf(maxKeys));
+    auditMap.put(OzoneConsts.KEY_PREFIX, keyPrefix);
+
+    try {
+      // metrics.incNumKeyLists();
+      return keyManager.listKeys(bucket.realVolume(), bucket.realBucket(),
+          startKey, keyPrefix, maxKeys);
+    } catch (IOException ex) {
+      // metrics.incNumKeyListFails();
+      auditSuccess = false;
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_KEYS,
+          auditMap, ex));
+      throw ex;
+    } finally {
+      if (auditSuccess) {
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.LIST_KEYS,
+            auditMap));
+      }
+    }
+  }
+
+  public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
+    boolean auditSuccess = true;
+
+    try {
+      if (isAclEnabled) {
+        checkAcls(obj.getResourceType(), obj.getStoreType(), ACLType.READ_ACL,
+            obj.getVolumeName(), obj.getBucketName(), obj.getKeyName());
+      }
+      //metrics.incNumGetAcl();
+      switch (obj.getResourceType()) {
+      case VOLUME:
+        return volumeManager.getAcl(obj);
+      case BUCKET:
+        return bucketManager.getAcl(obj);
+      case KEY:
+        return keyManager.getAcl(obj);
+      case PREFIX:
+        return prefixManager.getAcl(obj);
+
+      default:
+        throw new OMException("Unexpected resource type: " +
+            obj.getResourceType(), INVALID_REQUEST);
+      }
+    } catch (Exception ex) {
+      auditSuccess = false;
+      AUDIT.logReadFailure(
+          buildAuditMessageForFailure(OMAction.GET_ACL, obj.toAuditMap(), ex));
+      throw ex;
+    } finally {
+      if (auditSuccess) {
+        AUDIT.logReadSuccess(
+            buildAuditMessageForSuccess(OMAction.GET_ACL, obj.toAuditMap()));
       }
     }
   }
@@ -464,6 +626,13 @@ public class OmMReader {
 
   public IAccessAuthorizer getAccessAuthorizer() {
     return accessAuthorizer;
+  }
+
+  private ResourceType getResourceType(OmKeyArgs args) {
+    if (args.getKeyName() == null || args.getKeyName().length() == 0) {
+      return ResourceType.BUCKET;
+    }
+    return ResourceType.KEY;
   }
 
   
