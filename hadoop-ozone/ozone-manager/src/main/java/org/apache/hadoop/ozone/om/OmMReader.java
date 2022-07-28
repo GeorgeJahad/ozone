@@ -72,7 +72,6 @@ public class OmMReader {
   private final boolean allowListAllVolumes;
   private final boolean isNativeAuthorizerEnabled;
   private final OmMReaderMetrics metrics;
-  //  private final InetSocketAddress omRpcAddress;
 
   public final Logger LOG;
 
@@ -92,7 +91,6 @@ public class OmMReader {
     this.metadataManager = metadataManager;
     this.configuration = ozoneManager.getConfiguration();
     this.ozoneManager = ozoneManager;
-    //    this.omRpcAddress = ozoneManager.getOmRpcServerAddr();
     this.isAclEnabled = ozoneManager.getAclsEnabled();
     this.LOG = LOG;
     this.allowListAllVolumes = ozoneManager.getAllowListAllVolumes();
