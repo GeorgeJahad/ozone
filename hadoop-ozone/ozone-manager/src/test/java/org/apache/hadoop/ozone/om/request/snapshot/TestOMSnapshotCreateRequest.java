@@ -91,7 +91,7 @@ public class TestOMSnapshotCreateRequest {
     when(ozoneManager.isRatisEnabled()).thenReturn(true);
     when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(false);
     when(ozoneManager.isOwner(any(), any())).thenReturn(false);
-    when(ozoneManager.getBucketOwner(any(), any(),
+    when(ozoneManager.getOmMReader().getBucketOwner(any(), any(),
         any(), any())).thenReturn("dummyBucketOwner");
     OMLayoutVersionManager lvm = mock(OMLayoutVersionManager.class);
     when(lvm.getMetadataLayoutVersion()).thenReturn(0);

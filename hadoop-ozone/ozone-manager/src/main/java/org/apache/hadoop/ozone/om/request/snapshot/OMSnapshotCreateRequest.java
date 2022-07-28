@@ -92,7 +92,7 @@ public class OMSnapshotCreateRequest extends OMClientRequest {
     OmUtils.validateSnapshotName(name);
 
     UserGroupInformation ugi = createUGI();
-    String bucketOwner = ozoneManager.getBucketOwner(volumeName, bucketName,
+    String bucketOwner = ozoneManager.getOmMReader().getBucketOwner(volumeName, bucketName,
         IAccessAuthorizer.ACLType.READ, OzoneObj.ResourceType.BUCKET);
     if (!ozoneManager.isAdmin(ugi) &&
         !ozoneManager.isOwner(ugi, bucketOwner)) {

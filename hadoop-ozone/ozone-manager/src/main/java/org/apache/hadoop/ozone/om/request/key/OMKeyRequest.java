@@ -358,7 +358,7 @@ public abstract class OMKeyRequest extends OMClientRequest {
     if (ozoneManager.getAclsEnabled()) {
       checkAcls(ozoneManager, resourceType, OzoneObj.StoreType.OZONE,
           aclType, volume, bucket, key, volumeOwner,
-          ozoneManager.getBucketOwner(volume, bucket, aclType, resourceType));
+          ozoneManager.getOmMReader().getBucketOwner(volume, bucket, aclType, resourceType));
     }
   }
 
@@ -380,7 +380,7 @@ public abstract class OMKeyRequest extends OMClientRequest {
     // Native authorizer requires client id as part of key name to check
     // write ACL on key. Add client id to key name if ozone native
     // authorizer is configured.
-    if (ozoneManager.isNativeAuthorizerEnabled()) {
+    if (ozoneManager.getOmMReader().isNativeAuthorizerEnabled()) {
       keyNameForAclCheck = key + "/" + clientId;
     }
 
@@ -425,7 +425,7 @@ public abstract class OMKeyRequest extends OMClientRequest {
         // If bucket is symlink, resolveBucketLink to figure out real
         // volume/bucket.
         if (bucketInfo.isLink()) {
-          ResolvedBucket resolvedBucket = ozoneManager.resolveBucketLink(
+          ResolvedBucket resolvedBucket = ozoneManager.getOmMReader().resolveBucketLink(
               Pair.of(keyArgs.getVolumeName(), keyArgs.getBucketName()));
 
           bucketInfo = omMetadataManager.getBucketTable().get(
@@ -474,7 +474,7 @@ public abstract class OMKeyRequest extends OMClientRequest {
       acquireLock = omMetadataManager.getLock().acquireReadLock(
           BUCKET_LOCK, volumeName, bucketName);
       try {
-        ResolvedBucket resolvedBucket = ozoneManager.resolveBucketLink(
+        ResolvedBucket resolvedBucket = ozoneManager.getOmMReader().resolveBucketLink(
             Pair.of(keyArgs.getVolumeName(), keyArgs.getBucketName()));
 
         // Get the DB key name for looking up keyInfo in OpenKeyTable with
