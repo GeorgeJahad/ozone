@@ -574,10 +574,14 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     ListKeysResponse.Builder resp =
         ListKeysResponse.newBuilder();
 
+    String startKey = request.getStartKey();
+    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager(), request.getVolumeName(), request.getBucketName(), startKey);
+    startKey = SnapshotManager.fixKeyname(startKey);
+
     List<OmKeyInfo> keys = impl.listKeys(
         request.getVolumeName(),
         request.getBucketName(),
-        request.getStartKey(),
+        startKey,
         request.getPrefix(),
         request.getCount());
     for (OmKeyInfo key : keys) {
@@ -864,15 +868,18 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   private GetFileStatusResponse getOzoneFileStatus(
       GetFileStatusRequest request, int clientVersion) throws IOException {
     KeyArgs keyArgs = request.getKeyArgs();
+    String keyname = keyArgs.getKeyName();
+    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
+    keyname = SnapshotManager.fixKeyname(keyname);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-        .setKeyName(keyArgs.getKeyName())
+        .setKeyName(keyname)
         .setRefreshPipeline(true)
         .build();
 
     GetFileStatusResponse.Builder rb = GetFileStatusResponse.newBuilder();
-    rb.setStatus(impl.getFileStatus(omKeyArgs).getProtobuf(clientVersion));
+    rb.setStatus(((sm != null) ? sm.getFileStatus(omKeyArgs) : impl.getFileStatus(omKeyArgs)).getProtobuf(clientVersion));
 
     return rb.build();
   }
@@ -943,16 +950,21 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   private LookupFileResponse lookupFile(LookupFileRequest request,
       int clientVersion) throws IOException {
     KeyArgs keyArgs = request.getKeyArgs();
+    String keyname = keyArgs.getKeyName();
+    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
+    keyname = SnapshotManager.fixKeyname(keyname);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-        .setKeyName(keyArgs.getKeyName())
+      .setKeyName(keyname)
         .setRefreshPipeline(true)
         .setSortDatanodesInPipeline(keyArgs.getSortDatanodes())
         .setLatestVersionLocation(keyArgs.getLatestVersionLocation())
         .build();
     return LookupFileResponse.newBuilder()
-        .setKeyInfo(impl.lookupFile(omKeyArgs).getProtobuf(clientVersion))
+        .setKeyInfo(
+                    (sm != null) ? sm.lookupFile(omKeyArgs).getProtobuf(clientVersion) :
+                    impl.lookupFile(omKeyArgs).getProtobuf(clientVersion))
         .build();
   }
 
@@ -1018,10 +1030,13 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   private ListStatusResponse listStatus(
       ListStatusRequest request, int clientVersion) throws IOException {
     KeyArgs keyArgs = request.getKeyArgs();
+    String keyname = keyArgs.getKeyName();
+    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
+    keyname = SnapshotManager.fixKeyname(keyname);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-        .setKeyName(keyArgs.getKeyName())
+      .setKeyName(keyname)
         .setRefreshPipeline(true)
         .setLatestVersionLocation(keyArgs.getLatestVersionLocation())
         .setHeadOp(keyArgs.getHeadOp())
@@ -1029,6 +1044,12 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     boolean allowPartialPrefixes =
         request.hasAllowPartialPrefix() && request.getAllowPartialPrefix();
     List<OzoneFileStatus> statuses =
+      (sm != null) ?
+
+        sm.listStatus(omKeyArgs, request.getRecursive(),
+            request.getStartKey(), request.getNumEntries(),
+            allowPartialPrefixes) :
+
         impl.listStatus(omKeyArgs, request.getRecursive(),
             request.getStartKey(), request.getNumEntries(),
             allowPartialPrefixes);

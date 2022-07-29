@@ -129,7 +129,7 @@ public final class SnapshotManager {
   public static SnapshotManager getSnapshotManager(OzoneManager ozoneManager,  String volumeName, String bucketName, String keyname) {
     SnapshotManager sm = null;
     String[] keyParts = keyname.split("/");
-    if ((keyParts.length > 2) &&keyParts[0].compareTo(".snapshot") == 0) {
+    if ((keyParts.length > 1) &&keyParts[0].compareTo(".snapshot") == 0) {
       sm = SnapshotManager.createSnapshotManager(ozoneManager, volumeName, bucketName, keyParts[1]);
     }
     return sm;
