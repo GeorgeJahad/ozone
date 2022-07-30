@@ -1,6 +1,6 @@
 package org.apache.hadoop.ozone.om.lock;
 
-public class OmReaderLock implements OmLock{
+public class OmReadOnlyLock implements OmLock{
   @Override
   public boolean acquireLock(OzoneManagerLock.Resource resource,
                              String... resources) {
@@ -109,6 +109,6 @@ public class OmReaderLock implements OmLock{
 
   @Override
   public OMLockMetrics getOMLockMetrics() {
-    return null;
+    throw new UnsupportedOperationException("OmReaderLock does not support this operation.");
   }
 }
