@@ -117,7 +117,7 @@ public abstract class OMKeyRequest extends OMClientRequest {
   protected KeyArgs resolveBucketLink(
       OzoneManager ozoneManager, KeyArgs keyArgs,
       Map<String, String> auditMap) throws IOException {
-    ResolvedBucket bucket = ozoneManager.resolveBucketLink(keyArgs, this);
+    ResolvedBucket bucket = ozoneManager.getOmMReader().resolveBucketLink(keyArgs, this);
     keyArgs = bucket.update(keyArgs);
     bucket.audit(auditMap);
     return keyArgs;

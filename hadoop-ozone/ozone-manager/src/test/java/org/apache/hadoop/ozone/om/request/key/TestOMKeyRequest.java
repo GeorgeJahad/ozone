@@ -63,6 +63,7 @@ import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
+import org.apache.hadoop.ozone.om.OmMReader;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.ScmClient;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
@@ -200,10 +201,11 @@ public class TestOMKeyRequest {
     version = 0L;
 
     Pair<String, String> volumeAndBucket = Pair.of(volumeName, bucketName);
-    when(ozoneManager.resolveBucketLink(any(KeyArgs.class),
+    when(ozoneManager.getOmMReader()).thenReturn(omMReader);
+    when(omMReader.resolveBucketLink(any(KeyArgs.class),
         any(OMClientRequest.class)))
         .thenReturn(new ResolvedBucket(volumeAndBucket, volumeAndBucket));
-    when(ozoneManager.resolveBucketLink(any(Pair.class),
+    when(omMReader.resolveBucketLink(any(Pair.class),
         any(OMClientRequest.class)))
         .thenReturn(new ResolvedBucket(volumeAndBucket, volumeAndBucket));
   }

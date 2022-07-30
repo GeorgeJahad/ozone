@@ -351,7 +351,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final File omMetaDir;
   private boolean isAclEnabled;
   private final boolean isSpnegoEnabled;
-  private IAccessAuthorizer accessAuthorizer;
   private JvmPauseMonitor jvmPauseMonitor;
   private final SecurityConfig secConfig;
   private S3SecretManager s3SecretManager;
@@ -433,7 +432,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   private OmMReader omMReader;
 
-  
   @SuppressWarnings("methodlength")
   private OzoneManager(OzoneConfiguration conf, StartupOption startupOption)
       throws IOException, AuthenticationException {
@@ -568,6 +566,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     // Get admin list
     omAdminUsernames = getOzoneAdminsFromConfig(configuration);
+
+    metrics = OMMetrics.create();
     instantiateServices(false);
 
     // Create special volume s3v which is required for S3G.
@@ -584,7 +584,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     initializeRatisDirs(conf);
     initializeRatisServer(isBootstrapping || isForcedBootstrapping);
 
-    metrics = OMMetrics.create();
     omClientProtocolMetrics = ProtocolMessageMetrics
         .create("OmClientProtocol", "Ozone Manager RPC endpoint",
             OzoneManagerProtocolProtos.Type.values());
@@ -609,7 +608,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } else {
       omState = State.INITIALIZED;
     }
-    omMReader = new OmMReader(keyManager, prefixManager,  metadataManager, this, LOG, metrics);
   }
 
   public boolean isStopped() {
@@ -707,6 +705,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     prefixManager = new PrefixManagerImpl(metadataManager, isRatisEnabled);
     keyManager = new KeyManagerImpl(this, scmClient, configuration,
         omStorage.getOmId());
+    omMReader = new OmMReader(keyManager, prefixManager,  metadataManager, this, LOG, metrics);
 
     if (withNewSnapshot) {
       Integer layoutVersionInDB = getLayoutVersionInDB();
@@ -733,7 +732,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       // restart.
       instantiatePrepareStateOnStartup();
     }
-
   }
 
   /**
@@ -1592,7 +1590,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
     startJVMPauseMonitor();
     setStartTime();
-    omMReader = new OmMReader(keyManager, prefixManager,  metadataManager, this, LOG, metrics);
     omState = State.RUNNING;
   }
 
@@ -2637,7 +2634,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
-    LOG.info("gbjLookupKey");
     return omMReader.lookupKey(args);
   }
 
@@ -2697,28 +2693,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public AuditMessage buildAuditMessageForSuccess(AuditAction op,
       Map<String, String> auditMap) {
-
-    return new AuditMessage.Builder()
-        .setUser(getRemoteUserName())
-        .atIp(Server.getRemoteAddress())
-        .forOperation(op)
-        .withParams(auditMap)
-        .withResult(AuditEventStatus.SUCCESS)
-        .build();
+    return omMReader.buildAuditMessageForSuccess(op, auditMap);
   }
 
   @Override
   public AuditMessage buildAuditMessageForFailure(AuditAction op,
       Map<String, String> auditMap, Throwable throwable) {
-
-    return new AuditMessage.Builder()
-        .setUser(getRemoteUserName())
-        .atIp(Server.getRemoteAddress())
-        .forOperation(op)
-        .withParams(auditMap)
-        .withResult(AuditEventStatus.FAILURE)
-        .withException(throwable)
-        .build();
+    return omMReader.buildAuditMessageForFailure(op, auditMap, throwable);
   }
 
   private void registerMXBean() {
@@ -3520,7 +3501,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     // Update OM snapshot index with the new snapshot index (from the new OM
     // DB state).
     omRatisSnapshotInfo.updateTermIndex(newSnapshotTermIndex, newSnapshotIndex);
-    omMReader = new OmMReader(keyManager, prefixManager,  metadataManager, this, LOG, metrics);
   }
 
   public static Logger getLogger() {
@@ -3719,27 +3699,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     jvmPauseMonitor = new JvmPauseMonitor();
     jvmPauseMonitor.init(configuration);
     jvmPauseMonitor.start();
-  }
-
-  public ResolvedBucket resolveBucketLink(KeyArgs args,
-      OMClientRequest omClientRequest) throws IOException {
-    return resolveBucketLink(
-        Pair.of(args.getVolumeName(), args.getBucketName()), omClientRequest);
-  }
-
-  public ResolvedBucket resolveBucketLink(Pair<String, String> requested,
-      OMClientRequest omClientRequest)
-      throws IOException {
-    Pair<String, String> resolved;
-    if (isAclEnabled) {
-      resolved = omMReader.resolveBucketLink(requested, new HashSet<>(),
-              omClientRequest.createUGI(), omClientRequest.getRemoteAddress(),
-              omClientRequest.getHostName());
-    } else {
-      resolved = omMReader.resolveBucketLink(requested, new HashSet<>(),
-          null, null, null);
-    }
-    return new ResolvedBucket(requested, resolved);
   }
 
   @VisibleForTesting

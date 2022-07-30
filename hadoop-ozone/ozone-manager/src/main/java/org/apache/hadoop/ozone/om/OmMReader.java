@@ -381,6 +381,28 @@ public class OmMReader {
         visited, userGroupInformation, remoteAddress, hostName);
   }
 
+  public ResolvedBucket resolveBucketLink(
+      OzoneManagerProtocolProtos.KeyArgs args,
+      OMClientRequest omClientRequest) throws IOException {
+    return resolveBucketLink(
+        Pair.of(args.getVolumeName(), args.getBucketName()), omClientRequest);
+  }
+
+  public ResolvedBucket resolveBucketLink(Pair<String, String> requested,
+      OMClientRequest omClientRequest)
+      throws IOException {
+    Pair<String, String> resolved;
+    if (isAclEnabled) {
+      resolved = resolveBucketLink(requested, new HashSet<>(),
+              omClientRequest.createUGI(), omClientRequest.getRemoteAddress(),
+              omClientRequest.getHostName());
+    } else {
+      resolved = resolveBucketLink(requested, new HashSet<>(),
+          null, null, null);
+    }
+    return new ResolvedBucket(requested, resolved);
+  }
+
   /**
    * Checks if current caller has acl permissions.
    *
