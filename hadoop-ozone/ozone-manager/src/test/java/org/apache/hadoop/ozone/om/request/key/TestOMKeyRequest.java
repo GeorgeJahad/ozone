@@ -27,7 +27,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.om.OmMReader;
 import org.apache.hadoop.ozone.om.OzoneManagerPrepareState;
 import org.apache.hadoop.ozone.om.ResolvedBucket;
 import org.apache.hadoop.ozone.om.KeyManager;
@@ -201,7 +200,6 @@ public class TestOMKeyRequest {
     version = 0L;
 
     Pair<String, String> volumeAndBucket = Pair.of(volumeName, bucketName);
-    when(ozoneManager.getOmMReader()).thenReturn(omMReader);
     when(omMReader.resolveBucketLink(any(KeyArgs.class),
         any(OMClientRequest.class)))
         .thenReturn(new ResolvedBucket(volumeAndBucket, volumeAndBucket));

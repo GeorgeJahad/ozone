@@ -75,11 +75,11 @@ public final class OzoneAclUtils {
    */
   @SuppressWarnings("parameternumber")
   public static void checkAllAcls(OmMReader omMReader,
-                                  OzoneObj.ResourceType resType,
-                                  OzoneObj.StoreType storeType, IAccessAuthorizer.ACLType aclType,
-                                  String vol, String bucket, String key, String volOwner,
-                                  String bucketOwner, UserGroupInformation user, InetAddress remoteAddress,
-                                  String hostName) throws IOException {
+      OzoneObj.ResourceType resType,
+      OzoneObj.StoreType storeType, IAccessAuthorizer.ACLType aclType,
+      String vol, String bucket, String key, String volOwner,
+      String bucketOwner, UserGroupInformation user, InetAddress remoteAddress,
+      String hostName) throws IOException {
 
     boolean isVolOwner = isOwner(user, volOwner);
 

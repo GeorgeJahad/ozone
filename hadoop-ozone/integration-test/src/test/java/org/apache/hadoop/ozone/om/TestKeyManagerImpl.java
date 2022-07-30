@@ -611,6 +611,7 @@ public class TestKeyManagerImpl {
       }
     }
     Assert.assertEquals(2, matchEntries);
+    // cleanup
     writeClient.removeAcl(ozPrefix1, ozAcl1);
     writeClient.removeAcl(ozPrefix1, ozAcl2);
     writeClient.removeAcl(ozPrefix1, ozAcl3);
@@ -720,6 +721,7 @@ public class TestKeyManagerImpl {
     for (int i = 0; i < 6; i++) {
       Assert.assertEquals(null, prefixInfos.get(i));
     }
+    // cleanup
     writeClient.removeAcl(ozPrefix1, ozAcl1);
   }
 
