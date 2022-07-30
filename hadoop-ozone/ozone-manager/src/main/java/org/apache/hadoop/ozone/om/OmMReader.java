@@ -115,6 +115,13 @@ public class OmMReader implements Auditor {
     }
   }
 
+  /**
+   * Lookup a key.
+   *
+   * @param args - attributes of the key.
+   * @return OmKeyInfo - the info about the requested key.
+   * @throws IOException
+   */
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
     ResolvedBucket bucket = resolveBucketLink(args);
 
@@ -208,7 +215,6 @@ public class OmMReader implements Auditor {
     ResolvedBucket bucket = resolveBucketLink(args);
 
     if (isAclEnabled) {
-      LOG.info("gbjAcl2");
       checkAcls(ResourceType.KEY, StoreType.OZONE, ACLType.READ,
           bucket.realVolume(), bucket.realBucket(), args.getKeyName());
     }
