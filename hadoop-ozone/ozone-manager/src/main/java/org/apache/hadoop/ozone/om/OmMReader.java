@@ -59,7 +59,7 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVA
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.PERMISSION_DENIED;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
 
-public class OmMReader {
+public class OmMReader implements Auditor {
   private final KeyManager keyManager;
   private final PrefixManager prefixManager;
   private final VolumeManager volumeManager;
@@ -72,17 +72,15 @@ public class OmMReader {
   private final boolean allowListAllVolumes;
   private final boolean isNativeAuthorizerEnabled;
   private final OmMReaderMetrics metrics;
-
-  public final Logger LOG;
-
-  private static final AuditLogger AUDIT = new AuditLogger(
-      AuditLoggerType.OMLOGGER);
+  private final Logger LOG;
+  private final AuditLogger AUDIT;
 
   public OmMReader(KeyManager keyManager,
                           PrefixManager prefixManager,
                           OMMetadataManager metadataManager,
                    OzoneManager ozoneManager,
                    Logger LOG,
+                   AuditLogger AUDIT,
                    OmMReaderMetrics omMReaderMetrics) {
     this.keyManager = keyManager;
     this.bucketManager = ozoneManager.getBucketManager();
@@ -93,6 +91,7 @@ public class OmMReader {
     this.ozoneManager = ozoneManager;
     this.isAclEnabled = ozoneManager.getAclsEnabled();
     this.LOG = LOG;
+    this.AUDIT = AUDIT;
     this.allowListAllVolumes = ozoneManager.getAllowListAllVolumes();
     metrics = omMReaderMetrics;
     if (isAclEnabled) {
