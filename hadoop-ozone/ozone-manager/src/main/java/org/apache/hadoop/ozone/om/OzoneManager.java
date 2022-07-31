@@ -391,8 +391,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   private boolean isS3MultiTenancyEnabled;
 
-  private boolean isNativeAuthorizerEnabled;
-
   private ExitManager exitManager;
 
   private OzoneManagerPrepareState prepareState;
