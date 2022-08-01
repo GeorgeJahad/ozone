@@ -275,6 +275,12 @@ public class OmMReader implements Auditor {
     }
   }
 
+  /**
+   * Returns list of ACLs for given Ozone object.
+   *
+   * @param obj Ozone object.
+   * @throws IOException if there is error.
+   */
   public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
     boolean auditSuccess = true;
 
