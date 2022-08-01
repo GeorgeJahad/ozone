@@ -38,7 +38,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,7 +104,6 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.audit.AuditAction;
-import org.apache.hadoop.ozone.audit.AuditEventStatus;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.AuditLoggerType;
 import org.apache.hadoop.ozone.audit.AuditMessage;
@@ -150,14 +148,12 @@ import org.apache.hadoop.hdds.security.OzoneSecurityException;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.snapshot.OzoneManagerSnapshotProvider;
 import org.apache.hadoop.ozone.om.upgrade.OMLayoutVersionManager;
 import org.apache.hadoop.ozone.om.upgrade.OMUpgradeFinalizer;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerAdminProtocolProtos.OzoneManagerAdminService;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRoleInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3Authentication;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
@@ -173,8 +169,6 @@ import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
-import org.apache.hadoop.ozone.security.acl.OzoneAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneNativeAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType;
 import org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType;
@@ -193,7 +187,6 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.KMSUtil;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -212,14 +205,12 @@ import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
 import static org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest.getEncodedString;
-import static org.apache.hadoop.hdds.server.ServerUtils.getRemoteUserName;
 import static org.apache.hadoop.hdds.server.ServerUtils.updateRPCListenAddress;
 import static org.apache.hadoop.hdds.utils.HAUtils.getScmInfo;
 import static org.apache.hadoop.ozone.OmUtils.MAX_TRXN_ID;
 import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS;
@@ -263,12 +254,9 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_SERVER_DEFAULT_REPLI
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_SERVER_DEFAULT_REPLICATION_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_SERVER_DEFAULT_REPLICATION_TYPE_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_SERVER_DEFAULT_REPLICATION_TYPE_KEY;
-import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.DETECTED_LOOP_IN_BUCKET_LINKS;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_AUTH_METHOD;
-import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_REQUEST;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.PERMISSION_DENIED;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
-import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
 import static org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer.RaftServerStatus.LEADER_AND_READY;
 import static org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer.getRaftGroupIdFromOmServiceId;
@@ -703,7 +691,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     prefixManager = new PrefixManagerImpl(metadataManager, isRatisEnabled);
     keyManager = new KeyManagerImpl(this, scmClient, configuration,
         omStorage.getOmId());
-    omMReader = new OmMReader(keyManager, prefixManager,  metadataManager, this, LOG, AUDIT, metrics);
+    omMReader = new OmMReader(keyManager, prefixManager,
+        metadataManager, this, LOG, AUDIT, metrics);
 
     if (withNewSnapshot) {
       Integer layoutVersionInDB = getLayoutVersionInDB();
@@ -2424,7 +2413,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public OmVolumeArgs getVolumeInfo(String volume) throws IOException {
     if (isAclEnabled) {
-      omMReader.checkAcls(ResourceType.VOLUME, StoreType.OZONE, ACLType.READ, volume,
+      omMReader.checkAcls(ResourceType.VOLUME,
+          StoreType.OZONE, ACLType.READ, volume,
           null, null);
     }
 
@@ -2533,7 +2523,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       if (!allowListAllVolumes) {
         // Only admin can list all volumes when disallowed in config
         if (isAclEnabled) {
-          omMReader.checkAcls(ResourceType.VOLUME, StoreType.OZONE, ACLType.LIST,
+          omMReader.checkAcls(ResourceType.VOLUME,
+              StoreType.OZONE, ACLType.LIST,
               OzoneConsts.OZONE_ROOT, null, null);
         }
       }
@@ -2560,7 +2551,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       String startKey, String prefix, int maxNumOfBuckets)
       throws IOException {
     if (isAclEnabled) {
-      omMReader.checkAcls(ResourceType.VOLUME, StoreType.OZONE, ACLType.LIST, volumeName,
+      omMReader.checkAcls(ResourceType.VOLUME,
+          StoreType.OZONE, ACLType.LIST, volumeName,
           null, null);
     }
     boolean auditSuccess = true;
@@ -2599,7 +2591,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   public OmBucketInfo getBucketInfo(String volume, String bucket)
       throws IOException {
     if (isAclEnabled) {
-      omMReader.checkAcls(ResourceType.BUCKET, StoreType.OZONE, ACLType.READ, volume,
+      omMReader.checkAcls(ResourceType.BUCKET,
+          StoreType.OZONE, ACLType.READ, volume,
           bucket, null);
     }
     boolean auditSuccess = true;
@@ -2639,7 +2632,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public List<OmKeyInfo> listKeys(String volumeName, String bucketName,
       String startKey, String keyPrefix, int maxKeys) throws IOException {
-    return omMReader.listKeys(volumeName, bucketName, startKey, keyPrefix, maxKeys);
+    return omMReader.listKeys(volumeName, bucketName,
+        startKey, keyPrefix, maxKeys);
   }
 
   @Override
@@ -3098,7 +3092,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       final String bucketName, String keyName, String uploadID,
       int partNumberMarker, int maxParts)  throws IOException {
 
-    ResolvedBucket bucket = omMReader.resolveBucketLink(Pair.of(volumeName, bucketName));
+    ResolvedBucket bucket = omMReader.resolveBucketLink(
+        Pair.of(volumeName, bucketName));
 
     Map<String, String> auditMap = bucket.audit();
     auditMap.put(OzoneConsts.KEY, keyName);
@@ -3127,7 +3122,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   public OmMultipartUploadList listMultipartUploads(String volumeName,
       String bucketName, String prefix) throws IOException {
 
-    ResolvedBucket bucket = omMReader.resolveBucketLink(Pair.of(volumeName, bucketName));
+    ResolvedBucket bucket = omMReader.resolveBucketLink(
+        Pair.of(volumeName, bucketName));
 
     Map<String, String> auditMap = bucket.audit();
     auditMap.put(OzoneConsts.PREFIX, prefix);
@@ -3171,7 +3167,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       String startKey, long numEntries, boolean allowPartialPrefixes)
       throws IOException {
 
-    return omMReader.listStatus(args, recursive, startKey, numEntries, allowPartialPrefixes);
+    return omMReader.listStatus(args, recursive,
+        startKey, numEntries, allowPartialPrefixes);
   }
 
   /**

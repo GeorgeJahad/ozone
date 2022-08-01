@@ -129,7 +129,8 @@ public class TestCleanupTableInfo {
     when(om.getMetadataManager()).thenReturn(metaMgr);
     OmMReader omMReader = mock(OmMReader.class);
     when(om.getOmMReader()).thenReturn(omMReader);
-    when(omMReader.resolveBucketLink(any(KeyArgs.class), any(OMClientRequest.class)))
+    when(omMReader.resolveBucketLink(any(KeyArgs.class),
+        any(OMClientRequest.class)))
         .thenAnswer(
             invocationOnMock -> {
               Pair<String, String> pair =

@@ -878,16 +878,16 @@ public class KeyManagerImpl implements KeyManager {
         .build();
 
     BucketLayout bucketLayout = BucketLayout.DEFAULT;
-      String buckKey =
-          metadataManager.getBucketKey(volume, bucket);
-      OmBucketInfo buckInfo = null;
-      try {
-        buckInfo =
-            metadataManager.getBucketTable().get(buckKey);
-        bucketLayout = buckInfo.getBucketLayout();
-      } catch (IOException e) {
-        LOG.error("Failed to get bucket for the key: " + buckKey, e);
-      }
+    String buckKey =
+        metadataManager.getBucketKey(volume, bucket);
+    OmBucketInfo buckInfo = null;
+    try {
+      buckInfo =
+          metadataManager.getBucketTable().get(buckKey);
+      bucketLayout = buckInfo.getBucketLayout();
+    } catch (IOException e) {
+      LOG.error("Failed to get bucket for the key: " + buckKey, e);
+    }
 
     metadataManager.getLock().acquireReadLock(BUCKET_LOCK, volume, bucket);
     try {

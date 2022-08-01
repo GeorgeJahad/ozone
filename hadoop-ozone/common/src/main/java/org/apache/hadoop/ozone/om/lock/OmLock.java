@@ -2,6 +2,9 @@ package org.apache.hadoop.ozone.om.lock;
 
 import com.google.common.annotations.VisibleForTesting;
 
+/**
+ * Interface for OM Metadata locks.
+ */
 public interface OmLock {
   @Deprecated
   boolean acquireLock(OzoneManagerLock.Resource resource, String... resources);

@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership.  The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ */
+
 package org.apache.hadoop.ozone.om;
 
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
@@ -13,7 +30,12 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.audit.*;
+import org.apache.hadoop.ozone.audit.AuditAction;
+import org.apache.hadoop.ozone.audit.AuditEventStatus;
+import org.apache.hadoop.ozone.audit.AuditLogger;
+import org.apache.hadoop.ozone.audit.AuditMessage;
+import org.apache.hadoop.ozone.audit.Auditor;
+import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -22,7 +44,9 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.security.acl.*;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyArgs;
+import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
+import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
@@ -31,12 +55,16 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.apache.hadoop.hdds.server.ServerUtils.getRemoteUserName;
 import static org.apache.hadoop.hdds.utils.HAUtils.getScmBlockClient;
 import static org.apache.hadoop.hdds.utils.HAUtils.getScmContainerClient;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS;
 import static org.apache.hadoop.ozone.om.KeyManagerImpl.getRemoteUser;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_VOLUME_LISTALL_ALLOWED;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_VOLUME_LISTALL_ALLOWED_DEFAULT;
@@ -59,6 +87,9 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVA
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.PERMISSION_DENIED;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
 
+/**
+ * OM Metadata Reading class for the OM and Snapshot managers.
+ */
 public class OmMReader implements Auditor {
   private final KeyManager keyManager;
   private final PrefixManager prefixManager;
@@ -72,15 +103,15 @@ public class OmMReader implements Auditor {
   private final boolean allowListAllVolumes;
   private final boolean isNativeAuthorizerEnabled;
   private final OmMReaderMetrics metrics;
-  private final Logger LOG;
-  private final AuditLogger AUDIT;
+  private final Logger log;
+  private final AuditLogger audit;
 
   public OmMReader(KeyManager keyManager,
                           PrefixManager prefixManager,
                           OMMetadataManager metadataManager,
                    OzoneManager ozoneManager,
-                   Logger LOG,
-                   AuditLogger AUDIT,
+                   Logger log,
+                   AuditLogger audit,
                    OmMReaderMetrics omMReaderMetrics) {
     this.keyManager = keyManager;
     this.bucketManager = ozoneManager.getBucketManager();
@@ -90,8 +121,8 @@ public class OmMReader implements Auditor {
     this.configuration = ozoneManager.getConfiguration();
     this.ozoneManager = ozoneManager;
     this.isAclEnabled = ozoneManager.getAclsEnabled();
-    this.LOG = LOG;
-    this.AUDIT = AUDIT;
+    this.log = log;
+    this.audit = audit;
     this.allowListAllVolumes = ozoneManager.getAllowListAllVolumes();
     metrics = omMReaderMetrics;
     if (isAclEnabled) {
@@ -141,12 +172,12 @@ public class OmMReader implements Auditor {
     } catch (Exception ex) {
       metrics.incNumKeyLookupFails();
       auditSuccess = false;
-      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_KEY,
+      audit.logReadFailure(buildAuditMessageForFailure(OMAction.READ_KEY,
           auditMap, ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_KEY,
+        audit.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_KEY,
             auditMap));
       }
     }
@@ -175,12 +206,12 @@ public class OmMReader implements Auditor {
     } catch (Exception ex) {
       metrics.incNumListStatusFails();
       auditSuccess = false;
-      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_STATUS,
+      audit.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_STATUS,
           auditMap, ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        AUDIT.logReadSuccess(buildAuditMessageForSuccess(
+        audit.logReadSuccess(buildAuditMessageForSuccess(
             OMAction.LIST_STATUS, auditMap));
       }
     }
@@ -200,12 +231,12 @@ public class OmMReader implements Auditor {
     } catch (IOException ex) {
       metrics.incNumGetFileStatusFails();
       auditSuccess = false;
-      AUDIT.logReadFailure(
+      audit.logReadFailure(
           buildAuditMessageForFailure(OMAction.GET_FILE_STATUS, auditMap, ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        AUDIT.logReadSuccess(
+        audit.logReadSuccess(
             buildAuditMessageForSuccess(OMAction.GET_FILE_STATUS, auditMap));
       }
     }
@@ -230,12 +261,12 @@ public class OmMReader implements Auditor {
     } catch (Exception ex) {
       metrics.incNumLookupFileFails();
       auditSuccess = false;
-      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LOOKUP_FILE,
+      audit.logReadFailure(buildAuditMessageForFailure(OMAction.LOOKUP_FILE,
           auditMap, ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        AUDIT.logReadSuccess(buildAuditMessageForSuccess(
+        audit.logReadSuccess(buildAuditMessageForSuccess(
             OMAction.LOOKUP_FILE, auditMap));
       }
     }
@@ -264,12 +295,12 @@ public class OmMReader implements Auditor {
     } catch (IOException ex) {
       metrics.incNumKeyListFails();
       auditSuccess = false;
-      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_KEYS,
+      audit.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_KEYS,
           auditMap, ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.LIST_KEYS,
+        audit.logReadSuccess(buildAuditMessageForSuccess(OMAction.LIST_KEYS,
             auditMap));
       }
     }
@@ -306,12 +337,12 @@ public class OmMReader implements Auditor {
       }
     } catch (Exception ex) {
       auditSuccess = false;
-      AUDIT.logReadFailure(
+      audit.logReadFailure(
           buildAuditMessageForFailure(OMAction.GET_ACL, obj.toAuditMap(), ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        AUDIT.logReadSuccess(
+        audit.logReadSuccess(
             buildAuditMessageForSuccess(OMAction.GET_ACL, obj.toAuditMap()));
       }
     }
@@ -360,7 +391,7 @@ public class OmMReader implements Auditor {
    * @throws IOException (most likely OMException) if ACL check fails, bucket is
    *   not found, loop is detected in the links, etc.
    */
-  public Pair<String, String> resolveBucketLink(
+  Pair<String, String> resolveBucketLink(
       Pair<String, String> volumeAndBucket,
       Set<Pair<String, String>> visited,
       UserGroupInformation userGroupInformation,
@@ -392,8 +423,7 @@ public class OmMReader implements Auditor {
         visited, userGroupInformation, remoteAddress, hostName);
   }
 
-  public ResolvedBucket resolveBucketLink(
-      OzoneManagerProtocolProtos.KeyArgs args,
+  public ResolvedBucket resolveBucketLink(KeyArgs args,
       OMClientRequest omClientRequest) throws IOException {
     return resolveBucketLink(
         Pair.of(args.getVolumeName(), args.getBucketName()), omClientRequest);
@@ -444,8 +474,10 @@ public class OmMReader implements Auditor {
     OzoneAclUtils.checkAllAcls(this, resType, store, acl,
         vol, bucket, key, volumeOwner, bucketOwner,
         user != null ? user : getRemoteUser(),
-        remoteIp != null ? remoteIp : ozoneManager.getOmRpcServerAddr().getAddress(),
-        remoteIp != null ? remoteIp.getHostName() : ozoneManager.getOmRpcServerAddr().getHostName());
+        remoteIp != null ? remoteIp :
+            ozoneManager.getOmRpcServerAddr().getAddress(),
+        remoteIp != null ? remoteIp.getHostName() :
+            ozoneManager.getOmRpcServerAddr().getHostName());
   }
 
   
@@ -499,7 +531,7 @@ public class OmMReader implements Auditor {
                 "Bucket:" + obj.getBucketName() + " " : "";
         String keyName = obj.getKeyName() != null ?
                 "Key:" + obj.getKeyName() : "";
-        LOG.warn("User {} doesn't have {} permission to access {} {}{}{}",
+        log.warn("User {} doesn't have {} permission to access {} {}{}{}",
             context.getClientUgi().getUserName(), context.getAclRights(),
             obj.getResourceType(), volumeName, bucketName, keyName);
         throw new OMException("User " + context.getClientUgi().getUserName() +
@@ -621,7 +653,7 @@ public class OmMReader implements Auditor {
   }
 
   public AuditMessage buildAuditMessageForSuccess(AuditAction op,
-      Map<String, String> auditMap) {
+                                                  Map<String, String> auditMap) {
 
     return new AuditMessage.Builder()
         .setUser(getRemoteUserName())
