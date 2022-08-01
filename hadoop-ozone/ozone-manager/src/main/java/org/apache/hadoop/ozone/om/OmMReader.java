@@ -69,6 +69,9 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 
 /**
  * OM Metadata Reading class for the OM and Snapshot managers.
+ *
+ * This abstraction manages all the metadata key/acl reading
+ * from a rocksDb instance, for both the OM and OM snapshots.
  */
 public class OmMReader implements Auditor {
   private final KeyManager keyManager;
@@ -85,8 +88,8 @@ public class OmMReader implements Auditor {
   private final AuditLogger audit;
 
   public OmMReader(KeyManager keyManager,
-                          PrefixManager prefixManager,
-                          OMMetadataManager metadataManager,
+                   PrefixManager prefixManager,
+                   OMMetadataManager metadataManager,
                    OzoneManager ozoneManager,
                    Logger log,
                    AuditLogger audit,
