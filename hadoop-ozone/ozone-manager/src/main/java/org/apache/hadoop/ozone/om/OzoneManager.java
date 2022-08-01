@@ -2387,6 +2387,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
 
+
   /**
    * Return true if Ozone acl's are enabled, else false.
    *
@@ -3639,7 +3640,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   /**
    * Return list of OzoneAdministrators from config.
    */
-  static Collection<String> getOzoneAdminsFromConfig(OzoneConfiguration conf)
+  Collection<String> getOzoneAdminsFromConfig(OzoneConfiguration conf)
       throws IOException {
     Collection<String> ozAdmins =
         conf.getTrimmedStringCollection(OZONE_ADMINISTRATORS);
