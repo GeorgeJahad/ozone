@@ -79,6 +79,7 @@ import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
+import org.apache.hadoop.ozone.om.lock.OmReadOnlyLock;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.ozone.om.lock.OmLock;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
@@ -285,6 +286,19 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     this.omEpoch = 0;
   }
 
+ private OmMetadataManagerImpl(OzoneConfiguration conf, String snapshotName) throws IOException {
+    lock = new OmReadOnlyLock();
+    omEpoch = 0;
+    setStore(loadDB(conf, new File("/data/metadata/db.snapshots"), "om.db-" + snapshotName, true));
+    initializeOmTables();
+  }
+
+  // Factory method for creating snapshot metadata manager
+  public static OmMetadataManagerImpl createSnapshotMetadataManager(OzoneConfiguration conf, String snapshotName) throws IOException {
+    OmMetadataManagerImpl smm = new OmMetadataManagerImpl(conf, snapshotName);
+    return smm;
+  }
+
   @Override
   public Table<String, PersistedUserVolumeInfo> getUserTable() {
     return userTable;
@@ -412,15 +426,16 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
 
   public static DBStore loadDB(OzoneConfiguration configuration, File metaDir)
       throws IOException {
-    return loadDB(configuration, metaDir, OM_DB_NAME);
+    return loadDB(configuration, metaDir, OM_DB_NAME, false);
   }
 
   public static DBStore loadDB(OzoneConfiguration configuration, File metaDir,
-      String dbName) throws IOException {
+      String dbName, boolean readOnly) throws IOException {
     RocksDBConfiguration rocksDBConfiguration =
         configuration.getObject(RocksDBConfiguration.class);
     DBStoreBuilder dbStoreBuilder = DBStoreBuilder.newBuilder(configuration,
         rocksDBConfiguration).setName(dbName)
+        .setOpenReadOnly(readOnly)
         .setPath(Paths.get(metaDir.getPath()));
     DBStore dbStore = addOMTablesAndCodecs(dbStoreBuilder).build();
     return dbStore;
