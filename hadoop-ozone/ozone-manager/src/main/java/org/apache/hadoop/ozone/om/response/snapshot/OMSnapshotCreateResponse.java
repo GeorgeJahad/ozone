@@ -20,7 +20,7 @@ package org.apache.hadoop.ozone.om.response.snapshot;
 
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.SnapshotManager;
+import org.apache.hadoop.ozone.om.OmSnapshotManager;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
@@ -63,7 +63,7 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
       BatchOperation batchOperation) throws IOException {
 
     // Create the snapshot checkpoint
-    SnapshotManager.createSnapshot(
+    OmSnapshotManager.createOmSnapshotCheckpoint(
         omMetadataManager, SnapshotInfo.newInstance(name, snapshotPath));
 
     SnapshotInfo snapshotInfo =

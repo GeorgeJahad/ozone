@@ -32,9 +32,10 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.UpgradeFinalizationStatu
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.utils.db.SequenceNumberNotFoundException;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.OmSnapshot;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.OzoneManagerPrepareState;
-import org.apache.hadoop.ozone.om.SnapshotManager;
+import org.apache.hadoop.ozone.om.OmSnapshotManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.DBUpdates;
@@ -475,8 +476,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         LookupKeyResponse.newBuilder();
     KeyArgs keyArgs = request.getKeyArgs();
     String keyname = keyArgs.getKeyName();
-    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
-    keyname = SnapshotManager.fixKeyname(keyname);
+    OmSnapshot
+        s= OmSnapshotManager.getOmSnapshot(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
+    keyname = OmSnapshotManager.fixKeyname(keyname);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
@@ -485,7 +487,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setSortDatanodesInPipeline(keyArgs.getSortDatanodes())
         .setHeadOp(keyArgs.getHeadOp())
         .build();
-    OmKeyInfo keyInfo = (sm != null) ? sm.lookupKey(omKeyArgs) : impl.lookupKey(omKeyArgs);
+    OmKeyInfo keyInfo = (s != null) ? s.lookupKey(omKeyArgs) : impl.lookupKey(omKeyArgs);
 
     resp.setKeyInfo(keyInfo.getProtobuf(keyArgs.getHeadOp(), clientVersion));
 
@@ -575,8 +577,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         ListKeysResponse.newBuilder();
 
     String startKey = request.getStartKey();
-    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager(), request.getVolumeName(), request.getBucketName(), startKey);
-    startKey = SnapshotManager.fixKeyname(startKey);
+    OmSnapshot
+        sm = OmSnapshotManager.getOmSnapshot(getOzoneManager(), request.getVolumeName(), request.getBucketName(), startKey);
+    startKey = OmSnapshotManager.fixKeyname(startKey);
 
     List<OmKeyInfo> keys = impl.listKeys(
         request.getVolumeName(),
@@ -869,8 +872,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
       GetFileStatusRequest request, int clientVersion) throws IOException {
     KeyArgs keyArgs = request.getKeyArgs();
     String keyname = keyArgs.getKeyName();
-    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
-    keyname = SnapshotManager.fixKeyname(keyname);
+    OmSnapshot
+        sm = OmSnapshotManager.getOmSnapshot(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
+    keyname = OmSnapshotManager.fixKeyname(keyname);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
@@ -951,8 +955,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
       int clientVersion) throws IOException {
     KeyArgs keyArgs = request.getKeyArgs();
     String keyname = keyArgs.getKeyName();
-    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
-    keyname = SnapshotManager.fixKeyname(keyname);
+    OmSnapshot
+        sm = OmSnapshotManager.getOmSnapshot(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
+    keyname = OmSnapshotManager.fixKeyname(keyname);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
@@ -1031,8 +1036,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
       ListStatusRequest request, int clientVersion) throws IOException {
     KeyArgs keyArgs = request.getKeyArgs();
     String keyname = keyArgs.getKeyName();
-    SnapshotManager sm = SnapshotManager.getSnapshotManager(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
-    keyname = SnapshotManager.fixKeyname(keyname);
+    OmSnapshot
+        sm = OmSnapshotManager.getOmSnapshot(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
+    keyname = OmSnapshotManager.fixKeyname(keyname);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
