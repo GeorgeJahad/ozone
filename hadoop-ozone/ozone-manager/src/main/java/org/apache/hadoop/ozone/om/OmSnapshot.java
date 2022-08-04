@@ -36,12 +36,6 @@ public class OmSnapshot implements IOmMReader {
     return omMReader.lookupKey(args);
   }
 
-  public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
-                                          String startKey, long numEntries)
-      throws IOException {
-    return listStatus(args, recursive, startKey, numEntries, false);
-  }
-
   @Override
   public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
       String startKey, long numEntries, boolean allowPartialPrefixes)
@@ -65,10 +59,10 @@ public class OmSnapshot implements IOmMReader {
     return omMReader.listKeys(volumeName, bucketName, startKey, keyPrefix, maxKeys);
   }
 
+  @Override
   public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
     return omMReader.getAcl(obj);
   }
 
-  
   
 }

@@ -32,6 +32,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.UpgradeFinalizationStatu
 import org.apache.hadoop.hdds.client.ReplicationConfig;
 import org.apache.hadoop.hdds.utils.db.SequenceNumberNotFoundException;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.IOmMReader;
 import org.apache.hadoop.ozone.om.OmSnapshot;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.OzoneManagerPrepareState;
@@ -475,19 +476,16 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     LookupKeyResponse.Builder resp =
         LookupKeyResponse.newBuilder();
     KeyArgs keyArgs = request.getKeyArgs();
-    String keyname = keyArgs.getKeyName();
-    OmSnapshot
-        s= OmSnapshotManager.getOmSnapshot(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
-    keyname = OmSnapshotManager.fixKeyname(keyname);
+    IOmMReader reader = getReader(keyArgs);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-        .setKeyName(keyname)
+        .setKeyName(OmSnapshotManager.fixKeyName(keyArgs.getKeyName()))
         .setLatestVersionLocation(keyArgs.getLatestVersionLocation())
         .setSortDatanodesInPipeline(keyArgs.getSortDatanodes())
         .setHeadOp(keyArgs.getHeadOp())
         .build();
-    OmKeyInfo keyInfo = (s != null) ? s.lookupKey(omKeyArgs) : impl.lookupKey(omKeyArgs);
+    OmKeyInfo keyInfo = reader.lookupKey(omKeyArgs);
 
     resp.setKeyInfo(keyInfo.getProtobuf(keyArgs.getHeadOp(), clientVersion));
 
@@ -576,15 +574,11 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     ListKeysResponse.Builder resp =
         ListKeysResponse.newBuilder();
 
-    String startKey = request.getStartKey();
-    OmSnapshot
-        sm = OmSnapshotManager.getOmSnapshot(getOzoneManager(), request.getVolumeName(), request.getBucketName(), startKey);
-    startKey = OmSnapshotManager.fixKeyname(startKey);
-
-    List<OmKeyInfo> keys = impl.listKeys(
+    IOmMReader reader = getReader(request);
+    List<OmKeyInfo> keys = reader.listKeys(
         request.getVolumeName(),
         request.getBucketName(),
-        startKey,
+        OmSnapshotManager.fixKeyName(request.getStartKey()),
         request.getPrefix(),
         request.getCount());
     for (OmKeyInfo key : keys) {
@@ -871,19 +865,16 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   private GetFileStatusResponse getOzoneFileStatus(
       GetFileStatusRequest request, int clientVersion) throws IOException {
     KeyArgs keyArgs = request.getKeyArgs();
-    String keyname = keyArgs.getKeyName();
-    OmSnapshot
-        sm = OmSnapshotManager.getOmSnapshot(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
-    keyname = OmSnapshotManager.fixKeyname(keyname);
+    IOmMReader reader = getReader(keyArgs);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-        .setKeyName(keyname)
+        .setKeyName(OmSnapshotManager.fixKeyName(keyArgs.getKeyName()))
         .setRefreshPipeline(true)
         .build();
 
     GetFileStatusResponse.Builder rb = GetFileStatusResponse.newBuilder();
-    rb.setStatus(((sm != null) ? sm.getFileStatus(omKeyArgs) : impl.getFileStatus(omKeyArgs)).getProtobuf(clientVersion));
+    rb.setStatus(reader.getFileStatus(omKeyArgs).getProtobuf(clientVersion));
 
     return rb.build();
   }
@@ -954,22 +945,17 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   private LookupFileResponse lookupFile(LookupFileRequest request,
       int clientVersion) throws IOException {
     KeyArgs keyArgs = request.getKeyArgs();
-    String keyname = keyArgs.getKeyName();
-    OmSnapshot
-        sm = OmSnapshotManager.getOmSnapshot(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
-    keyname = OmSnapshotManager.fixKeyname(keyname);
+    IOmMReader reader = getReader(keyArgs);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-      .setKeyName(keyname)
+        .setKeyName(OmSnapshotManager.fixKeyName(keyArgs.getKeyName()))
         .setRefreshPipeline(true)
         .setSortDatanodesInPipeline(keyArgs.getSortDatanodes())
         .setLatestVersionLocation(keyArgs.getLatestVersionLocation())
         .build();
     return LookupFileResponse.newBuilder()
-        .setKeyInfo(
-                    (sm != null) ? sm.lookupFile(omKeyArgs).getProtobuf(clientVersion) :
-                    impl.lookupFile(omKeyArgs).getProtobuf(clientVersion))
+        .setKeyInfo(reader.lookupFile(omKeyArgs).getProtobuf(clientVersion))
         .build();
   }
 
@@ -1035,14 +1021,11 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   private ListStatusResponse listStatus(
       ListStatusRequest request, int clientVersion) throws IOException {
     KeyArgs keyArgs = request.getKeyArgs();
-    String keyname = keyArgs.getKeyName();
-    OmSnapshot
-        sm = OmSnapshotManager.getOmSnapshot(getOzoneManager(), keyArgs.getVolumeName(), keyArgs.getBucketName(), keyname);
-    keyname = OmSnapshotManager.fixKeyname(keyname);
+    IOmMReader reader = getReader(keyArgs);
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-      .setKeyName(keyname)
+        .setKeyName(OmSnapshotManager.fixKeyName(keyArgs.getKeyName()))
         .setRefreshPipeline(true)
         .setLatestVersionLocation(keyArgs.getLatestVersionLocation())
         .setHeadOp(keyArgs.getHeadOp())
@@ -1050,14 +1033,8 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     boolean allowPartialPrefixes =
         request.hasAllowPartialPrefix() && request.getAllowPartialPrefix();
     List<OzoneFileStatus> statuses =
-      (sm != null) ?
-
-        sm.listStatus(omKeyArgs, request.getRecursive(),
-            request.getStartKey(), request.getNumEntries(),
-            allowPartialPrefixes) :
-
-        impl.listStatus(omKeyArgs, request.getRecursive(),
-            request.getStartKey(), request.getNumEntries(),
+        reader.listStatus(omKeyArgs, request.getRecursive(),
+        OmSnapshotManager.fixKeyName(request.getStartKey()), request.getNumEntries(),
             allowPartialPrefixes);
     ListStatusResponse.Builder
         listStatusResponseBuilder =
@@ -1181,5 +1158,15 @@ public class OzoneManagerRequestHandler implements RequestHandler {
 
   public OzoneManager getOzoneManager() {
     return impl;
+  }
+
+  private IOmMReader getReader(KeyArgs keyArgs) {
+    return OmSnapshotManager.checkForSnapshot(impl,
+        keyArgs.getVolumeName(), keyArgs.getBucketName(), keyArgs.getKeyName());
+  }
+
+  private IOmMReader getReader(ListKeysRequest request) {
+    return OmSnapshotManager.checkForSnapshot(impl,
+        request.getVolumeName(), request.getBucketName(), request.getStartKey());
   }
 }

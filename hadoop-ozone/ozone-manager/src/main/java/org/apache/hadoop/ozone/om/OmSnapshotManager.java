@@ -87,17 +87,17 @@ public final class OmSnapshotManager {
   }
 
   // Get OmSnapshot based on keyname
-  public static OmSnapshot getOmSnapshot(OzoneManager ozoneManager,  String volumeName, String bucketName, String keyname) {
-    OmSnapshot s = null;
+  public static IOmMReader checkForSnapshot(OzoneManager ozoneManager,  String volumeName, String bucketName, String keyname) {
     String[] keyParts = keyname.split("/");
     if ((keyParts.length > 1) &&keyParts[0].compareTo(".snapshot") == 0) {
-      s = createOmSnapshot(ozoneManager, volumeName, bucketName, keyParts[1]);
+      return createOmSnapshot(ozoneManager, volumeName, bucketName, keyParts[1]);
+    } else {
+      return ozoneManager;
     }
-    return s;
   }
 
   // Remove snapshot indicator from keyname
-  public static String fixKeyname(String keyname) {
+  public static String fixKeyName(String keyname) {
     String[] keyParts = keyname.split("/");
     if ((keyParts.length > 2) && (keyParts[0].compareTo(".snapshot") == 0)) {
       return String.join("/", Arrays.copyOfRange(keyParts, 2, keyParts.length));

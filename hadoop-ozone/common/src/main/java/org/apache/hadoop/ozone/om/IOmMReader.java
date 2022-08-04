@@ -1,8 +1,11 @@
 package org.apache.hadoop.ozone.om;
 
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 
 import java.io.IOException;
 import java.util.List;
@@ -20,7 +23,7 @@ public interface IOmMReader {
   /**
    * List the status for a file or a directory and its contents.
    *
-   * @param keyArgs    Key args
+   * @param args    Key args
    * @param recursive  For a directory if true all the descendants of a
    *                   particular directory are listed
    * @param startKey   Key from which listing needs to start. If startKey exists
@@ -34,6 +37,12 @@ public interface IOmMReader {
                                    String startKey, long numEntries,
                                    boolean allowPartialPrefixes)
       throws IOException;
+
+  default List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
+      String startKey, long numEntries)
+      throws IOException {
+    return listStatus(args, recursive, startKey, numEntries, false);
+  }
 
   /**
    * OzoneFS api to get file status for an entry.
@@ -50,7 +59,7 @@ public interface IOmMReader {
   /**
    * OzoneFS api to lookup for a file.
    *
-   * @param keyArgs Key args
+   * @param args Key args
    * @throws OMException if given key is not found or it is not a file
    *                     if bucket does not exist
    * @throws IOException if there is error in the db
@@ -67,7 +76,7 @@ public interface IOmMReader {
    *   the name of the volume.
    * @param bucketName
    *   the name of the bucket.
-   * @param startKeyName
+   * @param startKey
    *   the start key name, only the keys whose name is
    *   after this value will be included in the result.
    * @param keyPrefix
@@ -82,4 +91,12 @@ public interface IOmMReader {
   List<OmKeyInfo> listKeys(String volumeName, String bucketName,
                            String startKey, String keyPrefix, int maxKeys)
       throws IOException;
+
+  /**
+   * Returns list of ACLs for given Ozone object.
+   *
+   * @param obj Ozone object.
+   * @throws IOException if there is error.
+   */
+  List<OzoneAcl> getAcl(OzoneObj obj) throws IOException;
 }
