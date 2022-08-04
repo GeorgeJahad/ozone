@@ -104,4 +104,14 @@ public final class OmSnapshotManager {
     }
     return keyname;
   }
+
+  public static OzoneObjInfo fixOzoneObjInfo(OzoneObjInfo o) {
+    return OzoneObjInfo.Builder.newBuilder()
+        .setVolumeName(o.getVolumeName())
+        .setBucketName(o.getBucketName())
+        .setResType(o.getResourceType())
+        .setStoreType(o.getStoreType())
+        .setKeyName(fixKeyName(o.getKeyName()))
+        .build();
+  }
 }
