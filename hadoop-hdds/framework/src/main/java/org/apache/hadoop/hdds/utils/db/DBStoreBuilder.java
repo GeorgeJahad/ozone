@@ -42,9 +42,12 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_ROCKS
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF;
 import org.eclipse.jetty.util.StringUtil;
+import org.rocksdb.AbstractEventListener;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyOptions;
+import org.rocksdb.CompactionJobInfo;
 import org.rocksdb.DBOptions;
+import org.rocksdb.EventListener;
 import org.rocksdb.InfoLogLevel;
 import org.rocksdb.RocksDB;
 import org.rocksdb.Statistics;
@@ -180,6 +183,30 @@ public final class DBStoreBuilder {
       rocksDBOption = getDefaultDBOptions(tableConfigs);
     }
 
+    AbstractEventListener e = new AbstractEventListener() {
+      @Override
+      public void onCompactionBegin(RocksDB rocksDB,
+                                    CompactionJobInfo compactionJobInfo) {
+        super.onCompactionBegin(rocksDB, compactionJobInfo);
+        String inputFiles = String.join(",", compactionJobInfo.inputFiles());
+        String outputFiles = String.join(",", compactionJobInfo.outputFiles());
+        LOG.info("gbjcompationBegin: inputFiles {} : outputFiles: {}", inputFiles, outputFiles);
+      }
+
+      @Override
+      public void onCompactionCompleted(RocksDB rocksDB,
+                                        CompactionJobInfo compactionJobInfo) {
+        super.onCompactionCompleted(rocksDB, compactionJobInfo);
+        String inputFiles = String.join(",", compactionJobInfo.inputFiles());
+        String outputFiles = String.join(",", compactionJobInfo.outputFiles());
+        LOG.info("gbjcompationCompleted: inputFiles {} : outputFiles: {}", inputFiles, outputFiles);
+      }
+    };
+
+    List<AbstractEventListener> l = new ArrayList<>();
+    l.add(e);
+    rocksDBOption.setCreateIfMissing(true).setListeners(l);
+    LOG.info("gbjcompaction initialized");
     WriteOptions writeOptions = new WriteOptions();
     writeOptions.setSync(rocksDBConfiguration.getSyncOption());
 
