@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.List;
 
-public class OmSnapshot {
+public class OmSnapshot implements IOmMReader {
 
   public static final Logger LOG =
       LoggerFactory.getLogger(OmSnapshot.class);
@@ -31,6 +31,7 @@ public class OmSnapshot {
   }
 
 
+  @Override
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
     return omMReader.lookupKey(args);
   }
@@ -41,20 +42,24 @@ public class OmSnapshot {
     return listStatus(args, recursive, startKey, numEntries, false);
   }
 
+  @Override
   public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
       String startKey, long numEntries, boolean allowPartialPrefixes)
       throws IOException {
     return omMReader.listStatus(args, recursive, startKey, numEntries, allowPartialPrefixes);
   }
 
+  @Override
   public OzoneFileStatus getFileStatus(OmKeyArgs args) throws IOException {
     return omMReader.getFileStatus(args);
   }
 
+  @Override
   public OmKeyInfo lookupFile(OmKeyArgs args) throws IOException {
     return omMReader.lookupFile(args);
   }
 
+  @Override
   public List<OmKeyInfo> listKeys(String volumeName, String bucketName,
       String startKey, String keyPrefix, int maxKeys) throws IOException {
     return omMReader.listKeys(volumeName, bucketName, startKey, keyPrefix, maxKeys);
