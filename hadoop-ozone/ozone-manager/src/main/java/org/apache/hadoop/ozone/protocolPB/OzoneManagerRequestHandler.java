@@ -109,7 +109,6 @@ import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import com.google.common.collect.Lists;
 
 import org.apache.hadoop.ozone.om.OmSnapshotManager;
-import static org.apache.hadoop.ozone.om.OmSnapshotManager.fixKeyName;
 import static org.apache.hadoop.ozone.om.upgrade.OMLayoutFeature.MULTITENANCY_SCHEMA;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesRequest;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesResponse;
@@ -324,9 +323,8 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   private GetAclResponse getAcl(GetAclRequest req) throws IOException {
     List<OzoneAclInfo> acls = new ArrayList<>();
     OzoneObjInfo ozoneObjInfo = OzoneObjInfo.fromProtobuf(req.getObj());
-    OzoneObjInfo fixedObjInfo = OmSnapshotManager.fixOzoneObjInfo(ozoneObjInfo);
     List<OzoneAcl> aclList =
-        getReader(ozoneObjInfo).getAcl(fixedObjInfo);
+        getReader(ozoneObjInfo).getAcl(ozoneObjInfo);
     if (aclList != null) {
       aclList.forEach(a -> acls.add(OzoneAcl.toProtobuf(a)));
     }
@@ -482,7 +480,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-        .setKeyName(fixKeyName(keyArgs.getKeyName()))
+        .setKeyName(keyArgs.getKeyName())
         .setLatestVersionLocation(keyArgs.getLatestVersionLocation())
         .setSortDatanodesInPipeline(keyArgs.getSortDatanodes())
         .setHeadOp(keyArgs.getHeadOp())
@@ -579,7 +577,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     List<OmKeyInfo> keys = getReader(request).listKeys(
         request.getVolumeName(),
         request.getBucketName(),
-        fixKeyName(request.getStartKey()),
+        request.getStartKey(),
         request.getPrefix(),
         request.getCount());
     for (OmKeyInfo key : keys) {
@@ -869,7 +867,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-        .setKeyName(fixKeyName(keyArgs.getKeyName()))
+        .setKeyName(keyArgs.getKeyName())
         .setRefreshPipeline(true)
         .build();
 
@@ -948,7 +946,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-        .setKeyName(fixKeyName(keyArgs.getKeyName()))
+        .setKeyName(keyArgs.getKeyName())
         .setRefreshPipeline(true)
         .setSortDatanodesInPipeline(keyArgs.getSortDatanodes())
         .setLatestVersionLocation(keyArgs.getLatestVersionLocation())
@@ -1023,7 +1021,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
-        .setKeyName(fixKeyName(keyArgs.getKeyName()))
+        .setKeyName(keyArgs.getKeyName())
         .setRefreshPipeline(true)
         .setLatestVersionLocation(keyArgs.getLatestVersionLocation())
         .setHeadOp(keyArgs.getHeadOp())
@@ -1032,7 +1030,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         request.hasAllowPartialPrefix() && request.getAllowPartialPrefix();
     List<OzoneFileStatus> statuses =
         getReader(keyArgs).listStatus(omKeyArgs, request.getRecursive(),
-        fixKeyName(request.getStartKey()), request.getNumEntries(),
+            request.getStartKey(), request.getNumEntries(),
             allowPartialPrefixes);
     ListStatusResponse.Builder
         listStatusResponseBuilder =

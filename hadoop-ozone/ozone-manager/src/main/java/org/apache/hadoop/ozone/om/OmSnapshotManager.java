@@ -97,21 +97,11 @@ public final class OmSnapshotManager {
   }
 
   // Remove snapshot indicator from keyname
-  public static String fixKeyName(String keyname) {
+  public static String normalizeKeyName(String keyname) {
     String[] keyParts = keyname.split("/");
     if ((keyParts.length > 2) && (keyParts[0].compareTo(".snapshot") == 0)) {
       return String.join("/", Arrays.copyOfRange(keyParts, 2, keyParts.length));
     }
     return keyname;
-  }
-
-  public static OzoneObjInfo fixOzoneObjInfo(OzoneObjInfo o) {
-    return OzoneObjInfo.Builder.newBuilder()
-        .setVolumeName(o.getVolumeName())
-        .setBucketName(o.getBucketName())
-        .setResType(o.getResourceType())
-        .setStoreType(o.getStoreType())
-        .setKeyName(fixKeyName(o.getKeyName()))
-        .build();
   }
 }

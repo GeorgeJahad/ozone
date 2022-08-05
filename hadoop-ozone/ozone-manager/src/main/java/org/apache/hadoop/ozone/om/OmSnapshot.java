@@ -7,11 +7,15 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.apache.hadoop.ozone.om.OmSnapshotManager.normalizeKeyName;
 
 public class OmSnapshot implements IOmMReader {
 
@@ -33,36 +37,63 @@ public class OmSnapshot implements IOmMReader {
 
   @Override
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
-    return omMReader.lookupKey(args);
+    return normalizeOmKeyInfo(omMReader.lookupKey(normalizeOmKeyArgs(args)));
+  }
+
+  private static OmKeyInfo  normalizeOmKeyInfo(OmKeyInfo keyInfo) {
+    OmKeyInfo normalized = keyInfo.copyObject();
+    normalized.setKeyName(normalizeKeyName(keyInfo.getKeyName()));
+    return normalized;
+  }
+
+  private static OmKeyArgs normalizeOmKeyArgs(OmKeyArgs args) {
+    return args.toBuilder().setKeyName(normalizeKeyName(args.getKeyName())).build();
   }
 
   @Override
   public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
       String startKey, long numEntries, boolean allowPartialPrefixes)
       throws IOException {
-    return omMReader.listStatus(args, recursive, startKey, numEntries, allowPartialPrefixes);
+    List<OzoneFileStatus> l = omMReader.listStatus(args, recursive, normalizeKeyName(startKey), numEntries, allowPartialPrefixes);
+    return l.stream().map(OmSnapshot::normalizeOzoneFileStatus).collect(Collectors.toList());
   }
 
   @Override
   public OzoneFileStatus getFileStatus(OmKeyArgs args) throws IOException {
-    return omMReader.getFileStatus(args);
+    return normalizeOzoneFileStatus(omMReader.getFileStatus(normalizeOmKeyArgs(args)));
+  }
+
+  private static OzoneFileStatus normalizeOzoneFileStatus(OzoneFileStatus fileStatus) {
+    return new OzoneFileStatus(normalizeOmKeyInfo(
+        fileStatus.getKeyInfo()),fileStatus.getBlockSize(), fileStatus.isDirectory());
   }
 
   @Override
   public OmKeyInfo lookupFile(OmKeyArgs args) throws IOException {
-    return omMReader.lookupFile(args);
+    return normalizeOmKeyInfo(omMReader.lookupFile(normalizeOmKeyArgs(args)));
   }
 
   @Override
   public List<OmKeyInfo> listKeys(String volumeName, String bucketName,
       String startKey, String keyPrefix, int maxKeys) throws IOException {
-    return omMReader.listKeys(volumeName, bucketName, startKey, keyPrefix, maxKeys);
+    List<OmKeyInfo> l = omMReader.listKeys(volumeName, bucketName, normalizeKeyName(startKey), normalizeKeyName(keyPrefix), maxKeys);
+    return l.stream().map(OmSnapshot::normalizeOmKeyInfo).collect(Collectors.toList());
   }
 
   @Override
   public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
-    return omMReader.getAcl(obj);
+    return omMReader.getAcl(normalizeOzoneObj(obj));
   }
 
-  
+  private OzoneObj normalizeOzoneObj(OzoneObj o) {
+    return OzoneObjInfo.Builder.getBuilder(o.getResourceType(),
+        o.getStoreType(), o.getVolumeName(), o.getBucketName(),
+        normalizeKeyName(o.getKeyName()))
+        // OzonePrefixPath field appears to only used by fso delete/rename requests
+        //  which are not applicable to snapshots
+        .setOzonePrefixPath(o.getOzonePrefixPathViewer()).build();
+
+  }
+
+
 }
