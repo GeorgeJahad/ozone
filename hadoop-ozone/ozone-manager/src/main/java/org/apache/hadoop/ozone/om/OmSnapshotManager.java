@@ -81,7 +81,7 @@ public final class OmSnapshotManager {
     PrefixManagerImpl pm = new PrefixManagerImpl(smm, false);
     KeyManagerImpl km = new KeyManagerImpl(null, ozoneManager.getScmClient(), smm, conf, null,
         ozoneManager.getBlockTokenSecretManager(), ozoneManager.getKmsProvider(), pm );
-    OmSnapshot s = new OmSnapshot(km, pm, smm, ozoneManager);
+    OmSnapshot s = new OmSnapshot(km, pm, smm, ozoneManager, snapshotName);
     snapshotManagerCache.put(fullName, s);
     return s;
   }
@@ -103,5 +103,10 @@ public final class OmSnapshotManager {
       return String.join("/", Arrays.copyOfRange(keyParts, 2, keyParts.length));
     }
     return keyname;
+  }
+
+  // Restore snapshot indicator to keyanme
+  public static String denormalizeKeyName(String keyname, String snapshotName) {
+    return ".snapshot/" + snapshotName + "/" + keyname;
   }
 }

@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.ozone.om.OmSnapshotManager.denormalizeKeyName;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.normalizeKeyName;
 
 public class OmSnapshot implements IOmMReader {
@@ -26,24 +27,33 @@ public class OmSnapshot implements IOmMReader {
       AuditLoggerType.OMLOGGER);
 
   private final OmMReader omMReader;
+  private final String snapshotName;
   
   public OmSnapshot(KeyManager keyManager,
                           PrefixManager prefixManager,
                           OMMetadataManager omMetadataManager,
-                    OzoneManager ozoneManager) {
+                    OzoneManager ozoneManager,
+                    String snapshotName) {
     omMReader = new OmMReader(keyManager, prefixManager, omMetadataManager, ozoneManager, LOG, AUDIT, OmSnapshotMetrics.getInstance());
+    this.snapshotName = snapshotName;
   }
 
 
   @Override
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
-    return normalizeOmKeyInfo(omMReader.lookupKey(normalizeOmKeyArgs(args)));
+    return denormalizeOmKeyInfo(omMReader.lookupKey(normalizeOmKeyArgs(args)));
   }
 
   private static OmKeyInfo  normalizeOmKeyInfo(OmKeyInfo keyInfo) {
     OmKeyInfo normalized = keyInfo.copyObject();
     normalized.setKeyName(normalizeKeyName(keyInfo.getKeyName()));
     return normalized;
+  }
+
+  private  OmKeyInfo  denormalizeOmKeyInfo(OmKeyInfo keyInfo) {
+    OmKeyInfo denormalized = keyInfo.copyObject();
+    denormalized.setKeyName(denormalizeKeyName(keyInfo.getKeyName(), snapshotName));
+    return denormalized;
   }
 
   private static OmKeyArgs normalizeOmKeyArgs(OmKeyArgs args) {
@@ -54,30 +64,30 @@ public class OmSnapshot implements IOmMReader {
   public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
       String startKey, long numEntries, boolean allowPartialPrefixes)
       throws IOException {
-    List<OzoneFileStatus> l = omMReader.listStatus(args, recursive, normalizeKeyName(startKey), numEntries, allowPartialPrefixes);
-    return l.stream().map(OmSnapshot::normalizeOzoneFileStatus).collect(Collectors.toList());
+    List<OzoneFileStatus> l = omMReader.listStatus(normalizeOmKeyArgs(args), recursive, normalizeKeyName(startKey), numEntries, allowPartialPrefixes);
+    return l.stream().map(this::denormalizeOzoneFileStatus).collect(Collectors.toList());
   }
 
   @Override
   public OzoneFileStatus getFileStatus(OmKeyArgs args) throws IOException {
-    return normalizeOzoneFileStatus(omMReader.getFileStatus(normalizeOmKeyArgs(args)));
+    return denormalizeOzoneFileStatus(omMReader.getFileStatus(normalizeOmKeyArgs(args)));
   }
 
-  private static OzoneFileStatus normalizeOzoneFileStatus(OzoneFileStatus fileStatus) {
-    return new OzoneFileStatus(normalizeOmKeyInfo(
+  private  OzoneFileStatus denormalizeOzoneFileStatus(OzoneFileStatus fileStatus) {
+    return new OzoneFileStatus(denormalizeOmKeyInfo(
         fileStatus.getKeyInfo()),fileStatus.getBlockSize(), fileStatus.isDirectory());
   }
 
   @Override
   public OmKeyInfo lookupFile(OmKeyArgs args) throws IOException {
-    return normalizeOmKeyInfo(omMReader.lookupFile(normalizeOmKeyArgs(args)));
+    return denormalizeOmKeyInfo(omMReader.lookupFile(normalizeOmKeyArgs(args)));
   }
 
   @Override
   public List<OmKeyInfo> listKeys(String volumeName, String bucketName,
       String startKey, String keyPrefix, int maxKeys) throws IOException {
     List<OmKeyInfo> l = omMReader.listKeys(volumeName, bucketName, normalizeKeyName(startKey), normalizeKeyName(keyPrefix), maxKeys);
-    return l.stream().map(OmSnapshot::normalizeOmKeyInfo).collect(Collectors.toList());
+    return l.stream().map(this::denormalizeOmKeyInfo).collect(Collectors.toList());
   }
 
   @Override
