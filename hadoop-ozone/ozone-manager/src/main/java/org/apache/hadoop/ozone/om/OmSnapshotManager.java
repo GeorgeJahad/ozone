@@ -88,6 +88,9 @@ public final class OmSnapshotManager {
 
   // Get OmSnapshot based on keyname
   public static IOmMReader checkForSnapshot(OzoneManager ozoneManager,  String volumeName, String bucketName, String keyname) {
+    if (keyname == null) {
+      return ozoneManager;
+    }
     String[] keyParts = keyname.split("/");
     if ((keyParts.length > 1) &&keyParts[0].compareTo(".snapshot") == 0) {
       return createOmSnapshot(ozoneManager, volumeName, bucketName, keyParts[1]);
@@ -99,7 +102,7 @@ public final class OmSnapshotManager {
   // Remove snapshot indicator from keyname
   public static String normalizeKeyName(String keyname) {
     String[] keyParts = keyname.split("/");
-    if ((keyParts.length > 2) && (keyParts[0].compareTo(".snapshot") == 0)) {
+    if ((keyParts.length > 1) && (keyParts[0].compareTo(".snapshot") == 0)) {
       return String.join("/", Arrays.copyOfRange(keyParts, 2, keyParts.length));
     }
     return keyname;

@@ -83,14 +83,15 @@ public class TestOmSnapshot {
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
     omId = UUID.randomUUID().toString();
+    conf.setBoolean(OMConfigKeys.OZONE_OM_ENABLE_FILESYSTEM_PATHS, true);
     conf.set(OMConfigKeys.OZONE_DEFAULT_BUCKET_LAYOUT,
-        BucketLayout.FILE_SYSTEM_OPTIMIZED.name());
+        BucketLayout.LEGACY.name());
     cluster = MiniOzoneCluster.newBuilder(conf).setClusterId(clusterId)
         .setScmId(scmId).setOmId(omId).build();
     cluster.waitForClusterToBeReady();
     // create a volume and a bucket to be used by OzoneFileSystem
     OzoneBucket bucket = TestDataUtil
-        .createVolumeAndBucket(cluster, BucketLayout.FILE_SYSTEM_OPTIMIZED);
+        .createVolumeAndBucket(cluster, BucketLayout.LEGACY);
     volumeName = bucket.getVolumeName();
     bucketName = bucket.getName();
 
@@ -230,7 +231,8 @@ public class TestOmSnapshot {
       OzoneKey ozoneKey = ozoneKeyIterator.next();
       outputKeys.add(ozoneKey.getName());
     }
-
+    keys.sort(String::compareTo);
+    outputKeys.sort(String::compareTo);
     Assert.assertEquals(keys, outputKeys);
   }
 
