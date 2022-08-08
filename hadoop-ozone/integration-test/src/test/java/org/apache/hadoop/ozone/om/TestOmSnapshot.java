@@ -28,6 +28,7 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmDirectoryInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.ozone.test.GenericTestUtils;
 import org.junit.Assert;
@@ -67,6 +68,7 @@ public class TestOmSnapshot {
   private static String volumeName;
   private static String bucketName;
   private static FileSystem fs;
+  private static OzoneManagerProtocol writeClient;
 
   @Rule
   public Timeout timeout = new Timeout(1200000);
@@ -150,20 +152,23 @@ public class TestOmSnapshot {
 
     createKeys(ozoneBucket, keys);
 
+    writeClient = objectStore.getClientProxy().getOzoneManagerClient();
+
     // Root level listing keys
-    Iterator<? extends OzoneKey> ozoneKeyIterator =
-        ozoneBucket.listKeys(null, null);
+    Iterator<? extends OmKeyInfo> ozoneKeyIterator =
+        writeClient.listKeys(volumeName, bucketName, null, null,
+            1000).iterator();
     verifyFullTreeStructure(ozoneKeyIterator);
 
     ozoneKeyIterator =
-        ozoneBucket.listKeys("a/", null);
+        writeClient.listKeys(volumeName, bucketName, null, "a/", 1000).iterator();
     verifyFullTreeStructure(ozoneKeyIterator);
 
     LinkedList<String> expectedKeys;
 
     // Intermediate level keyPrefix - 2nd level
     ozoneKeyIterator =
-        ozoneBucket.listKeys("a///b2///", null);
+        writeClient.listKeys(volumeName, bucketName, null, "a///b2///", 1000).iterator();
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/");
     expectedKeys.add("a/b2/d1/");
@@ -177,7 +182,7 @@ public class TestOmSnapshot {
 
     // Intermediate level keyPrefix - 3rd level
     ozoneKeyIterator =
-        ozoneBucket.listKeys("a/b2/d1", null);
+        writeClient.listKeys(volumeName, bucketName, null, "a/b2/d1", 1000).iterator();
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/d1/");
     expectedKeys.add("a/b2/d1/d11.tx");
@@ -185,19 +190,19 @@ public class TestOmSnapshot {
 
     // Boundary of a level
     ozoneKeyIterator =
-        ozoneBucket.listKeys("a/b2/d2", "a/b2/d2/d21.tx");
+        writeClient.listKeys(volumeName, bucketName, "a/b2/d2/d21.tx", "a/b2/d2",  1000).iterator();
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/d2/d22.tx");
     checkKeyList(ozoneKeyIterator, expectedKeys);
 
     // Boundary case - last node in the depth-first-traversal
     ozoneKeyIterator =
-        ozoneBucket.listKeys("a/b3/e3", "a/b3/e3/e31.tx");
+        writeClient.listKeys(volumeName, bucketName, "a/b3/e3/e31.tx", "a/b3/e3",  1000).iterator();
     expectedKeys = new LinkedList<>();
     checkKeyList(ozoneKeyIterator, expectedKeys);
   }
 
-  private void verifyFullTreeStructure(Iterator<? extends OzoneKey> keyItr) {
+  private void verifyFullTreeStructure(Iterator<? extends OmKeyInfo> keyItr) {
     LinkedList<String> expectedKeys = new LinkedList<>();
     expectedKeys.add("a/");
     expectedKeys.add("a/b1/");
@@ -223,13 +228,13 @@ public class TestOmSnapshot {
     checkKeyList(keyItr, expectedKeys);
   }
 
-  private void checkKeyList(Iterator<? extends OzoneKey > ozoneKeyIterator,
+  private void checkKeyList(Iterator<? extends OmKeyInfo > ozoneKeyIterator,
       List<String> keys) {
 
     LinkedList<String> outputKeys = new LinkedList<>();
     while (ozoneKeyIterator.hasNext()) {
-      OzoneKey ozoneKey = ozoneKeyIterator.next();
-      outputKeys.add(ozoneKey.getName());
+      OmKeyInfo omKeyInfo = ozoneKeyIterator.next();
+      outputKeys.add(omKeyInfo.getKeyName());
     }
     keys.sort(String::compareTo);
     outputKeys.sort(String::compareTo);
