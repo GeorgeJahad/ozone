@@ -53,6 +53,7 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.hdds.client.ReplicationFactor.ONE;
 import static org.apache.hadoop.hdds.client.ReplicationType.RATIS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_FS_ITERATE_BATCH_SIZE;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_ALREADY_EXISTS;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
@@ -154,21 +155,22 @@ public class TestOmSnapshot {
 
     writeClient = objectStore.getClientProxy().getOzoneManagerClient();
 
+    writeClient.createSnapshot("snap1", volumeName + OM_KEY_PREFIX + bucketName);
     // Root level listing keys
     Iterator<? extends OmKeyInfo> ozoneKeyIterator =
-        writeClient.listKeys(volumeName, bucketName, null, null,
+        writeClient.listKeys(volumeName, bucketName, ".snapshot/snap1/", ".snapshot/snap1/",
             1000).iterator();
     verifyFullTreeStructure(ozoneKeyIterator);
 
     ozoneKeyIterator =
-        writeClient.listKeys(volumeName, bucketName, null, "a/", 1000).iterator();
+        writeClient.listKeys(volumeName, bucketName, ".snapshot/snap1/a/", ".snapshot/snap1/a/", 1000).iterator();
     verifyFullTreeStructure(ozoneKeyIterator);
 
     LinkedList<String> expectedKeys;
 
     // Intermediate level keyPrefix - 2nd level
     ozoneKeyIterator =
-        writeClient.listKeys(volumeName, bucketName, null, "a///b2///", 1000).iterator();
+        writeClient.listKeys(volumeName, bucketName, null, "a/b2/", 1000).iterator();
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/");
     expectedKeys.add("a/b2/d1/");
