@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -1060,7 +1061,9 @@ public class TestKeyManagerImpl {
     // Test non-recursive, should return the dir under root
     fileStatuses =
         keyManager.listStatus(rootDirArgs, false, "", 1000);
-    Assert.assertEquals(2, fileStatuses.size());
+    String fileNames = fileStatuses.stream().map(OzoneFileStatus::getPath).collect(
+        Collectors.joining(", "));
+    Assert.assertEquals("Returned: " + fileNames, 5, fileStatuses.size());
 
     // Test recursive, should return the dir and the keys in it
     fileStatuses =
