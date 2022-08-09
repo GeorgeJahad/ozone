@@ -113,14 +113,11 @@ public class OmMReader implements Auditor {
         authorizer.setBucketManager(bucketManager);
         authorizer.setKeyManager(keyManager);
         authorizer.setPrefixManager(prefixManager);
-        authorizer.setOzoneAdmins(ozoneManager.getOmAdminUsernames());
+        authorizer.setOzoneAdmins(omAdminUsernames);
         authorizer.setAllowListAllVolumes(allowListAllVolumes);
-      } else {
-        isNativeAuthorizerEnabled = false;
       }
     } else {
       accessAuthorizer = null;
-      isNativeAuthorizerEnabled = false;
     }
   }
 
@@ -131,6 +128,7 @@ public class OmMReader implements Auditor {
    * @return OmKeyInfo - the info about the requested key.
    * @throws IOException
    */
+  @Override
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
     ResolvedBucket bucket = resolveBucketLink(args);
 
@@ -150,12 +148,12 @@ public class OmMReader implements Auditor {
     } catch (Exception ex) {
       metrics.incNumKeyLookupFails();
       auditSuccess = false;
-      audit.logReadFailure(buildAuditMessageForFailure(OMAction.READ_KEY,
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.READ_KEY,
           auditMap, ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        audit.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_KEY,
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.READ_KEY,
             auditMap));
       }
     }
@@ -184,12 +182,12 @@ public class OmMReader implements Auditor {
     } catch (Exception ex) {
       metrics.incNumListStatusFails();
       auditSuccess = false;
-      audit.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_STATUS,
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_STATUS,
           auditMap, ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        audit.logReadSuccess(buildAuditMessageForSuccess(
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(
             OMAction.LIST_STATUS, auditMap));
       }
     }
@@ -209,12 +207,12 @@ public class OmMReader implements Auditor {
     } catch (IOException ex) {
       metrics.incNumGetFileStatusFails();
       auditSuccess = false;
-      audit.logReadFailure(
+      AUDIT.logReadFailure(
           buildAuditMessageForFailure(OMAction.GET_FILE_STATUS, auditMap, ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        audit.logReadSuccess(
+        AUDIT.logReadSuccess(
             buildAuditMessageForSuccess(OMAction.GET_FILE_STATUS, auditMap));
       }
     }
@@ -239,12 +237,12 @@ public class OmMReader implements Auditor {
     } catch (Exception ex) {
       metrics.incNumLookupFileFails();
       auditSuccess = false;
-      audit.logReadFailure(buildAuditMessageForFailure(OMAction.LOOKUP_FILE,
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LOOKUP_FILE,
           auditMap, ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        audit.logReadSuccess(buildAuditMessageForSuccess(
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(
             OMAction.LOOKUP_FILE, auditMap));
       }
     }
@@ -273,12 +271,12 @@ public class OmMReader implements Auditor {
     } catch (IOException ex) {
       metrics.incNumKeyListFails();
       auditSuccess = false;
-      audit.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_KEYS,
+      AUDIT.logReadFailure(buildAuditMessageForFailure(OMAction.LIST_KEYS,
           auditMap, ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        audit.logReadSuccess(buildAuditMessageForSuccess(OMAction.LIST_KEYS,
+        AUDIT.logReadSuccess(buildAuditMessageForSuccess(OMAction.LIST_KEYS,
             auditMap));
       }
     }
@@ -290,6 +288,7 @@ public class OmMReader implements Auditor {
    * @param obj Ozone object.
    * @throws IOException if there is error.
    */
+  @Override
   public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
     boolean auditSuccess = true;
 
@@ -315,12 +314,12 @@ public class OmMReader implements Auditor {
       }
     } catch (Exception ex) {
       auditSuccess = false;
-      audit.logReadFailure(
+      AUDIT.logReadFailure(
           buildAuditMessageForFailure(OMAction.GET_ACL, obj.toAuditMap(), ex));
       throw ex;
     } finally {
       if (auditSuccess) {
-        audit.logReadSuccess(
+        AUDIT.logReadSuccess(
             buildAuditMessageForSuccess(OMAction.GET_ACL, obj.toAuditMap()));
       }
     }
@@ -347,7 +346,7 @@ public class OmMReader implements Auditor {
           ugi,
           remoteIp,
           remoteIp != null ? remoteIp.getHostName() :
-              ozoneManager.getOmRpcServerAddr().getHostName());
+              omRpcAddress.getHostName());
     } else {
       resolved = resolveBucketLink(requested, new HashSet<>(),
           null, null, null);
@@ -361,7 +360,7 @@ public class OmMReader implements Auditor {
    * @param volumeAndBucket the bucket to be resolved (if it is a link)
    * @param visited collects link buckets visited during the resolution to
    *   avoid infinite loops
-   * @param userGroupInformation {@link UserGroupInformation}
+   * @param {@link UserGroupInformation}
    * @param remoteAddress
    * @param hostName
    * @return bucket location possibly updated with its actual volume and bucket
@@ -369,7 +368,7 @@ public class OmMReader implements Auditor {
    * @throws IOException (most likely OMException) if ACL check fails, bucket is
    *   not found, loop is detected in the links, etc.
    */
-  Pair<String, String> resolveBucketLink(
+  private Pair<String, String> resolveBucketLink(
       Pair<String, String> volumeAndBucket,
       Set<Pair<String, String>> visited,
       UserGroupInformation userGroupInformation,
@@ -393,7 +392,7 @@ public class OmMReader implements Auditor {
       checkAcls(ResourceType.BUCKET, StoreType.OZONE, type,
           volumeName, bucketName, null, userGroupInformation,
           remoteAddress, hostName, true,
-          ozoneManager.getVolumeOwner(volumeName, type, ResourceType.BUCKET));
+          getVolumeOwner(volumeName, type, ResourceType.BUCKET));
     }
 
     return resolveBucketLink(
@@ -433,7 +432,7 @@ public class OmMReader implements Auditor {
    * @param key     - key
    * @throws OMException ResultCodes.PERMISSION_DENIED if permission denied.
    */
-  void checkAcls(ResourceType resType, StoreType store,
+  private void checkAcls(ResourceType resType, StoreType store,
       ACLType acl, String vol, String bucket, String key)
       throws IOException {
     UserGroupInformation user;
@@ -446,16 +445,14 @@ public class OmMReader implements Auditor {
     }
 
     InetAddress remoteIp = ProtobufRpcEngine.Server.getRemoteIp();
-    String volumeOwner = ozoneManager.getVolumeOwner(vol, acl, resType);
-    String bucketOwner = ozoneManager.getBucketOwner(vol, bucket, acl, resType);
+    String volumeOwner = getVolumeOwner(vol, acl, resType);
+    String bucketOwner = getBucketOwner(vol, bucket, acl, resType);
 
     OzoneAclUtils.checkAllAcls(this, resType, store, acl,
         vol, bucket, key, volumeOwner, bucketOwner,
         user != null ? user : getRemoteUser(),
-        remoteIp != null ? remoteIp :
-            ozoneManager.getOmRpcServerAddr().getAddress(),
-        remoteIp != null ? remoteIp.getHostName() :
-            ozoneManager.getOmRpcServerAddr().getHostName());
+        remoteIp != null ? remoteIp : omRpcAddress.getAddress(),
+        remoteIp != null ? remoteIp.getHostName() : omRpcAddress.getHostName());
   }
 
   
@@ -509,7 +506,7 @@ public class OmMReader implements Auditor {
                 "Bucket:" + obj.getBucketName() + " " : "";
         String keyName = obj.getKeyName() != null ?
                 "Key:" + obj.getKeyName() : "";
-        log.warn("User {} doesn't have {} permission to access {} {}{}{}",
+        LOG.warn("User {} doesn't have {} permission to access {} {}{}{}",
             context.getClientUgi().getUserName(), context.getAclRights(),
             obj.getResourceType(), volumeName, bucketName, keyName);
         throw new OMException("User " + context.getClientUgi().getUserName() +
