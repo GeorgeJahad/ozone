@@ -1063,7 +1063,7 @@ public class TestKeyManagerImpl {
         keyManager.listStatus(rootDirArgs, false, "", 1000);
     String fileNames = fileStatuses.stream().map(OzoneFileStatus::getPath).collect(
         Collectors.joining(", "));
-    Assert.assertEquals("Returned: " + fileNames, 5, fileStatuses.size());
+    Assert.assertEquals("Returned: " + fileNames, 2, fileStatuses.size());
 
     // Test recursive, should return the dir and the keys in it
     fileStatuses =
