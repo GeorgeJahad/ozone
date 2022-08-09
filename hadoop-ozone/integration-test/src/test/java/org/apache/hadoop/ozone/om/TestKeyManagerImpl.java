@@ -1059,6 +1059,7 @@ public class TestKeyManagerImpl {
     }
 
     // Test non-recursive, should return the dir under root
+    Thread.sleep(5000);
     fileStatuses =
         keyManager.listStatus(rootDirArgs, false, "", 1000);
     String fileNames = fileStatuses.stream().map(OzoneFileStatus::getPath).collect(
