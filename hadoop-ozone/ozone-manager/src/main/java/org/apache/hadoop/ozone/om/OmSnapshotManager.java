@@ -45,6 +45,9 @@ import static org.apache.hadoop.hdds.utils.HAUtils.getScmContainerClient;
 public final class OmSnapshotManager {
   private static final Map<String, OmSnapshot> snapshotManagerCache = new HashMap<>();
 
+  public static final Logger LOG =
+      LoggerFactory.getLogger(OmSnapshotManager.class);
+
 
   /**
    * Creates snapshot checkpoint that corresponds with SnapshotInfo.
@@ -62,21 +65,30 @@ public final class OmSnapshotManager {
   // Create the snapshot manager by finding the corresponding RocksDB instance,
   //  creating an OmMetadataManagerImpl instance based on that
   //  and creating the other manager instances based on that metadataManager
-  public static synchronized OmSnapshot createOmSnapshot(OzoneManager ozoneManager, String volumeName, String bucketName, String snapshotName){
+  public static synchronized OmSnapshot createOmSnapshot(OzoneManager ozoneManager, String volumeName, String bucketName, String snapshotName)
+      throws IOException {
     if (snapshotName == null || snapshotName.isEmpty()) {
       return null;
     }
-    String fullName = volumeName + "-" + bucketName + "_" + snapshotName;
+    String fullName = SnapshotInfo.getTableKey(snapshotName, volumeName + "/" + bucketName);
+    SnapshotInfo snapshotInfo;
+    try {
+      snapshotInfo = ozoneManager.getMetadataManager().getSnapshotInfoTable()
+          .get(fullName);
+    } catch (IOException e) {
+      LOG.error("Snapshot {}: not found: {}", fullName, e);
+      throw e;
+    }
     OmMetadataManagerImpl smm = null;
     if (snapshotManagerCache.containsKey(fullName)) {
       return snapshotManagerCache.get(fullName);
     }
     OzoneConfiguration conf = ozoneManager.getConfiguration();
     try {
-      smm = OmMetadataManagerImpl.createSnapshotMetadataManager(conf, fullName);
+      smm = OmMetadataManagerImpl.createSnapshotMetadataManager(conf, snapshotInfo.getCheckpointDirName());
     } catch (IOException e) {
-      // handle this
-      e.printStackTrace();
+      LOG.error("Failed to retrieve snapshot: {}, {}", fullName, e);
+      throw e;
     }
     PrefixManagerImpl pm = new PrefixManagerImpl(smm, false);
     KeyManagerImpl km = new KeyManagerImpl(null, ozoneManager.getScmClient(), smm, conf, null,
@@ -87,7 +99,8 @@ public final class OmSnapshotManager {
   }
 
   // Get OmSnapshot based on keyname
-  public static IOmMReader checkForSnapshot(OzoneManager ozoneManager,  String volumeName, String bucketName, String keyname) {
+  public static IOmMReader checkForSnapshot(OzoneManager ozoneManager,  String volumeName, String bucketName, String keyname)
+      throws IOException {
     if (keyname == null) {
       return ozoneManager;
     }

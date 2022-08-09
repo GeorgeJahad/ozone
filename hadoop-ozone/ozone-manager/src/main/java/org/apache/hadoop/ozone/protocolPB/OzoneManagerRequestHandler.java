@@ -1156,17 +1156,17 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     return impl;
   }
 
-  private IOmMReader getReader(KeyArgs keyArgs) {
+  private IOmMReader getReader(KeyArgs keyArgs) throws IOException {
     return OmSnapshotManager.checkForSnapshot(impl,
         keyArgs.getVolumeName(), keyArgs.getBucketName(), keyArgs.getKeyName());
   }
 
-  private IOmMReader getReader(ListKeysRequest request) {
+  private IOmMReader getReader(ListKeysRequest request) throws IOException {
     return OmSnapshotManager.checkForSnapshot(impl,
         request.getVolumeName(), request.getBucketName(), request.getStartKey());
   }
 
-  private IOmMReader getReader(OzoneObjInfo ozoneObjInfo) {
+  private IOmMReader getReader(OzoneObjInfo ozoneObjInfo) throws IOException {
     return OmSnapshotManager.checkForSnapshot(impl,
         ozoneObjInfo.getVolumeName(), ozoneObjInfo.getBucketName(), ozoneObjInfo.getKeyName());
   }

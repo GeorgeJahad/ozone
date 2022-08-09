@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.om.response.snapshot;
 
 import org.apache.hadoop.hdds.utils.db.BatchOperation;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmSnapshotManager;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
@@ -62,13 +63,13 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
 
-    // Create the snapshot checkpoint
-    OmSnapshotManager.createOmSnapshotCheckpoint(
-        omMetadataManager, SnapshotInfo.newInstance(name, snapshotPath));
-
     SnapshotInfo snapshotInfo =
         SnapshotInfo.getFromProtobuf(
         getOMResponse().getCreateSnapshotResponse().getSnapshotInfo());
+
+    // Create the snapshot checkpoint
+    OmSnapshotManager.createOmSnapshotCheckpoint(omMetadataManager, snapshotInfo);
+
     String key = SnapshotInfo.getTableKey(name, snapshotPath);
 
     // Add to db

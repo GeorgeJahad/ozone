@@ -96,6 +96,7 @@ import org.apache.commons.lang3.StringUtils;
 import static org.apache.hadoop.ozone.OzoneConsts.DB_TRANSIENT_MARKER;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_DIR;
 
 import org.apache.ratis.util.ExitUtils;
 import org.eclipse.jetty.util.StringUtil;
@@ -289,7 +290,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
  private OmMetadataManagerImpl(OzoneConfiguration conf, String snapshotName) throws IOException {
     lock = new OmReadOnlyLock();
     omEpoch = 0;
-    setStore(loadDB(conf, new File("/data/metadata/db.snapshots"), "om.db-" + snapshotName, true));
+    setStore(loadDB(conf, new File(OMStorage.getOmDbDir(conf).toString() + OM_KEY_PREFIX + OM_SNAPSHOT_DIR), OM_DB_NAME + snapshotName, true));
     initializeOmTables();
   }
 
