@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: 8e1172398
+          ref: testMaster
       - name: Cache for maven dependencies
         uses: actions/cache@v2
         with:
