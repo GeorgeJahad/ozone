@@ -156,6 +156,8 @@ public class TestOmSnapshot {
     writeClient = objectStore.getClientProxy().getOzoneManagerClient();
 
     writeClient.createSnapshot("snap1", volumeName + OM_KEY_PREFIX + bucketName);
+    // TODO search for dir instead of sleep?
+    Thread.sleep(4000);
     // Root level listing keys
     Iterator<? extends OmKeyInfo> ozoneKeyIterator =
         writeClient.listKeys(volumeName, bucketName, ".snapshot/snap1/", ".snapshot/snap1/",
@@ -236,7 +238,11 @@ public class TestOmSnapshot {
     LinkedList<String> outputKeys = new LinkedList<>();
     while (ozoneKeyIterator.hasNext()) {
       OmKeyInfo omKeyInfo = ozoneKeyIterator.next();
-      outputKeys.add(omKeyInfo.getKeyName());
+      String keyName = omKeyInfo.getKeyName();
+      if (keyName.startsWith(".snapshot/snap1/")) {
+        keyName = keyName.substring(".snapshot/snap1/".length());
+      }
+      outputKeys.add(keyName);
     }
     keys.sort(String::compareTo);
     outputKeys.sort(String::compareTo);
