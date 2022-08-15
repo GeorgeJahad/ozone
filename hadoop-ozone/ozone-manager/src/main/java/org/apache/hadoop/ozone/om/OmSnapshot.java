@@ -51,12 +51,18 @@ public class OmSnapshot implements IOmMReader {
   }
 
   private  OmKeyInfo  denormalizeOmKeyInfo(OmKeyInfo keyInfo) {
+    if (keyInfo == null) {
+      return null;
+    }
     OmKeyInfo denormalized = keyInfo.copyObject();
     denormalized.setKeyName(denormalizeKeyName(keyInfo.getKeyName(), snapshotName));
     return denormalized;
   }
 
   private static OmKeyArgs normalizeOmKeyArgs(OmKeyArgs args) {
+    if (args == null) {
+      return null;
+    }
     return args.toBuilder().setKeyName(normalizeKeyName(args.getKeyName())).build();
   }
 
