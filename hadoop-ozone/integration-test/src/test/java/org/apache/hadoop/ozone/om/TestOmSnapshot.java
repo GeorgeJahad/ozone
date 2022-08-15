@@ -1,4 +1,5 @@
 package org.apache.hadoop.ozone.om;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.fs.ozone.OzoneFileSystem;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -38,11 +39,14 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -60,6 +64,7 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+@RunWith(Parameterized.class)
 public class TestOmSnapshot {
   private static MiniOzoneCluster cluster = null;
   private static OzoneConfiguration conf;
@@ -70,9 +75,37 @@ public class TestOmSnapshot {
   private static String bucketName;
   private static FileSystem fs;
   private static OzoneManagerProtocol writeClient;
+  private static BucketLayout bucketLayout;
+  private static boolean enabledFileSystemPaths;
 
   @Rule
   public Timeout timeout = new Timeout(1200000);
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> data() {
+    return Arrays.asList(
+        new Object[]{BucketLayout.LEGACY, true},
+        new Object[]{BucketLayout.LEGACY, false},
+        new Object[]{BucketLayout.FILE_SYSTEM_OPTIMIZED, false});
+  }
+
+  public TestOmSnapshot(BucketLayout newBucketLayout, boolean newEnableFileSystemPaths) {
+    // Checking whether 'newBucketLayout' and 'newEnableFileSystemPaths' flags represents next
+    // parameter index values. This is to ensure that initialize
+    // init() function will be invoked only at the
+    // beginning of every new set of Parameterized.Parameters.
+    if (enabledFileSystemPaths != newEnableFileSystemPaths ||
+            bucketLayout != newBucketLayout) {
+      enabledFileSystemPaths = newEnableFileSystemPaths;
+      bucketLayout = newBucketLayout;
+      try {
+        tearDown();
+        init();
+      } catch (Exception e) {
+        fail("Unexpected exception:" + e.getMessage());
+      }
+    }
+  }
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -80,32 +113,20 @@ public class TestOmSnapshot {
    *
    * @throws IOException
    */
-  static {
-    try {
+  private void init() throws Exception {
       conf = new OzoneConfiguration();
       clusterId = UUID.randomUUID().toString();
       scmId = UUID.randomUUID().toString();
       omId = UUID.randomUUID().toString();
-      conf.setBoolean(OMConfigKeys.OZONE_OM_ENABLE_FILESYSTEM_PATHS, true);
+      conf.setBoolean(OMConfigKeys.OZONE_OM_ENABLE_FILESYSTEM_PATHS, enabledFileSystemPaths);
       conf.set(OMConfigKeys.OZONE_DEFAULT_BUCKET_LAYOUT,
-          BucketLayout.LEGACY.name());
+          bucketLayout.name());
       cluster = MiniOzoneCluster.newBuilder(conf).setClusterId(clusterId)
           .setScmId(scmId).setOmId(omId).build();
       cluster.waitForClusterToBeReady();
-    } catch (Exception e) {
-      Assert.fail("Exception on init:" + e.getMessage());
-    }
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    deleteRootDir();
-  }
-  @Test
-  public void testListKeysAtDifferentLevels() throws Exception {
       // create a volume and a bucket to be used by OzoneFileSystem
       OzoneBucket bucket = TestDataUtil
-          .createVolumeAndBucket(cluster, BucketLayout.LEGACY);
+          .createVolumeAndBucket(cluster, bucketLayout);
       volumeName = bucket.getVolumeName();
       bucketName = bucket.getName();
 
@@ -118,6 +139,17 @@ public class TestOmSnapshot {
       conf.setInt(OZONE_FS_ITERATE_BATCH_SIZE, 5);
       fs = FileSystem.get(conf);
 
+  }
+
+  public void tearDown() throws Exception {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+    IOUtils.closeQuietly(fs);
+  }
+
+  @Test
+  public void testListKeysAtDifferentLevels() throws Exception {
     OzoneClient client = cluster.getClient();
 
     ObjectStore objectStore = client.getObjectStore();
@@ -283,11 +315,7 @@ public class TestOmSnapshot {
     Assert.assertEquals(inputString, new String(read, StandardCharsets.UTF_8));
 
     // Read using filesystem.
-    String rootPath = String.format("%s://%s.%s/", OZONE_URI_SCHEME,
-            bucketName, volumeName, StandardCharsets.UTF_8);
-    OzoneFileSystem o3fs = (OzoneFileSystem) FileSystem.get(new URI(rootPath),
-            conf);
-    FSDataInputStream fsDataInputStream = o3fs.open(new Path(key));
+    FSDataInputStream fsDataInputStream = fs.open(new Path(key));
     read = new byte[length];
     fsDataInputStream.read(read, 0, length);
     ozoneInputStream.close();
