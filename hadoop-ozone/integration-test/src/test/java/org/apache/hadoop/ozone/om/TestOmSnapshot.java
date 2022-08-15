@@ -84,9 +84,8 @@ public class TestOmSnapshot {
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(
-        new Object[]{BucketLayout.LEGACY, true},
-        new Object[]{BucketLayout.LEGACY, false},
-        new Object[]{BucketLayout.FILE_SYSTEM_OPTIMIZED, false});
+                         new Object[]{BucketLayout.FILE_SYSTEM_OPTIMIZED, true},
+                         new Object[]{BucketLayout.LEGACY, true});
   }
 
   public TestOmSnapshot(BucketLayout newBucketLayout, boolean newEnableFileSystemPaths) {
@@ -197,20 +196,19 @@ public class TestOmSnapshot {
     deleteRootDir();
     Thread.sleep(4000);
     // Root level listing keys
-    Iterator<? extends OmKeyInfo> ozoneKeyIterator =
-      writeClient.listKeys(volumeName, bucketName, snapshotPath, snapshotPath,
-            1000).iterator();
+    Iterator<? extends OzoneKey> ozoneKeyIterator =
+      ozoneBucket.listKeys(snapshotPath, snapshotPath);
     verifyFullTreeStructure(ozoneKeyIterator);
 
     ozoneKeyIterator =
-        writeClient.listKeys(volumeName, bucketName, snapshotPath + "a/", snapshotPath + "a/", 1000).iterator();
+        ozoneBucket.listKeys(snapshotPath + "a/", snapshotPath + "a/");
     verifyFullTreeStructure(ozoneKeyIterator);
 
     LinkedList<String> expectedKeys;
 
     // Intermediate level keyPrefix - 2nd level
     ozoneKeyIterator =
-        writeClient.listKeys(volumeName, bucketName, snapshotPath + "a/b2", snapshotPath + "a/b2/", 1000).iterator();
+        ozoneBucket.listKeys(snapshotPath + "a/b2", snapshotPath + "a/b2/");
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/");
     expectedKeys.add("a/b2/d1/");
@@ -224,7 +222,7 @@ public class TestOmSnapshot {
 
     // Intermediate level keyPrefix - 3rd level
     ozoneKeyIterator =
-        writeClient.listKeys(volumeName, bucketName, snapshotPath + "a/b2/d1", snapshotPath + "a/b2/d1", 1000).iterator();
+        ozoneBucket.listKeys(snapshotPath + "a/b2/d1", snapshotPath + "a/b2/d1");
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/d1/");
     expectedKeys.add("a/b2/d1/d11.tx");
@@ -232,19 +230,19 @@ public class TestOmSnapshot {
 
     // Boundary of a level
     ozoneKeyIterator =
-        writeClient.listKeys(volumeName, bucketName, snapshotPath + "a/b2/d2/d21.tx", snapshotPath + "a/b2/d2",  1000).iterator();
+        ozoneBucket.listKeys(snapshotPath + "a/b2/d2/d21.tx", snapshotPath + "a/b2/d2");
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/d2/d22.tx");
     checkKeyList(ozoneKeyIterator, expectedKeys);
 
     // Boundary case - last node in the depth-first-traversal
     ozoneKeyIterator =
-        writeClient.listKeys(volumeName, bucketName, snapshotPath + "a/b3/e3/e31.tx", snapshotPath + "a/b3/e3",  1000).iterator();
+        ozoneBucket.listKeys(snapshotPath + "a/b3/e3/e31.tx", snapshotPath + "a/b3/e3");
     expectedKeys = new LinkedList<>();
     checkKeyList(ozoneKeyIterator, expectedKeys);
   }
 
-  private void verifyFullTreeStructure(Iterator<? extends OmKeyInfo> keyItr) {
+  private void verifyFullTreeStructure(Iterator<? extends OzoneKey> keyItr) {
     LinkedList<String> expectedKeys = new LinkedList<>();
     expectedKeys.add("a/");
     expectedKeys.add("a/b1/");
@@ -270,14 +268,17 @@ public class TestOmSnapshot {
     checkKeyList(keyItr, expectedKeys);
   }
 
-  private void checkKeyList(Iterator<? extends OmKeyInfo > ozoneKeyIterator,
+  private void checkKeyList(Iterator<? extends OzoneKey > ozoneKeyIterator,
       List<String> keys) {
 
     LinkedList<String> outputKeys = new LinkedList<>();
     while (ozoneKeyIterator.hasNext()) {
-      OmKeyInfo omKeyInfo = ozoneKeyIterator.next();
-      String keyName = omKeyInfo.getKeyName();
-      keyName = keyName.substring(".snapshot/snap1/".length());
+      OzoneKey ozoneKey = ozoneKeyIterator.next();
+      String keyName = ozoneKey.getName();
+      // GBJ should this be here?  seems like it should
+      if (keyName.startsWith(".snapshot/snap1/")) {
+          keyName = keyName.substring(".snapshot/snap1/".length());
+      }
       outputKeys.add(keyName);
     }
     keys.sort(String::compareTo);
