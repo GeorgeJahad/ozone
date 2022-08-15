@@ -188,27 +188,28 @@ public class TestOmSnapshot {
 
     createKeys(ozoneBucket, keys);
 
-    writeClient = objectStore.getClientProxy().getOzoneManagerClient();
+    //    writeClient = objectStore.getClientProxy().getOzoneManagerClient();
 
-    writeClient.createSnapshot("snap1", volumeName + OM_KEY_PREFIX + bucketName);
-    String snapshotPath = ".snapshot/snap1/";
+    //writeClient.createSnapshot("snap1", volumeName + OM_KEY_PREFIX + bucketName);
+    //    String snapshotPath = ".snapshot/snap1/";
+    String snapshotPath = "";
     // TODO search for dir instead of sleep?
-    deleteRootDir();
-    Thread.sleep(4000);
+    //deleteRootDir();
+    //Thread.sleep(4000);
     // Root level listing keys
     Iterator<? extends OzoneKey> ozoneKeyIterator =
       ozoneBucket.listKeys(snapshotPath, snapshotPath);
     verifyFullTreeStructure(ozoneKeyIterator);
 
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/", snapshotPath + "a/");
+        ozoneBucket.listKeys(snapshotPath + "a/", snapshotPath);
     verifyFullTreeStructure(ozoneKeyIterator);
 
     LinkedList<String> expectedKeys;
 
     // Intermediate level keyPrefix - 2nd level
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/b2", snapshotPath + "a/b2/");
+        ozoneBucket.listKeys(snapshotPath + "a/b2", snapshotPath);
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/");
     expectedKeys.add("a/b2/d1/");
@@ -222,7 +223,7 @@ public class TestOmSnapshot {
 
     // Intermediate level keyPrefix - 3rd level
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/b2/d1", snapshotPath + "a/b2/d1");
+        ozoneBucket.listKeys(snapshotPath + "a/b2/d1", snapshotPath);
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/d1/");
     expectedKeys.add("a/b2/d1/d11.tx");
@@ -230,14 +231,14 @@ public class TestOmSnapshot {
 
     // Boundary of a level
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/b2/d2/d21.tx", snapshotPath + "a/b2/d2");
+        ozoneBucket.listKeys(snapshotPath + "a/b2/d2", snapshotPath + "a/b2/d2/d21.tx");
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/d2/d22.tx");
     checkKeyList(ozoneKeyIterator, expectedKeys);
 
     // Boundary case - last node in the depth-first-traversal
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/b3/e3/e31.tx", snapshotPath + "a/b3/e3");
+        ozoneBucket.listKeys(snapshotPath + "a/b3/e3", snapshotPath + "a/b3/e3/e31.tx");
     expectedKeys = new LinkedList<>();
     checkKeyList(ozoneKeyIterator, expectedKeys);
   }
@@ -316,7 +317,11 @@ public class TestOmSnapshot {
     Assert.assertEquals(inputString, new String(read, StandardCharsets.UTF_8));
 
     // Read using filesystem.
-    FSDataInputStream fsDataInputStream = fs.open(new Path(key));
+    String rootPath = String.format("%s://%s.%s/", OZONE_URI_SCHEME,
+            bucketName, volumeName, StandardCharsets.UTF_8);
+    OzoneFileSystem o3fs = (OzoneFileSystem) FileSystem.get(new URI(rootPath),
+            conf);
+    FSDataInputStream fsDataInputStream = o3fs.open(new Path(key));
     read = new byte[length];
     fsDataInputStream.read(read, 0, length);
     ozoneInputStream.close();
