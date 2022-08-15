@@ -61,7 +61,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 public class TestOmSnapshot {
-    private static MiniOzoneCluster cluster = null;
+  private static MiniOzoneCluster cluster = null;
   private static OzoneConfiguration conf;
   private static String clusterId;
   private static String scmId;
@@ -80,32 +80,21 @@ public class TestOmSnapshot {
    *
    * @throws IOException
    */
-  @BeforeClass
-  public static void init() throws Exception {
-    conf = new OzoneConfiguration();
-    clusterId = UUID.randomUUID().toString();
-    scmId = UUID.randomUUID().toString();
-    omId = UUID.randomUUID().toString();
-    conf.setBoolean(OMConfigKeys.OZONE_OM_ENABLE_FILESYSTEM_PATHS, true);
-    conf.set(OMConfigKeys.OZONE_DEFAULT_BUCKET_LAYOUT,
-        BucketLayout.LEGACY.name());
-    cluster = MiniOzoneCluster.newBuilder(conf).setClusterId(clusterId)
-        .setScmId(scmId).setOmId(omId).build();
-    cluster.waitForClusterToBeReady();
-    // create a volume and a bucket to be used by OzoneFileSystem
-    OzoneBucket bucket = TestDataUtil
-        .createVolumeAndBucket(cluster, BucketLayout.LEGACY);
-    volumeName = bucket.getVolumeName();
-    bucketName = bucket.getName();
-
-    String rootPath = String
-        .format("%s://%s.%s/", OzoneConsts.OZONE_URI_SCHEME, bucket.getName(),
-            bucket.getVolumeName());
-    // Set the fs.defaultFS and start the filesystem
-    conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, rootPath);
-    // Set the number of keys to be processed during batch operate.
-    conf.setInt(OZONE_FS_ITERATE_BATCH_SIZE, 5);
-    fs = FileSystem.get(conf);
+  static {
+    try {
+      conf = new OzoneConfiguration();
+      clusterId = UUID.randomUUID().toString();
+      scmId = UUID.randomUUID().toString();
+      omId = UUID.randomUUID().toString();
+      conf.setBoolean(OMConfigKeys.OZONE_OM_ENABLE_FILESYSTEM_PATHS, true);
+      conf.set(OMConfigKeys.OZONE_DEFAULT_BUCKET_LAYOUT,
+          BucketLayout.LEGACY.name());
+      cluster = MiniOzoneCluster.newBuilder(conf).setClusterId(clusterId)
+          .setScmId(scmId).setOmId(omId).build();
+      cluster.waitForClusterToBeReady();
+    } catch (Exception e) {
+      Assert.fail("Exception on init:" + e.getMessage());
+    }
   }
 
   @After
@@ -114,6 +103,21 @@ public class TestOmSnapshot {
   }
   @Test
   public void testListKeysAtDifferentLevels() throws Exception {
+      // create a volume and a bucket to be used by OzoneFileSystem
+      OzoneBucket bucket = TestDataUtil
+          .createVolumeAndBucket(cluster, BucketLayout.LEGACY);
+      volumeName = bucket.getVolumeName();
+      bucketName = bucket.getName();
+
+      String rootPath = String
+          .format("%s://%s.%s/", OzoneConsts.OZONE_URI_SCHEME, bucket.getName(),
+              bucket.getVolumeName());
+      // Set the fs.defaultFS and start the filesystem
+      conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, rootPath);
+      // Set the number of keys to be processed during batch operate.
+      conf.setInt(OZONE_FS_ITERATE_BATCH_SIZE, 5);
+      fs = FileSystem.get(conf);
+
     OzoneClient client = cluster.getClient();
 
     ObjectStore objectStore = client.getObjectStore();
