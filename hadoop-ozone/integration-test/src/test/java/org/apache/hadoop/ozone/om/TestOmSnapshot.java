@@ -104,7 +104,8 @@ public class TestOmSnapshot {
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(
-                         new Object[]{BucketLayout.FILE_SYSTEM_OPTIMIZED, true},
+                         new Object[]{BucketLayout.LEGACY, false},
+                         new Object[]{BucketLayout.FILE_SYSTEM_OPTIMIZED, false},
                          new Object[]{BucketLayout.LEGACY, true});
   }
 
@@ -160,7 +161,7 @@ public class TestOmSnapshot {
       o3fs = (OzoneFileSystem) fs;
       OzoneClient client = cluster.getClient();
       objectStore = client.getObjectStore();
-
+      writeClient = objectStore.getClientProxy().getOzoneManagerClient();
   }
 
   public void tearDown() throws Exception {
@@ -210,7 +211,6 @@ public class TestOmSnapshot {
 
     createKeys(ozoneBucket, keys);
 
-    writeClient = objectStore.getClientProxy().getOzoneManagerClient();
 
     writeClient.createSnapshot("snap1", volumeName + OM_KEY_PREFIX + bucketName);
     String snapshotPath = ".snapshot/snap1/";
@@ -327,7 +327,7 @@ public class TestOmSnapshot {
             ozoneBucket.createKey(key, length);
 
     ozoneOutputStream.write(input);
-    ozoneOutputStream.write(input, 0, 10);
+    // ozoneOutputStream.write(input, 0, 10);
     ozoneOutputStream.close();
 
     // Read the key with given key name.
@@ -537,5 +537,32 @@ public class TestOmSnapshot {
     }
   }
 
+  @Test
+  public void checkKey() throws Exception {
+    OzoneVolume ozoneVolume = objectStore.getVolume(volumeName);
+    assertTrue(ozoneVolume.getName().equals(volumeName));
+    OzoneBucket ozoneBucket = ozoneVolume.getBucket(bucketName);
+    assertTrue(ozoneBucket.getName().equals(bucketName));
+
+    String s = "testData";
+    String key1 = "/checkKey/key1";
+    createKey(ozoneBucket, key1, s.length(), s.getBytes(
+        StandardCharsets.UTF_8) );
+
+    String snapshotPath = createSnapshot();
+
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(snapshotPath + key1)
+        .setAcls(Collections.emptyList())
+        .setReplicationConfig(StandaloneReplicationConfig.getInstance(ONE))
+        .setLocationInfoList(new ArrayList<>())
+        .build();
+
+    OmKeyInfo omKeyInfo = writeClient.lookupKey(keyArgs);
+    assertEquals(omKeyInfo.getKeyName(), key1);
+    
+  }
   
 }
