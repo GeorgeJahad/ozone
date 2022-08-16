@@ -188,28 +188,28 @@ public class TestOmSnapshot {
 
     createKeys(ozoneBucket, keys);
 
-    //    writeClient = objectStore.getClientProxy().getOzoneManagerClient();
+    writeClient = objectStore.getClientProxy().getOzoneManagerClient();
 
-    //writeClient.createSnapshot("snap1", volumeName + OM_KEY_PREFIX + bucketName);
-    //    String snapshotPath = ".snapshot/snap1/";
-    String snapshotPath = "";
+    writeClient.createSnapshot("snap1", volumeName + OM_KEY_PREFIX + bucketName);
+    String snapshotPath = ".snapshot/snap1/";
+    //String snapshotPath = "";
     // TODO search for dir instead of sleep?
-    //deleteRootDir();
-    //Thread.sleep(4000);
+    deleteRootDir();
+    Thread.sleep(4000);
     // Root level listing keys
     Iterator<? extends OzoneKey> ozoneKeyIterator =
-      ozoneBucket.listKeys(snapshotPath, snapshotPath);
-    verifyFullTreeStructure(ozoneKeyIterator);
+      ozoneBucket.listKeys(snapshotPath, null);
+//    verifyFullTreeStructure(ozoneKeyIterator);
 
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/", snapshotPath);
+        ozoneBucket.listKeys(snapshotPath + "a/", null);
     verifyFullTreeStructure(ozoneKeyIterator);
 
     LinkedList<String> expectedKeys;
 
     // Intermediate level keyPrefix - 2nd level
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/b2", snapshotPath);
+        ozoneBucket.listKeys(snapshotPath + "a/b2", null);
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/");
     expectedKeys.add("a/b2/d1/");
@@ -223,7 +223,7 @@ public class TestOmSnapshot {
 
     // Intermediate level keyPrefix - 3rd level
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/b2/d1", snapshotPath);
+        ozoneBucket.listKeys(snapshotPath + "a/b2/d1", null);
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/d1/");
     expectedKeys.add("a/b2/d1/d11.tx");
