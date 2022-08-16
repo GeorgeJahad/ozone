@@ -1,6 +1,8 @@
 package org.apache.hadoop.ozone.om;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor.ONE;
 import org.apache.hadoop.fs.ozone.OzoneFileSystem;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
@@ -9,6 +11,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
+import org.apache.hadoop.hdds.client.StandaloneReplicationConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
@@ -28,7 +31,9 @@ import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmDirectoryInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.ozone.test.GenericTestUtils;
@@ -41,20 +46,26 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-import static org.apache.hadoop.hdds.client.ReplicationFactor.ONE;
+import static org.apache.hadoop.fs.ozone.Constants.LISTING_PAGE_SIZE;
 import static org.apache.hadoop.hdds.client.ReplicationType.RATIS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_FS_ITERATE_BATCH_SIZE;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
@@ -62,6 +73,8 @@ import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_ALREADY_EXISTS;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 @RunWith(Parameterized.class)
@@ -74,9 +87,15 @@ public class TestOmSnapshot {
   private static String volumeName;
   private static String bucketName;
   private static FileSystem fs;
+  private static OzoneFileSystem o3fs;
   private static OzoneManagerProtocol writeClient;
   private static BucketLayout bucketLayout;
   private static boolean enabledFileSystemPaths;
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestOmSnapshot.class);
+
+
 
   @Rule
   public Timeout timeout = new Timeout(1200000);
@@ -137,6 +156,7 @@ public class TestOmSnapshot {
       // Set the number of keys to be processed during batch operate.
       conf.setInt(OZONE_FS_ITERATE_BATCH_SIZE, 5);
       fs = FileSystem.get(conf);
+      o3fs = (OzoneFileSystem) fs;
 
   }
 
@@ -153,9 +173,9 @@ public class TestOmSnapshot {
 
     ObjectStore objectStore = client.getObjectStore();
     OzoneVolume ozoneVolume = objectStore.getVolume(volumeName);
-    Assert.assertTrue(ozoneVolume.getName().equals(volumeName));
+    assertTrue(ozoneVolume.getName().equals(volumeName));
     OzoneBucket ozoneBucket = ozoneVolume.getBucket(bucketName);
-    Assert.assertTrue(ozoneBucket.getName().equals(bucketName));
+    assertTrue(ozoneBucket.getName().equals(bucketName));
 
     String keyc1 = "/a/b1/c1/c1.tx";
     String keyc2 = "/a/b1/c2/c2.tx";
@@ -199,6 +219,7 @@ public class TestOmSnapshot {
     // Root level listing keys
     Iterator<? extends OzoneKey> ozoneKeyIterator =
       ozoneBucket.listKeys(snapshotPath, null);
+    // GBJ: todo why the extra root directory?
 //    verifyFullTreeStructure(ozoneKeyIterator);
 
     ozoneKeyIterator =
@@ -327,6 +348,152 @@ public class TestOmSnapshot {
     ozoneInputStream.close();
 
     Assert.assertEquals(inputString, new String(read, StandardCharsets.UTF_8));
+  }
+
+  @Test
+  public void testListStatus() throws Exception {
+    deleteRootDir();
+    Path root = new Path("/");
+    Path parent = new Path(root, "/testListStatus");
+    Path file1 = new Path(parent, "key1");
+    Path file2 = new Path(parent, "key2");
+
+    FileStatus[] fileStatuses = o3fs.listStatus(root);
+    Assert.assertEquals("Should be empty", 0, fileStatuses.length);
+
+    ContractTestUtils.touch(fs, file1);
+    ContractTestUtils.touch(fs, file2);
+
+    fileStatuses = o3fs.listStatus(root);
+    Assert.assertEquals("Should have created parent",
+            1, fileStatuses.length);
+    Assert.assertEquals("Parent path doesn't match",
+            fileStatuses[0].getPath().toUri().getPath(), parent.toString());
+
+    // ListStatus on a directory should return all subdirs along with
+    // files, even if there exists a file and sub-dir with the same name.
+    fileStatuses = o3fs.listStatus(parent);
+    assertEquals("FileStatus did not return all children of the directory",
+        2, fileStatuses.length);
+
+    // ListStatus should return only the immediate children of a directory.
+    Path file3 = new Path(parent, "dir1/key3");
+    Path file4 = new Path(parent, "dir1/key4");
+    ContractTestUtils.touch(fs, file3);
+    ContractTestUtils.touch(fs, file4);
+    fileStatuses = o3fs.listStatus(parent);
+    assertEquals("FileStatus did not return all children of the directory",
+        3, fileStatuses.length);
+  }
+
+  @Test
+  public void testListStatusWithIntermediateDir() throws Exception {
+    String keyName = "object-dir/object-name";
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .setAcls(Collections.emptyList())
+        .setReplicationConfig(StandaloneReplicationConfig.getInstance(ONE))
+        .setLocationInfoList(new ArrayList<>())
+        .build();
+
+    OpenKeySession session = writeClient.openKey(keyArgs);
+    writeClient.commitKey(keyArgs, session.getId());
+
+    Path parent = new Path("/");
+
+    // Wait until the filestatus is updated
+    if (!enabledFileSystemPaths) {
+      GenericTestUtils.waitFor(() -> {
+        try {
+          return fs.listStatus(parent).length != 0;
+        } catch (IOException e) {
+          LOG.error("listStatus() Failed", e);
+          Assert.fail("listStatus() Failed");
+          return false;
+        }
+      }, 1000, 120000);
+    }
+
+    FileStatus[] fileStatuses = fs.listStatus(parent);
+
+    // the number of immediate children of root is 1
+    Assert.assertEquals(1, fileStatuses.length);
+    writeClient.deleteKey(keyArgs);
+  }
+
+  /**
+   * Tests listStatus operation on root directory.
+   */
+  @Test
+  public void testListStatusOnRoot() throws Exception {
+    Path root = new Path("/");
+    Path dir1 = new Path(root, "dir1");
+    Path dir12 = new Path(dir1, "dir12");
+    Path dir2 = new Path(root, "dir2");
+    fs.mkdirs(dir12);
+    fs.mkdirs(dir2);
+
+    // ListStatus on root should return dir1 (even though /dir1 key does not
+    // exist) and dir2 only. dir12 is not an immediate child of root and
+    // hence should not be listed.
+    FileStatus[] fileStatuses = o3fs.listStatus(root);
+    assertEquals("FileStatus should return only the immediate children",
+        2, fileStatuses.length);
+
+    // Verify that dir12 is not included in the result of the listStatus on root
+    String fileStatus1 = fileStatuses[0].getPath().toUri().getPath();
+    String fileStatus2 = fileStatuses[1].getPath().toUri().getPath();
+    assertNotEquals(fileStatus1, dir12.toString());
+    assertNotEquals(fileStatus2, dir12.toString());
+  }
+
+  /**
+   * Tests listStatus operation on root directory.
+   */
+  @Test
+  public void testListStatusOnLargeDirectory() throws Exception {
+    Path root = new Path("/");
+    deleteRootDir(); // cleanup
+    Set<String> paths = new TreeSet<>();
+    int numDirs = LISTING_PAGE_SIZE + LISTING_PAGE_SIZE / 2;
+    for (int i = 0; i < numDirs; i++) {
+      Path p = new Path(root, String.valueOf(i));
+      fs.mkdirs(p);
+      paths.add(p.getName());
+    }
+
+    FileStatus[] fileStatuses = o3fs.listStatus(root);
+    // Added logs for debugging failures, to check any sub-path mismatches.
+    Set<String> actualPaths = new TreeSet<>();
+    ArrayList<String> actualPathList = new ArrayList<>();
+    if (numDirs != fileStatuses.length) {
+      for (int i = 0; i < fileStatuses.length; i++) {
+        boolean duplicate =
+                actualPaths.add(fileStatuses[i].getPath().getName());
+        if (!duplicate) {
+          LOG.info("Duplicate path:{} in FileStatusList",
+                  fileStatuses[i].getPath().getName());
+        }
+        actualPathList.add(fileStatuses[i].getPath().getName());
+      }
+      if (numDirs != actualPathList.size()) {
+        LOG.info("actualPathsSize: {}", actualPaths.size());
+        LOG.info("actualPathListSize: {}", actualPathList.size());
+        actualPaths.removeAll(paths);
+        actualPathList.removeAll(paths);
+        LOG.info("actualPaths: {}", actualPaths);
+        LOG.info("actualPathList: {}", actualPathList);
+      }
+    }
+    assertEquals(
+        "Total directories listed do not match the existing directories",
+        numDirs, fileStatuses.length);
+
+    for (int i = 0; i < numDirs; i++) {
+      assertTrue(paths.contains(fileStatuses[i].getPath().getName()));
+    }
   }
 
   /**
