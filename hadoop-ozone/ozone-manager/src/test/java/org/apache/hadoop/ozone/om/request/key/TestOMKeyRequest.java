@@ -199,10 +199,10 @@ public class TestOMKeyRequest {
     version = 0L;
 
     Pair<String, String> volumeAndBucket = Pair.of(volumeName, bucketName);
-    when(omMReader.resolveBucketLink(any(KeyArgs.class),
+    when(ozoneManager.resolveBucketLink(any(KeyArgs.class),
         any(OMClientRequest.class)))
         .thenReturn(new ResolvedBucket(volumeAndBucket, volumeAndBucket));
-    when(omMReader.resolveBucketLink(any(Pair.class),
+    when(ozoneManager.resolveBucketLink(any(Pair.class),
         any(OMClientRequest.class)))
         .thenReturn(new ResolvedBucket(volumeAndBucket, volumeAndBucket));
   }
