@@ -212,7 +212,7 @@ public class TestOmSnapshot {
     createKeys(ozoneBucket, keys);
 
 
-    writeClient.createSnapshot("snap1", volumeName + OM_KEY_PREFIX + bucketName);
+    writeClient.createSnapshot(volumeName, bucketName, "snap1");
     String snapshotPath = ".snapshot/snap1/";
     //String snapshotPath = "";
     // TODO search for dir instead of sleep?
@@ -344,7 +344,7 @@ public class TestOmSnapshot {
   private String createSnapshot() throws IOException, InterruptedException {
     String snapshotName = UUID.randomUUID().toString();
     writeClient = objectStore.getClientProxy().getOzoneManagerClient();
-    writeClient.createSnapshot(snapshotName, volumeName + OM_KEY_PREFIX + bucketName);
+    writeClient.createSnapshot(volumeName, bucketName, snapshotName);
     String snapshotPath = "/.snapshot/" + snapshotName + "/";
     // TODO search for snapshot dir instead of sleep?
     Thread.sleep(4000);
