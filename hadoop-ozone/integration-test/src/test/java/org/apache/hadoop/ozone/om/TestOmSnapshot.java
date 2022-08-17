@@ -537,7 +537,7 @@ public class TestOmSnapshot {
         .build();
   }
 
-  //gbj  @Test
+  @Test
   public void checkKey() throws Exception {
     OzoneVolume ozoneVolume = objectStore.getVolume(volumeName);
     assertTrue(ozoneVolume.getName().equals(volumeName));
