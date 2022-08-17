@@ -45,6 +45,9 @@ public class OmSnapshot implements IOmMReader {
   }
 
   private static OmKeyInfo  normalizeOmKeyInfo(OmKeyInfo keyInfo) {
+    if (keyInfo == null) {
+      return null;
+    }
     OmKeyInfo normalized = keyInfo.copyObject();
     normalized.setKeyName(normalizeKeyName(keyInfo.getKeyName()));
     return normalized;
@@ -80,6 +83,10 @@ public class OmSnapshot implements IOmMReader {
   }
 
   private  OzoneFileStatus denormalizeOzoneFileStatus(OzoneFileStatus fileStatus) {
+    if (fileStatus == null) {
+      return null;
+    }
+
     return new OzoneFileStatus(denormalizeOmKeyInfo(
         fileStatus.getKeyInfo()),fileStatus.getBlockSize(), fileStatus.isDirectory());
   }
@@ -102,6 +109,10 @@ public class OmSnapshot implements IOmMReader {
   }
 
   private OzoneObj normalizeOzoneObj(OzoneObj o) {
+    if (o == null) {
+      return null;
+    }
+
     return OzoneObjInfo.Builder.getBuilder(o.getResourceType(),
         o.getStoreType(), o.getVolumeName(), o.getBucketName(),
         normalizeKeyName(o.getKeyName()))

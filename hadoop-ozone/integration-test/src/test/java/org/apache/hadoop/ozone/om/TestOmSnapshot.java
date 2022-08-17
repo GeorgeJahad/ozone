@@ -116,10 +116,10 @@ public class TestOmSnapshot {
     // parameter index values. This is to ensure that initialize
     // init() function will be invoked only at the
     // beginning of every new set of Parameterized.Parameters.
-    if (enabledFileSystemPaths != newEnableFileSystemPaths ||
-            bucketLayout != newBucketLayout) {
-      enabledFileSystemPaths = newEnableFileSystemPaths;
-      bucketLayout = newBucketLayout;
+    if (TestOmSnapshot.enabledFileSystemPaths != newEnableFileSystemPaths ||
+            TestOmSnapshot.bucketLayout != newBucketLayout) {
+      TestOmSnapshot.enabledFileSystemPaths = newEnableFileSystemPaths;
+      TestOmSnapshot.bucketLayout = newBucketLayout;
         tearDown();
         init();
     }
