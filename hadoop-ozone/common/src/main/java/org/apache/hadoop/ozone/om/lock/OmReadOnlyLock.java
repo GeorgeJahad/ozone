@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership.  The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ */
+
 package org.apache.hadoop.ozone.om.lock;
 
 public class OmReadOnlyLock implements OmLock{
@@ -14,9 +31,27 @@ public class OmReadOnlyLock implements OmLock{
   }
 
   @Override
+  public boolean acquireReadHashedLock(OzoneManagerLock.Resource resource,
+                                 String resourceName) {
+    return true;
+  }
+
+  @Override
   public boolean acquireWriteLock(OzoneManagerLock.Resource resource,
                                   String... resources) {
     return false;
+  }
+
+  @Override
+  public boolean acquireWriteHashedLock(OzoneManagerLock.Resource resource,
+                                        String resourceName) {
+    return false;
+  }
+
+  @Override
+  public String generateResourceName(OzoneManagerLock.Resource resource,
+                                     String... resources) {
+    return "";
   }
 
   @Override
@@ -36,8 +71,20 @@ public class OmReadOnlyLock implements OmLock{
   }
 
   @Override
+  public void releaseWriteHashedLock(OzoneManagerLock.Resource resource,
+                               String resourceName) {
+
+  }
+
+  @Override
   public void releaseReadLock(OzoneManagerLock.Resource resource,
                               String... resources) {
+
+  }
+
+  @Override
+  public void releaseReadHashedLock(OzoneManagerLock.Resource resource,
+                               String resourceName) {
 
   }
 

@@ -79,7 +79,9 @@ import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
+import org.apache.hadoop.ozone.om.lock.OmReadOnlyLock;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
+import org.apache.hadoop.ozone.om.lock.OmLock;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OpenKey;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OpenKeyBucket;
@@ -224,7 +226,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
 
   private DBStore store;
 
-  private final OzoneManagerLock lock;
+  private final OmLock lock;
 
   private Table userTable;
   private Table volumeTable;
@@ -288,7 +290,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
  private OmMetadataManagerImpl(OzoneConfiguration conf, String snapshotName) throws IOException {
-    lock = new OzoneManagerLock(conf);
+    lock = new OmReadOnlyLock();
     omEpoch = 0;
     setStore(loadDB(conf, new File(OMStorage.getOmDbDir(conf).toString() + OM_KEY_PREFIX + OM_SNAPSHOT_DIR), OM_DB_NAME + snapshotName, true));
     initializeOmTables();
@@ -684,7 +686,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
    * @return OzoneManagerLock
    */
   @Override
-  public org.apache.hadoop.ozone.om.lock.OzoneManagerLock getLock() {
+  public org.apache.hadoop.ozone.om.lock.OmLock getLock() {
     return lock;
   }
 
