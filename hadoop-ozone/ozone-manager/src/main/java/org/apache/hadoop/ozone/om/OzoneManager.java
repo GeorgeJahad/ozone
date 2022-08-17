@@ -3302,12 +3302,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   @Override
   public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
-      String startKey, long numEntries)
-      throws IOException {
-    return listStatus(args, recursive, startKey, numEntries, false);
-  }
-
-  public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
       String startKey, long numEntries, boolean allowPartialPrefixes)
       throws IOException {
 
