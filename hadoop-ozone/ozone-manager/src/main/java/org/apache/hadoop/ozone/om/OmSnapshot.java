@@ -1,17 +1,23 @@
 package org.apache.hadoop.ozone.om;
 
+import org.apache.hadoop.hdds.client.RatisReplicationConfig;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.AuditLoggerType;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,15 +33,21 @@ public class OmSnapshot implements IOmMReader {
       AuditLoggerType.OMLOGGER);
 
   private final OmMReader omMReader;
+  private final String volumeName;
+  private final String bucketName;
   private final String snapshotName;
   
   public OmSnapshot(KeyManager keyManager,
                           PrefixManager prefixManager,
                           OMMetadataManager omMetadataManager,
                     OzoneManager ozoneManager,
+                    String volumeName,
+                    String bucketName,
                     String snapshotName) {
     omMReader = new OmMReader(keyManager, prefixManager, omMetadataManager, ozoneManager, LOG, AUDIT, OmSnapshotMetrics.getInstance());
     this.snapshotName = snapshotName;
+    this.bucketName = bucketName;
+    this.volumeName = volumeName;
   }
 
 
@@ -86,9 +98,25 @@ public class OmSnapshot implements IOmMReader {
     if (fileStatus == null) {
       return null;
     }
-
+    OmKeyInfo omKeyInfo;
+    if (fileStatus.getKeyInfo() == null) {
+    omKeyInfo = new OmKeyInfo.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName("")
+        .setOmKeyLocationInfos(Collections.singletonList(
+            new OmKeyLocationInfoGroup(0, new ArrayList<>())))
+        .setCreationTime(Time.now())
+        .setModificationTime(Time.now())
+        .setDataSize(0)
+        .setReplicationConfig(RatisReplicationConfig
+            .getInstance(HddsProtos.ReplicationFactor.ONE))
+        .build();
+    } else {
+      omKeyInfo = fileStatus.getKeyInfo();
+    }
     return new OzoneFileStatus(denormalizeOmKeyInfo(
-        fileStatus.getKeyInfo()),fileStatus.getBlockSize(), fileStatus.isDirectory());
+        omKeyInfo),fileStatus.getBlockSize(), fileStatus.isDirectory());
   }
 
   @Override

@@ -93,7 +93,7 @@ public final class OmSnapshotManager {
     PrefixManagerImpl pm = new PrefixManagerImpl(smm, false);
     KeyManagerImpl km = new KeyManagerImpl(null, ozoneManager.getScmClient(), smm, conf, null,
         ozoneManager.getBlockTokenSecretManager(), ozoneManager.getKmsProvider(), pm );
-    OmSnapshot s = new OmSnapshot(km, pm, smm, ozoneManager, snapshotName);
+    OmSnapshot s = new OmSnapshot(km, pm, smm, ozoneManager, volumeName, bucketName, snapshotName);
     snapshotManagerCache.put(fullName, s);
     return s;
   }
