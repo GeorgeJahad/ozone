@@ -87,8 +87,8 @@ public class TestOmSnapshot {
   private static String omId;
   private static String volumeName;
   private static String bucketName;
-    private static OzoneManagerProtocol writeClient;
-  private static BucketLayout bucketLayout;
+  private static OzoneManagerProtocol writeClient;
+  private static BucketLayout bucketLayout = BucketLayout.LEGACY;
   private static boolean enabledFileSystemPaths;
   private static ObjectStore store;
 
@@ -118,8 +118,8 @@ public class TestOmSnapshot {
             TestOmSnapshot.bucketLayout != newBucketLayout) {
       TestOmSnapshot.enabledFileSystemPaths = newEnableFileSystemPaths;
       TestOmSnapshot.bucketLayout = newBucketLayout;
-        tearDown();
-        init();
+      tearDown();
+      init();
     }
   }
 
@@ -167,7 +167,7 @@ public class TestOmSnapshot {
 
   @Test
   public void testListKey()
-      throws IOException {
+      throws IOException, InterruptedException {
     String volumeA = "vol-a-" + RandomStringUtils.randomNumeric(5);
     String volumeB = "vol-b-" + RandomStringUtils.randomNumeric(5);
     String bucketA = "buc-a-" + RandomStringUtils.randomNumeric(5);
@@ -251,40 +251,52 @@ public class TestOmSnapshot {
       four.write(value);
       four.close();
     }
+
+
+    String snapshotPath = createSnapshot(volumeA, bucketA);
+
     Iterator<? extends OzoneKey> volABucketAIter =
-        volAbucketA.listKeys("key-");
+        volAbucketA.listKeys(snapshotPath + "key-");
     int volABucketAKeyCount = 0;
     while (volABucketAIter.hasNext()) {
       volABucketAIter.next();
       volABucketAKeyCount++;
     }
     Assert.assertEquals(20, volABucketAKeyCount);
+
+    snapshotPath = createSnapshot(volumeA, bucketB);
     Iterator<? extends OzoneKey> volABucketBIter =
-        volAbucketB.listKeys("key-");
+        volAbucketB.listKeys(snapshotPath + "key-");
     int volABucketBKeyCount = 0;
     while (volABucketBIter.hasNext()) {
       volABucketBIter.next();
       volABucketBKeyCount++;
     }
     Assert.assertEquals(20, volABucketBKeyCount);
+
+    snapshotPath = createSnapshot(volumeB, bucketA);
     Iterator<? extends OzoneKey> volBBucketAIter =
-        volBbucketA.listKeys("key-");
+        volBbucketA.listKeys(snapshotPath + "key-");
     int volBBucketAKeyCount = 0;
     while (volBBucketAIter.hasNext()) {
       volBBucketAIter.next();
       volBBucketAKeyCount++;
     }
     Assert.assertEquals(20, volBBucketAKeyCount);
+
+    snapshotPath = createSnapshot(volumeB, bucketB);
     Iterator<? extends OzoneKey> volBBucketBIter =
-        volBbucketB.listKeys("key-");
+        volBbucketB.listKeys(snapshotPath + "key-");
     int volBBucketBKeyCount = 0;
     while (volBBucketBIter.hasNext()) {
       volBBucketBIter.next();
       volBBucketBKeyCount++;
     }
     Assert.assertEquals(20, volBBucketBKeyCount);
+
+    snapshotPath = createSnapshot(volumeA, bucketA);
     Iterator<? extends OzoneKey> volABucketAKeyAIter =
-        volAbucketA.listKeys("key-a-");
+        volAbucketA.listKeys(snapshotPath + "key-a-");
     int volABucketAKeyACount = 0;
     while (volABucketAKeyAIter.hasNext()) {
       volABucketAKeyAIter.next();
@@ -292,24 +304,25 @@ public class TestOmSnapshot {
     }
     Assert.assertEquals(10, volABucketAKeyACount);
     Iterator<? extends OzoneKey> volABucketAKeyBIter =
-        volAbucketA.listKeys("key-b-");
+        volAbucketA.listKeys(snapshotPath + "key-b-");
     for (int i = 0; i < 10; i++) {
       Assert.assertTrue(volABucketAKeyBIter.next().getName()
-          .startsWith("key-b-" + i + "-"));
+          .startsWith(snapshotPath + "key-b-" + i + "-"));
     }
     Assert.assertFalse(volABucketBIter.hasNext());
   }
 
   @Test
   public void testListKeyOnEmptyBucket()
-      throws IOException {
+      throws IOException, InterruptedException {
     String volume = "vol-" + RandomStringUtils.randomNumeric(5);
     String bucket = "buc-" + RandomStringUtils.randomNumeric(5);
     store.createVolume(volume);
     OzoneVolume vol = store.getVolume(volume);
     vol.createBucket(bucket);
+    String snapshotPath = createSnapshot(volume, bucket);
     OzoneBucket buc = vol.getBucket(bucket);
-    Iterator<? extends OzoneKey> keys = buc.listKeys("");
+    Iterator<? extends OzoneKey> keys = buc.listKeys(snapshotPath);
     while (keys.hasNext()) {
       fail();
     }
@@ -341,7 +354,7 @@ public class TestOmSnapshot {
 
     OmKeyInfo originalKeyInfo = writeClient.lookupKey(genKeyArgs(key1));
     
-    String snapshotPath = createSnapshot().substring(1);
+    String snapshotPath = createSnapshot();
 
     OmKeyArgs keyArgs = genKeyArgs(snapshotPath + key1);
     
@@ -356,10 +369,13 @@ public class TestOmSnapshot {
   }
 
   private String createSnapshot() throws IOException, InterruptedException {
+    return createSnapshot(volumeName, bucketName);
+  }
+  private String createSnapshot(String vname, String bname) throws IOException, InterruptedException {
     String snapshotName = UUID.randomUUID().toString();
     writeClient = store.getClientProxy().getOzoneManagerClient();
-    writeClient.createSnapshot(volumeName, bucketName, snapshotName);
-    String snapshotPath = "/.snapshot/" + snapshotName + "/";
+    writeClient.createSnapshot(vname, bname, snapshotName);
+    String snapshotPath = ".snapshot/" + snapshotName + "/";
     // TODO search for snapshot dir instead of sleep?
     Thread.sleep(4000);
     return snapshotPath;
