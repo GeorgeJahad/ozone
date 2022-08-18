@@ -1370,7 +1370,7 @@ public class OzoneBucket extends WithMetadata {
       // not required to addKeyPrefix
       // case-1) if keyPrefix is null or empty
       // case-2) if startKey is not null or empty
-      if (StringUtils.isBlank(keyPrefix) || StringUtils.isNotBlank(startKey)) {
+      if (StringUtils.isBlank(keyPrefix) || StringUtils.isNotBlank(startKey) || (keyPrefix.startsWith(".snapshot/") && keyPrefix.split("/").length == 2)) {
         return;
       }
 
