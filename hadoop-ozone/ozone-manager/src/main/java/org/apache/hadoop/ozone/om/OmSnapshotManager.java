@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -70,7 +71,7 @@ public final class OmSnapshotManager {
     if (snapshotName == null || snapshotName.isEmpty()) {
       return null;
     }
-    String fullName = SnapshotInfo.getTableKey(snapshotName, volumeName + "/" + bucketName);
+    String fullName = SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName);
     SnapshotInfo snapshotInfo;
     try {
       snapshotInfo = ozoneManager.getMetadataManager().getSnapshotInfoTable()
@@ -78,6 +79,9 @@ public final class OmSnapshotManager {
     } catch (IOException e) {
       LOG.error("Snapshot {}: not found: {}", fullName, e);
       throw e;
+    }
+    if (snapshotInfo == null) {
+      throw new FileNotFoundException(fullName + " does not exist");
     }
     OmMetadataManagerImpl smm = null;
     if (snapshotManagerCache.containsKey(fullName)) {
@@ -114,6 +118,9 @@ public final class OmSnapshotManager {
 
   // Remove snapshot indicator from keyname
   public static String normalizeKeyName(String keyname) {
+    if (keyname == null) {
+      return null;
+    }
     String[] keyParts = keyname.split("/");
     if ((keyParts.length > 1) && (keyParts[0].compareTo(".snapshot") == 0)) {
       String normalizedKeyName = String.join("/", Arrays.copyOfRange(keyParts, 2, keyParts.length));
@@ -131,6 +138,9 @@ public final class OmSnapshotManager {
 
   // Restore snapshot indicator to keyanme
   public static String denormalizeKeyName(String keyname, String snapshotName) {
+    if (keyname == null) {
+      return null;
+    }
     return ".snapshot/" + snapshotName + "/" + keyname;
   }
 }

@@ -157,8 +157,8 @@ public class TestOMSnapshotCreateRequest {
         volumeName, bucketName, snapshotName);
     OMSnapshotCreateRequest omSnapshotCreateRequest =
         doPreExecute(omRequest);
-    String key = SnapshotInfo.newInstance(volumeName,
-        bucketName, snapshotName).getTableKey();
+    String key = SnapshotInfo.getTableKey(volumeName,
+        bucketName, snapshotName);
 
     // As we have not still called validateAndUpdateCache, get() should
     // return null.
@@ -195,8 +195,8 @@ public class TestOMSnapshotCreateRequest {
         OMRequestTestUtils.createSnapshotRequest(
         volumeName, bucketName, snapshotName);
     OMSnapshotCreateRequest omSnapshotCreateRequest = doPreExecute(omRequest);
-    String key = SnapshotInfo.newInstance(volumeName,
-        bucketName, snapshotName).getTableKey();
+    String key = SnapshotInfo.getTableKey(volumeName,
+        bucketName, snapshotName);
 
     Assert.assertNull(omMetadataManager.getSnapshotInfoTable().get(key));
 

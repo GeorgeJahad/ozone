@@ -13,6 +13,7 @@ import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.client.StandaloneReplicationConfig;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.HddsWhiteboxTestUtils;
 import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OmUtils;
@@ -162,6 +163,14 @@ public class TestOmSnapshot {
       OzoneClient client = cluster.getClient();
       objectStore = client.getObjectStore();
       writeClient = objectStore.getClientProxy().getOzoneManagerClient();
+      OzoneManager ozoneManager = cluster.getOzoneManager();
+      KeyManagerImpl keyManager = (KeyManagerImpl) HddsWhiteboxTestUtils
+        .getInternalState(ozoneManager, "keyManager");
+
+      // stop the deletion services so that keys can still be read
+      keyManager.stop();
+
+
   }
 
   public void tearDown() throws Exception {
