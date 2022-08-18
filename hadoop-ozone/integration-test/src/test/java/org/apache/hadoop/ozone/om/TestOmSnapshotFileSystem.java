@@ -179,7 +179,6 @@ public class TestOmSnapshotFileSystem {
 
   @Test
   public void testListKeysAtDifferentLevels() throws Exception {
-    deleteRootDir();
 
     OzoneVolume ozoneVolume = objectStore.getVolume(volumeName);
     assertTrue(ozoneVolume.getName().equals(volumeName));
@@ -238,15 +237,15 @@ public class TestOmSnapshotFileSystem {
 
     // Intermediate level keyPrefix - 2nd level
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/b2", null);
+        ozoneBucket.listKeys(snapshotPath + "a///b2///", null);
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/");
     expectedKeys.add("a/b2/d1/");
-    expectedKeys.add("a/b2/d2/");
-    expectedKeys.add("a/b2/d3/");
     expectedKeys.add("a/b2/d1/d11.tx");
+    expectedKeys.add("a/b2/d2/");
     expectedKeys.add("a/b2/d2/d21.tx");
     expectedKeys.add("a/b2/d2/d22.tx");
+    expectedKeys.add("a/b2/d3/");
     expectedKeys.add("a/b2/d3/d31.tx");
     checkKeyList(ozoneKeyIterator, expectedKeys);
 
@@ -359,7 +358,6 @@ public class TestOmSnapshotFileSystem {
     
   @Test
   public void testListStatus() throws Exception {
-    deleteRootDir();
     Path root = new Path("/");
     Path parent = new Path(root, "/testListStatus");
     Path file1 = new Path(parent, "key1");
@@ -467,7 +465,6 @@ public class TestOmSnapshotFileSystem {
   @Test
   public void testListStatusOnLargeDirectory() throws Exception {
     Path root = new Path("/");
-    deleteRootDir(); // cleanup
     Set<String> paths = new TreeSet<>();
     int numDirs = LISTING_PAGE_SIZE + LISTING_PAGE_SIZE / 2;
     for (int i = 0; i < numDirs; i++) {
@@ -514,7 +511,8 @@ public class TestOmSnapshotFileSystem {
    *
    * @throws IOException DB failure
    */
-  private void deleteRootDir() throws IOException {
+  @After
+  public void deleteRootDir() throws IOException {
     Path root = new Path("/");
     FileStatus[] fileStatuses = fs.listStatus(root);
 
