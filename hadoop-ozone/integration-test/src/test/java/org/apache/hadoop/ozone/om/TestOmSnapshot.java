@@ -106,7 +106,6 @@ public class TestOmSnapshot {
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
     return Arrays.asList(
-                         new Object[]{BucketLayout.LEGACY, false},
                          new Object[]{BucketLayout.FILE_SYSTEM_OPTIMIZED, false},
                          new Object[]{BucketLayout.LEGACY, true});
   }
@@ -156,10 +155,8 @@ public class TestOmSnapshot {
       conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, rootPath);
       // Set the number of keys to be processed during batch operate.
       conf.setInt(OZONE_FS_ITERATE_BATCH_SIZE, 5);
-      if (bucketLayout != BucketLayout.OBJECT_STORE) {
-        fs = FileSystem.get(conf);
-        o3fs = (OzoneFileSystem) fs;
-      }
+      fs = FileSystem.get(conf);
+      o3fs = (OzoneFileSystem) fs;
       OzoneClient client = cluster.getClient();
       objectStore = client.getObjectStore();
       writeClient = objectStore.getClientProxy().getOzoneManagerClient();
@@ -544,34 +541,6 @@ public class TestOmSnapshot {
         .setReplicationConfig(StandaloneReplicationConfig.getInstance(ONE))
         .setLocationInfoList(new ArrayList<>())
         .build();
-  }
-
-  @Test
-  public void checkKey() throws Exception {
-    OzoneVolume ozoneVolume = objectStore.getVolume(volumeName);
-    assertTrue(ozoneVolume.getName().equals(volumeName));
-    OzoneBucket ozoneBucket = ozoneVolume.getBucket(bucketName);
-    assertTrue(ozoneBucket.getName().equals(bucketName));
-
-    String s = "testData";
-    String key1 = "checkKey/key1";
-    createKey(ozoneBucket, key1, s.length(), s.getBytes(
-        StandardCharsets.UTF_8) );
-
-    OmKeyInfo originalKeyInfo = writeClient.lookupKey(genKeyArgs(key1));
-    
-    String snapshotPath = createSnapshot().substring(1);
-
-    OmKeyArgs keyArgs = genKeyArgs(snapshotPath + key1);
-    
-    OmKeyInfo omKeyInfo = writeClient.lookupKey(keyArgs);
-    assertEquals(omKeyInfo.getKeyName(), snapshotPath + key1);
-    
-    OmKeyInfo fileInfo = writeClient.lookupFile(keyArgs);
-    assertEquals(fileInfo.getKeyName(), snapshotPath + key1);
-
-    OzoneFileStatus ozoneFileStatus = writeClient.getFileStatus(keyArgs);
-    assertEquals(ozoneFileStatus.getKeyInfo().getKeyName(), snapshotPath + key1);
   }
   
 }
