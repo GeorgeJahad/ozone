@@ -123,13 +123,12 @@ public final class OmSnapshotManager {
     }
     String[] keyParts = keyname.split("/");
     if ((keyParts.length > 1) && (keyParts[0].compareTo(".snapshot") == 0)) {
+      if (keyParts.length == 2) {
+        return "";
+      }
       String normalizedKeyName = String.join("/", Arrays.copyOfRange(keyParts, 2, keyParts.length));
       if (keyname.endsWith("/")) {
         normalizedKeyName = normalizedKeyName + "/";
-      }
-      // GBJ todo: Is this right?
-      if (normalizedKeyName.equals("/")) {
-          return "";
       }
       return normalizedKeyName;
     }

@@ -159,7 +159,8 @@ public class TestOmSnapshot {
 
   }
 
-  public void tearDown() throws Exception {
+  @AfterClass
+  public static void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
