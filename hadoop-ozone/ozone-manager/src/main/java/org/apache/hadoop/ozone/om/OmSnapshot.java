@@ -34,8 +34,6 @@ public class OmSnapshot implements IOmMReader {
   private final String volumeName;
   private final String bucketName;
   private final String snapshotName;
-  private final KeyManager keyManager;
-  
   public OmSnapshot(KeyManager keyManager,
                     PrefixManager prefixManager,
                     OMMetadataManager omMetadataManager,
@@ -128,19 +126,11 @@ public class OmSnapshot implements IOmMReader {
   }
 
   // Restore snapshot indicator to keyanme
-  private String denormalizeKeyName(String keyname, String snapshotName) {
+  private String denormalizeKeyName(String keyname) {
     if (keyname == null) {
       return null;
     }
     return ".snapshot/" + snapshotName + "/" + keyname;
-  }
-  private OmKeyInfo  normalizeOmKeyInfo(OmKeyInfo keyInfo) {
-    if (keyInfo == null) {
-      return null;
-    }
-    OmKeyInfo normalized = keyInfo.copyObject();
-    normalized.setKeyName(normalizeKeyName(keyInfo.getKeyName()));
-    return normalized;
   }
 
   private  OmKeyInfo  denormalizeOmKeyInfo(OmKeyInfo keyInfo) {
@@ -148,7 +138,7 @@ public class OmSnapshot implements IOmMReader {
       return null;
     }
     OmKeyInfo denormalized = keyInfo.copyObject();
-    denormalized.setKeyName(denormalizeKeyName(keyInfo.getKeyName(), snapshotName));
+    denormalized.setKeyName(denormalizeKeyName(keyInfo.getKeyName()));
     return denormalized;
   }
 
@@ -165,23 +155,30 @@ public class OmSnapshot implements IOmMReader {
     }
     OmKeyInfo omKeyInfo;
     if (fileStatus.getKeyInfo() == null) {
-    omKeyInfo = new OmKeyInfo.Builder()
-        .setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setKeyName("")
-        .setOmKeyLocationInfos(Collections.singletonList(
-            new OmKeyLocationInfoGroup(0, new ArrayList<>())))
-        .setCreationTime(Time.now())
-        .setModificationTime(Time.now())
-        .setDataSize(0)
-        .setReplicationConfig(RatisReplicationConfig
-            .getInstance(HddsProtos.ReplicationFactor.ONE))
-        .build();
+      // fileStatus with null keyinfo is for a bucket, not a key
+      //  but a snapshot keyInfo has to contain the ".snapshot"
+      //  indicator in the key, so it cant be null
+      //  See FileManagerImpl.getOzoneFileStatus()
+      omKeyInfo = createSnapshotBucketKeyInfo();
     } else {
       omKeyInfo = fileStatus.getKeyInfo();
     }
-    return new OzoneFileStatus(denormalizeOmKeyInfo(
-        omKeyInfo),fileStatus.getBlockSize(), fileStatus.isDirectory());
+    return new OzoneFileStatus(
+        omKeyInfo, fileStatus.getBlockSize(), fileStatus.isDirectory());
   }
 
+  private OmKeyInfo createSnapshotBucketKeyInfo() {
+    return new OmKeyInfo.Builder()
+      .setVolumeName(volumeName)
+      .setBucketName(bucketName)
+      .setKeyName(denormalizeKeyName(""))
+      .setOmKeyLocationInfos(Collections.singletonList(
+          new OmKeyLocationInfoGroup(0, new ArrayList<>())))
+      .setCreationTime(Time.now())
+      .setModificationTime(Time.now())
+      .setDataSize(0)
+      .setReplicationConfig(RatisReplicationConfig
+          .getInstance(HddsProtos.ReplicationFactor.ZERO))
+      .build();
+  }
 }

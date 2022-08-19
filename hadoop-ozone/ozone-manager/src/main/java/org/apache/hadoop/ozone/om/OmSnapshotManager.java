@@ -136,24 +136,24 @@ public final class OmSnapshotManager {
     if (keyname == null) {
       return ozoneManager.getOmMReader();
     }
+
+    // see if key is for a snapshot
     String[] keyParts = keyname.split("/");
     if ((keyParts.length > 1) &&keyParts[0].compareTo(".snapshot") == 0) {
-      return createOmSnapshot(volumeName, bucketName, keyParts[1]);
+      String snapshotName = keyParts[1];
+      if (snapshotName == null || snapshotName.isEmpty()) {
+        return ozoneManager.getOmMReader();
+      }
+      String snapshotTableKey = SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName);
+
+      // retrieve the snapshot from the cache
+      try {
+        return snapshotCache.get(snapshotTableKey);
+      } catch (ExecutionException e) {
+        throw new IOException(e.getCause());
+      }
     } else {
       return ozoneManager.getOmMReader();
-    }
-  }
-
-  private OmSnapshot createOmSnapshot(String volumeName, String bucketName, String snapshotName)
-      throws IOException {
-    if (snapshotName == null || snapshotName.isEmpty()) {
-      return null;
-    }
-    String snapshotTableKey = SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName);
-    try {
-      return snapshotCache.get(snapshotTableKey);
-    } catch (ExecutionException e) {
-      throw new IOException(e.getCause());
     }
   }
 
