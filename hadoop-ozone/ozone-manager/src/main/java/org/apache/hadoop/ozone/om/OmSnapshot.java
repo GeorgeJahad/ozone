@@ -161,7 +161,7 @@ public class OmSnapshot implements IOmMReader {
       //  See FileManagerImpl.getOzoneFileStatus()
       omKeyInfo = createSnapshotBucketKeyInfo();
     } else {
-      omKeyInfo = fileStatus.getKeyInfo();
+      omKeyInfo = denormalizeOmKeyInfo(fileStatus.getKeyInfo());
     }
     return new OzoneFileStatus(
         omKeyInfo, fileStatus.getBlockSize(), fileStatus.isDirectory());
