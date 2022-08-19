@@ -73,7 +73,7 @@ public final class OmSnapshotManager {
       // Create the snapshot manager by finding the corresponding RocksDB instance,
       //  creating an OmMetadataManagerImpl instance based on that
       //  and creating the other manager instances based on that metadataManager
-      public OmSnapshot load(String snapshotTableKey) throws Exception {
+      public OmSnapshot load(String snapshotTableKey) throws IOException{
         SnapshotInfo snapshotInfo;
         // see if the snapshot exists
         try {
@@ -144,12 +144,17 @@ public final class OmSnapshotManager {
     }
   }
 
-  private OmSnapshot createOmSnapshot(String volumeName, String bucketName, String snapshotName) {
+  private OmSnapshot createOmSnapshot(String volumeName, String bucketName, String snapshotName)
+      throws IOException {
     if (snapshotName == null || snapshotName.isEmpty()) {
       return null;
     }
     String snapshotTableKey = SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName);
-    return snapshotCache.getUnchecked(snapshotTableKey);
+    try {
+      return snapshotCache.get(snapshotTableKey);
+    } catch (ExecutionException e) {
+      throw new IOException(e.getCause());
+    }
   }
 
   
