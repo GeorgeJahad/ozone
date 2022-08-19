@@ -36,6 +36,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.ozone.test.GenericTestUtils;
@@ -51,6 +52,7 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -70,7 +72,9 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.fs.ozone.Constants.LISTING_PAGE_SIZE;
 import static org.apache.hadoop.hdds.client.ReplicationType.RATIS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_FS_ITERATE_BATCH_SIZE;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_ALREADY_EXISTS;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
@@ -94,6 +98,9 @@ public class TestOmSnapshotFileSystem {
   private static BucketLayout bucketLayout;
   private static boolean enabledFileSystemPaths;
   private static ObjectStore objectStore;
+  private static File metaDir;
+  private static OzoneManager ozoneManager;
+  private static String keyPrefix;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestOmSnapshot.class);
@@ -160,10 +167,10 @@ public class TestOmSnapshotFileSystem {
       OzoneClient client = cluster.getClient();
       objectStore = client.getObjectStore();
       writeClient = objectStore.getClientProxy().getOzoneManagerClient();
-      OzoneManager ozoneManager = cluster.getOzoneManager();
-      KeyManagerImpl keyManager = (KeyManagerImpl) HddsWhiteboxTestUtils
-        .getInternalState(ozoneManager, "keyManager");
+      ozoneManager = cluster.getOzoneManager();
+      metaDir = OMStorage.getOmDbDir(conf);
 
+      KeyManagerImpl keyManager = (KeyManagerImpl) ozoneManager.getKeyManager();
       // stop the deletion services so that keys can still be read
       keyManager.stop();
 
@@ -217,27 +224,24 @@ public class TestOmSnapshotFileSystem {
     createKeys(ozoneBucket, keys);
 
 
-    writeClient.createSnapshot(volumeName, bucketName, "snap1");
-    String snapshotPath = ".snapshot/snap1/";
-    //String snapshotPath = "";
-    // TODO search for dir instead of sleep?
+    keyPrefix = createSnapshot().substring(1);
+   
+    // Delete the active fs so that we don't inadvertently read it
     deleteRootDir();
-    Thread.sleep(4000);
     // Root level listing keys
     Iterator<? extends OzoneKey> ozoneKeyIterator =
-      ozoneBucket.listKeys(snapshotPath, null);
-    // GBJ: todo why the extra root directory?
+      ozoneBucket.listKeys(keyPrefix, null);
     verifyFullTreeStructure(ozoneKeyIterator);
 
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/", null);
+        ozoneBucket.listKeys(keyPrefix + "a/", null);
     verifyFullTreeStructure(ozoneKeyIterator);
 
     LinkedList<String> expectedKeys;
 
     // Intermediate level keyPrefix - 2nd level
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a///b2///", null);
+        ozoneBucket.listKeys(keyPrefix + "a///b2///", null);
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/");
     expectedKeys.add("a/b2/d1/");
@@ -251,7 +255,7 @@ public class TestOmSnapshotFileSystem {
 
     // Intermediate level keyPrefix - 3rd level
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/b2/d1", null);
+        ozoneBucket.listKeys(keyPrefix + "a/b2/d1", null);
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/d1/");
     expectedKeys.add("a/b2/d1/d11.tx");
@@ -259,14 +263,14 @@ public class TestOmSnapshotFileSystem {
 
     // Boundary of a level
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/b2/d2", snapshotPath + "a/b2/d2/d21.tx");
+        ozoneBucket.listKeys(keyPrefix + "a/b2/d2", keyPrefix + "a/b2/d2/d21.tx");
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/d2/d22.tx");
     checkKeyList(ozoneKeyIterator, expectedKeys);
 
     // Boundary case - last node in the depth-first-traversal
     ozoneKeyIterator =
-        ozoneBucket.listKeys(snapshotPath + "a/b3/e3", snapshotPath + "a/b3/e3/e31.tx");
+        ozoneBucket.listKeys(keyPrefix + "a/b3/e3", keyPrefix + "a/b3/e3/e31.tx");
     expectedKeys = new LinkedList<>();
     checkKeyList(ozoneKeyIterator, expectedKeys);
   }
@@ -304,9 +308,8 @@ public class TestOmSnapshotFileSystem {
     while (ozoneKeyIterator.hasNext()) {
       OzoneKey ozoneKey = ozoneKeyIterator.next();
       String keyName = ozoneKey.getName();
-      // GBJ should this be here?  seems like it should
-      if (keyName.startsWith(".snapshot/snap1/")) {
-          keyName = keyName.substring(".snapshot/snap1/".length());
+      if (keyName.startsWith(keyPrefix)) {
+          keyName = keyName.substring(keyPrefix.length());
       }
       outputKeys.add(keyName);
     }
@@ -346,14 +349,20 @@ public class TestOmSnapshotFileSystem {
 
   }
 
-  private String createSnapshot() throws IOException, InterruptedException {
+  private String createSnapshot()
+      throws IOException, InterruptedException, TimeoutException {
     String snapshotName = UUID.randomUUID().toString();
     writeClient = objectStore.getClientProxy().getOzoneManagerClient();
     writeClient.createSnapshot(volumeName, bucketName, snapshotName);
-    String snapshotPath = "/.snapshot/" + snapshotName + "/";
-    // TODO search for snapshot dir instead of sleep?
-    Thread.sleep(4000);
-    return snapshotPath;
+    String snapshotKeyPrefix = "/.snapshot/" + snapshotName + "/";
+
+    SnapshotInfo snapshotInfo = OmSnapshotManager.getInstance(ozoneManager).getSnapshotInfo(volumeName, bucketName, snapshotName);
+    String snapshotDirName = metaDir + OM_KEY_PREFIX +
+        OM_SNAPSHOT_DIR + OM_KEY_PREFIX + OM_DB_NAME +
+        snapshotInfo.getCheckpointDirName() + OM_KEY_PREFIX + "CURRENT";
+    GenericTestUtils.waitFor(() -> new File(snapshotDirName).exists(), 1000, 120000);
+
+    return snapshotKeyPrefix;
   }
     
   @Test
@@ -363,23 +372,23 @@ public class TestOmSnapshotFileSystem {
     Path file1 = new Path(parent, "key1");
     Path file2 = new Path(parent, "key2");
 
-    String snapshotPath = createSnapshot();
-    FileStatus[] fileStatuses = o3fs.listStatus(new Path(snapshotPath + root));
+    String snapshotKeyPrefix = createSnapshot();
+    FileStatus[] fileStatuses = o3fs.listStatus(new Path(snapshotKeyPrefix + root));
     Assert.assertEquals("Should be empty", 0, fileStatuses.length);
 
     ContractTestUtils.touch(fs, file1);
     ContractTestUtils.touch(fs, file2);
 
-    snapshotPath = createSnapshot();
-    fileStatuses = o3fs.listStatus(new Path(snapshotPath + root));
+    snapshotKeyPrefix = createSnapshot();
+    fileStatuses = o3fs.listStatus(new Path(snapshotKeyPrefix + root));
     Assert.assertEquals("Should have created parent",
             1, fileStatuses.length);
     Assert.assertEquals("Parent path doesn't match",
-            fileStatuses[0].getPath().toUri().getPath(), new Path(snapshotPath + parent).toString());
+            fileStatuses[0].getPath().toUri().getPath(), new Path(snapshotKeyPrefix + parent).toString());
 
     // ListStatus on a directory should return all subdirs along with
     // files, even if there exists a file and sub-dir with the same name.
-    fileStatuses = o3fs.listStatus(new Path(snapshotPath + parent));
+    fileStatuses = o3fs.listStatus(new Path(snapshotKeyPrefix + parent));
     assertEquals("FileStatus did not return all children of the directory",
         2, fileStatuses.length);
 
@@ -388,8 +397,8 @@ public class TestOmSnapshotFileSystem {
     Path file4 = new Path(parent, "dir1/key4");
     ContractTestUtils.touch(fs, file3);
     ContractTestUtils.touch(fs, file4);
-    snapshotPath = createSnapshot();
-    fileStatuses = o3fs.listStatus(new Path(snapshotPath + parent));
+    snapshotKeyPrefix = createSnapshot();
+    fileStatuses = o3fs.listStatus(new Path(snapshotKeyPrefix + parent));
     assertEquals("FileStatus did not return all children of the directory",
         3, fileStatuses.length);
   }
@@ -424,8 +433,8 @@ public class TestOmSnapshotFileSystem {
       }, 1000, 120000);
     }
 
-    String snapshotPath = createSnapshot();
-    FileStatus[] fileStatuses = fs.listStatus(new Path(snapshotPath + parent));
+    String snapshotKeyPrefix = createSnapshot();
+    FileStatus[] fileStatuses = fs.listStatus(new Path(snapshotKeyPrefix + parent));
 
     // the number of immediate children of root is 1
     Assert.assertEquals(1, fileStatuses.length);
@@ -447,8 +456,8 @@ public class TestOmSnapshotFileSystem {
     // ListStatus on root should return dir1 (even though /dir1 key does not
     // exist) and dir2 only. dir12 is not an immediate child of root and
     // hence should not be listed.
-    String snapshotPath = createSnapshot();
-    FileStatus[] fileStatuses = o3fs.listStatus(new Path(snapshotPath + root));
+    String snapshotKeyPrefix = createSnapshot();
+    FileStatus[] fileStatuses = o3fs.listStatus(new Path(snapshotKeyPrefix + root));
     assertEquals("FileStatus should return only the immediate children",
         2, fileStatuses.length);
 
@@ -473,8 +482,8 @@ public class TestOmSnapshotFileSystem {
       paths.add(p.getName());
     }
 
-    String snapshotPath = createSnapshot();
-    FileStatus[] fileStatuses = o3fs.listStatus(new Path(snapshotPath + root));
+    String snapshotKeyPrefix = createSnapshot();
+    FileStatus[] fileStatuses = o3fs.listStatus(new Path(snapshotKeyPrefix + root));
     // Added logs for debugging failures, to check any sub-path mismatches.
     Set<String> actualPaths = new TreeSet<>();
     ArrayList<String> actualPathList = new ArrayList<>();

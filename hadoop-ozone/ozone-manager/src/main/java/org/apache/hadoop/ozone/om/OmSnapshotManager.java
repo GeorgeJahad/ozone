@@ -76,17 +76,7 @@ public final class OmSnapshotManager {
       public OmSnapshot load(String snapshotTableKey) throws IOException{
         SnapshotInfo snapshotInfo;
         // see if the snapshot exists
-        try {
-          snapshotInfo = ozoneManager.getMetadataManager()
-              .getSnapshotInfoTable()
-              .get(snapshotTableKey);
-        } catch (IOException e) {
-          LOG.error("Snapshot {}: not found: {}", snapshotTableKey, e);
-          throw e;
-        }
-        if (snapshotInfo == null) {
-          throw new FileNotFoundException(snapshotTableKey + " does not exist");
-        }
+        snapshotInfo = getSnapshotInfo(snapshotTableKey);
 
         // read in the snapshot
         OzoneConfiguration conf = ozoneManager.getConfiguration();
@@ -157,5 +147,24 @@ public final class OmSnapshotManager {
     }
   }
 
+  public SnapshotInfo getSnapshotInfo(String volumeName, String bucketName, String snapshotName)
+      throws IOException {
+    return getSnapshotInfo(SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName));
+  }
+  private SnapshotInfo getSnapshotInfo(String key) throws IOException {
+    SnapshotInfo snapshotInfo;
+    try {
+      snapshotInfo = ozoneManager.getMetadataManager()
+        .getSnapshotInfoTable()
+        .get(key);
+    } catch (IOException e) {
+      LOG.error("Snapshot {}: not found: {}", key, e);
+      throw e;
+    }
+    if (snapshotInfo == null) {
+      throw new FileNotFoundException(key + " does not exist");
+    }
+    return snapshotInfo;
+  }
   
 }

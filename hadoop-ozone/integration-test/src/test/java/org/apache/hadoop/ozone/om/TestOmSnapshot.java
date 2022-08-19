@@ -29,6 +29,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.ozone.test.GenericTestUtils;
@@ -44,6 +45,7 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -64,7 +66,9 @@ import java.util.stream.Collectors;
 import static org.apache.hadoop.hdds.client.ReplicationFactor.ONE;
 import static org.apache.hadoop.hdds.client.ReplicationType.RATIS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_FS_ITERATE_BATCH_SIZE;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
 import static org.apache.hadoop.ozone.om.TestOmSnapshotFileSystem.createKey;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_ALREADY_EXISTS;
@@ -91,7 +95,8 @@ public class TestOmSnapshot {
   private static BucketLayout bucketLayout = BucketLayout.LEGACY;
   private static boolean enabledFileSystemPaths;
   private static ObjectStore store;
-
+  private static File metaDir;
+  private static OzoneManager ozoneManager;
   private static final Logger LOG =
       LoggerFactory.getLogger(TestOmSnapshot.class);
 
@@ -149,13 +154,13 @@ public class TestOmSnapshot {
       OzoneClient client = cluster.getClient();
       store = client.getObjectStore();
       writeClient = store.getClientProxy().getOzoneManagerClient();
-      OzoneManager ozoneManager = cluster.getOzoneManager();
+      ozoneManager = cluster.getOzoneManager();
       KeyManagerImpl keyManager = (KeyManagerImpl) HddsWhiteboxTestUtils
         .getInternalState(ozoneManager, "keyManager");
 
       // stop the deletion services so that keys can still be read
       keyManager.stop();
-
+      metaDir = OMStorage.getOmDbDir(conf);
 
   }
 
@@ -168,7 +173,7 @@ public class TestOmSnapshot {
 
   @Test
   public void testListKey()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     String volumeA = "vol-a-" + RandomStringUtils.randomNumeric(5);
     String volumeB = "vol-b-" + RandomStringUtils.randomNumeric(5);
     String bucketA = "buc-a-" + RandomStringUtils.randomNumeric(5);
@@ -254,10 +259,10 @@ public class TestOmSnapshot {
     }
 
 
-    String snapshotPath = createSnapshot(volumeA, bucketA);
+    String snapshotKeyPrefix = createSnapshot(volumeA, bucketA);
 
     Iterator<? extends OzoneKey> volABucketAIter =
-        volAbucketA.listKeys(snapshotPath + "key-");
+        volAbucketA.listKeys(snapshotKeyPrefix + "key-");
     int volABucketAKeyCount = 0;
     while (volABucketAIter.hasNext()) {
       volABucketAIter.next();
@@ -265,9 +270,9 @@ public class TestOmSnapshot {
     }
     Assert.assertEquals(20, volABucketAKeyCount);
 
-    snapshotPath = createSnapshot(volumeA, bucketB);
+    snapshotKeyPrefix = createSnapshot(volumeA, bucketB);
     Iterator<? extends OzoneKey> volABucketBIter =
-        volAbucketB.listKeys(snapshotPath + "key-");
+        volAbucketB.listKeys(snapshotKeyPrefix + "key-");
     int volABucketBKeyCount = 0;
     while (volABucketBIter.hasNext()) {
       volABucketBIter.next();
@@ -275,9 +280,9 @@ public class TestOmSnapshot {
     }
     Assert.assertEquals(20, volABucketBKeyCount);
 
-    snapshotPath = createSnapshot(volumeB, bucketA);
+    snapshotKeyPrefix = createSnapshot(volumeB, bucketA);
     Iterator<? extends OzoneKey> volBBucketAIter =
-        volBbucketA.listKeys(snapshotPath + "key-");
+        volBbucketA.listKeys(snapshotKeyPrefix + "key-");
     int volBBucketAKeyCount = 0;
     while (volBBucketAIter.hasNext()) {
       volBBucketAIter.next();
@@ -285,9 +290,9 @@ public class TestOmSnapshot {
     }
     Assert.assertEquals(20, volBBucketAKeyCount);
 
-    snapshotPath = createSnapshot(volumeB, bucketB);
+    snapshotKeyPrefix = createSnapshot(volumeB, bucketB);
     Iterator<? extends OzoneKey> volBBucketBIter =
-        volBbucketB.listKeys(snapshotPath + "key-");
+        volBbucketB.listKeys(snapshotKeyPrefix + "key-");
     int volBBucketBKeyCount = 0;
     while (volBBucketBIter.hasNext()) {
       volBBucketBIter.next();
@@ -295,9 +300,9 @@ public class TestOmSnapshot {
     }
     Assert.assertEquals(20, volBBucketBKeyCount);
 
-    snapshotPath = createSnapshot(volumeA, bucketA);
+    snapshotKeyPrefix = createSnapshot(volumeA, bucketA);
     Iterator<? extends OzoneKey> volABucketAKeyAIter =
-        volAbucketA.listKeys(snapshotPath + "key-a-");
+        volAbucketA.listKeys(snapshotKeyPrefix + "key-a-");
     int volABucketAKeyACount = 0;
     while (volABucketAKeyAIter.hasNext()) {
       volABucketAKeyAIter.next();
@@ -305,25 +310,25 @@ public class TestOmSnapshot {
     }
     Assert.assertEquals(10, volABucketAKeyACount);
     Iterator<? extends OzoneKey> volABucketAKeyBIter =
-        volAbucketA.listKeys(snapshotPath + "key-b-");
+        volAbucketA.listKeys(snapshotKeyPrefix + "key-b-");
     for (int i = 0; i < 10; i++) {
       Assert.assertTrue(volABucketAKeyBIter.next().getName()
-          .startsWith(snapshotPath + "key-b-" + i + "-"));
+          .startsWith(snapshotKeyPrefix + "key-b-" + i + "-"));
     }
     Assert.assertFalse(volABucketBIter.hasNext());
   }
 
   @Test
   public void testListKeyOnEmptyBucket()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     String volume = "vol-" + RandomStringUtils.randomNumeric(5);
     String bucket = "buc-" + RandomStringUtils.randomNumeric(5);
     store.createVolume(volume);
     OzoneVolume vol = store.getVolume(volume);
     vol.createBucket(bucket);
-    String snapshotPath = createSnapshot(volume, bucket);
+    String snapshotKeyPrefix = createSnapshot(volume, bucket);
     OzoneBucket buc = vol.getBucket(bucket);
-    Iterator<? extends OzoneKey> keys = buc.listKeys(snapshotPath);
+    Iterator<? extends OzoneKey> keys = buc.listKeys(snapshotKeyPrefix);
     while (keys.hasNext()) {
       fail();
     }
@@ -355,31 +360,37 @@ public class TestOmSnapshot {
 
     OmKeyInfo originalKeyInfo = writeClient.lookupKey(genKeyArgs(key1));
     
-    String snapshotPath = createSnapshot();
+    String snapshotKeyPrefix = createSnapshot();
 
-    OmKeyArgs keyArgs = genKeyArgs(snapshotPath + key1);
+    OmKeyArgs keyArgs = genKeyArgs(snapshotKeyPrefix + key1);
     
     OmKeyInfo omKeyInfo = writeClient.lookupKey(keyArgs);
-    assertEquals(omKeyInfo.getKeyName(), snapshotPath + key1);
+    assertEquals(omKeyInfo.getKeyName(), snapshotKeyPrefix + key1);
     
     OmKeyInfo fileInfo = writeClient.lookupFile(keyArgs);
-    assertEquals(fileInfo.getKeyName(), snapshotPath + key1);
+    assertEquals(fileInfo.getKeyName(), snapshotKeyPrefix + key1);
 
     OzoneFileStatus ozoneFileStatus = writeClient.getFileStatus(keyArgs);
-    assertEquals(ozoneFileStatus.getKeyInfo().getKeyName(), snapshotPath + key1);
+    assertEquals(ozoneFileStatus.getKeyInfo().getKeyName(), snapshotKeyPrefix + key1);
   }
 
-  private String createSnapshot() throws IOException, InterruptedException {
+  private String createSnapshot()
+      throws IOException, InterruptedException, TimeoutException {
     return createSnapshot(volumeName, bucketName);
   }
-  private String createSnapshot(String vname, String bname) throws IOException, InterruptedException {
+  private String createSnapshot(String vname, String bname)
+      throws IOException, InterruptedException, TimeoutException {
     String snapshotName = UUID.randomUUID().toString();
     writeClient = store.getClientProxy().getOzoneManagerClient();
     writeClient.createSnapshot(vname, bname, snapshotName);
-    String snapshotPath = ".snapshot/" + snapshotName + "/";
-    // TODO search for snapshot dir instead of sleep?
-    Thread.sleep(4000);
-    return snapshotPath;
+    String snapshotKeyPrefix = ".snapshot/" + snapshotName + "/";
+    SnapshotInfo snapshotInfo = OmSnapshotManager.getInstance(ozoneManager).getSnapshotInfo(vname, bname, snapshotName);
+    String snapshotDirName = metaDir + OM_KEY_PREFIX +
+        OM_SNAPSHOT_DIR + OM_KEY_PREFIX + OM_DB_NAME +
+        snapshotInfo.getCheckpointDirName() + OM_KEY_PREFIX + "CURRENT";
+    GenericTestUtils.waitFor(() -> new File(snapshotDirName).exists(), 1000, 120000);
+
+    return snapshotKeyPrefix;
 
   }
 
