@@ -17,12 +17,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static org.apache.hadoop.ozone.om.OmSnapshotManager.denormalizeKeyName;
-import static org.apache.hadoop.ozone.om.OmSnapshotManager.normalizeKeyName;
 
 public class OmSnapshot implements IOmMReader {
 
@@ -38,8 +36,8 @@ public class OmSnapshot implements IOmMReader {
   private final String snapshotName;
   
   public OmSnapshot(KeyManager keyManager,
-                          PrefixManager prefixManager,
-                          OMMetadataManager omMetadataManager,
+                    PrefixManager prefixManager,
+                    OMMetadataManager omMetadataManager,
                     OzoneManager ozoneManager,
                     String volumeName,
                     String bucketName,
@@ -56,7 +54,7 @@ public class OmSnapshot implements IOmMReader {
     return denormalizeOmKeyInfo(omMReader.lookupKey(normalizeOmKeyArgs(args)));
   }
 
-  private static OmKeyInfo  normalizeOmKeyInfo(OmKeyInfo keyInfo) {
+  private OmKeyInfo  normalizeOmKeyInfo(OmKeyInfo keyInfo) {
     if (keyInfo == null) {
       return null;
     }
@@ -74,7 +72,7 @@ public class OmSnapshot implements IOmMReader {
     return denormalized;
   }
 
-  private static OmKeyArgs normalizeOmKeyArgs(OmKeyArgs args) {
+  private OmKeyArgs normalizeOmKeyArgs(OmKeyArgs args) {
     if (args == null) {
       return null;
     }
@@ -151,4 +149,30 @@ public class OmSnapshot implements IOmMReader {
   }
 
 
+  // Remove snapshot indicator from keyname
+  private String normalizeKeyName(String keyname) {
+    if (keyname == null) {
+      return null;
+    }
+    String[] keyParts = keyname.split("/");
+    if ((keyParts.length > 1) && (keyParts[0].compareTo(".snapshot") == 0)) {
+      if (keyParts.length == 2) {
+        return "";
+      }
+      String normalizedKeyName = String.join("/", Arrays.copyOfRange(keyParts, 2, keyParts.length));
+      if (keyname.endsWith("/")) {
+        normalizedKeyName = normalizedKeyName + "/";
+      }
+      return normalizedKeyName;
+    }
+    return keyname;
+  }
+
+  // Restore snapshot indicator to keyanme
+  private String denormalizeKeyName(String keyname, String snapshotName) {
+    if (keyname == null) {
+      return null;
+    }
+    return ".snapshot/" + snapshotName + "/" + keyname;
+  }
 }

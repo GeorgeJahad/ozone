@@ -425,6 +425,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final boolean isSecurityEnabled;
 
   private OmMReader omMReader;
+  private final OmSnapshotManager omSnapshotManager;
 
   @SuppressWarnings("methodlength")
   private OzoneManager(OzoneConfiguration conf, StartupOption startupOption)
@@ -606,6 +607,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } else {
       omState = State.INITIALIZED;
     }
+
+    omSnapshotManager = OmSnapshotManager.getInstance(this);
   }
 
   public boolean isStopped() {
@@ -2716,13 +2719,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
-    return omMReader.lookupKey(args);
+    return getReader(args).lookupKey(args);
   }
 
   @Override
   public List<OmKeyInfo> listKeys(String volumeName, String bucketName,
       String startKey, String keyPrefix, int maxKeys) throws IOException {
-    return omMReader.listKeys(volumeName, bucketName,
+    return getReader(volumeName, bucketName, keyPrefix).listKeys(volumeName, bucketName,
         startKey, keyPrefix, maxKeys);
   }
 
@@ -3293,12 +3296,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   @Override
   public OzoneFileStatus getFileStatus(OmKeyArgs args) throws IOException {
-    return omMReader.getFileStatus(args);
+    return getReader(args).getFileStatus(args);
   }
 
   @Override
   public OmKeyInfo lookupFile(OmKeyArgs args) throws IOException {
-    return omMReader.lookupFile(args);
+    return getReader(args).lookupFile(args);
   }
 
   @Override
@@ -3306,7 +3309,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       String startKey, long numEntries, boolean allowPartialPrefixes)
       throws IOException {
 
-    return omMReader.listStatus(args, recursive,
+    return getReader(args).listStatus(args, recursive,
         startKey, numEntries, allowPartialPrefixes);
   }
 
@@ -3318,7 +3321,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
-    return omMReader.getAcl(obj);
+    return getReader(obj).getAcl(obj);
   }
 
   /**
@@ -4189,5 +4192,18 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   private BucketLayout getBucketLayout() {
     return BucketLayout.DEFAULT;
+  }
+  private IOmMReader getReader(OmKeyArgs keyArgs) throws IOException {
+    return omSnapshotManager.checkForSnapshot(
+        keyArgs.getVolumeName(), keyArgs.getBucketName(), keyArgs.getKeyName());
+  }
+
+  private IOmMReader getReader(String volumeName, String bucketName, String key) throws IOException {
+    return omSnapshotManager.checkForSnapshot(volumeName, bucketName, key);
+  }
+
+  private IOmMReader getReader(OzoneObj ozoneObj) throws IOException {
+    return omSnapshotManager.checkForSnapshot(
+        ozoneObj.getVolumeName(), ozoneObj.getBucketName(), ozoneObj.getKeyName());
   }
 }
