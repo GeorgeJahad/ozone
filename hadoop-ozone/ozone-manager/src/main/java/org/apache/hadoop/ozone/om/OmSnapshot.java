@@ -89,6 +89,7 @@ public class OmSnapshot implements IOmMReader {
 
   @Override
   public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
+    // TODO: handle denormalization
     return omMReader.getAcl(normalizeOzoneObj(obj));
   }
 
@@ -114,9 +115,11 @@ public class OmSnapshot implements IOmMReader {
     }
     String[] keyParts = keyname.split("/");
     if (OmSnapshotManager.isSnapshotKey(keyParts)) {
+      // ".snapshot/name/" becomes ""
       if (keyParts.length == 2) {
         return "";
       }
+      // ".snapshot/name/key/" becomes "key/"
       String normalizedKeyName = String.join("/", Arrays.copyOfRange(keyParts, 2, keyParts.length));
       if (keyname.endsWith("/")) {
         normalizedKeyName = normalizedKeyName + "/";
@@ -155,12 +158,16 @@ public class OmSnapshot implements IOmMReader {
       return null;
     }
     OmKeyInfo omKeyInfo;
+    // if this is the filestatus for the whole bucket
     if (fileStatus.getKeyInfo() == null) {
-      // fileStatus with null keyinfo is for a bucket, not a key
-      //  but a snapshot keyInfo has to contain the ".snapshot"
-      //  indicator in the key, so it cant be null
-      //  See FileManagerImpl.getOzoneFileStatus()
-      omKeyInfo = createSnapshotBucketKeyInfo();
+      // denormalization requires that the keyname in the filestatus
+      // keyInfo struct be updated to include the snapshot indicator.
+      // But the bucket filestatus has a null keyInfo struct.
+
+      //  so this code adds a dummy keyinfo struct just for
+      //  denormalization.
+      //  See KeyManagerImpl.getOzoneFileStatus()
+      omKeyInfo = createDenormalizedBucketKeyInfo();
     } else {
       omKeyInfo = denormalizeOmKeyInfo(fileStatus.getKeyInfo());
     }
@@ -168,7 +175,7 @@ public class OmSnapshot implements IOmMReader {
         omKeyInfo, fileStatus.getBlockSize(), fileStatus.isDirectory());
   }
 
-  private OmKeyInfo createSnapshotBucketKeyInfo() {
+  private OmKeyInfo createDenormalizedBucketKeyInfo() {
     return new OmKeyInfo.Builder()
       .setVolumeName(volumeName)
       .setBucketName(bucketName)

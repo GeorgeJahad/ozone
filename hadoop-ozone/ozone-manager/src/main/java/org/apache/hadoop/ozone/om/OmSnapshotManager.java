@@ -18,34 +18,27 @@
 
 package org.apache.hadoop.ozone.om;
 
-import com.amazonaws.services.directconnect.model.Loa;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.RDBStore;
-import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.audit.*;
-import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.security.acl.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
 import java.util.concurrent.ExecutionException;
 
-import static org.apache.hadoop.hdds.utils.HAUtils.getScmContainerClient;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_INDICATOR;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_KEY_NAME;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
 
 
 /**
@@ -60,6 +53,8 @@ public final class OmSnapshotManager {
 
   OmSnapshotManager(OzoneManager ozoneManager) {
     this.ozoneManager = ozoneManager;
+
+    // size of lru cache
     int cacheSize = ozoneManager.getConfiguration().getInt(
         OzoneConfigKeys.OZONE_OM_SNAPSHOT_CACHE_MAX_SIZE,
         OzoneConfigKeys.OZONE_OM_SNAPSHOT_CACHE_MAX_SIZE_DEFAULT);
@@ -67,10 +62,8 @@ public final class OmSnapshotManager {
     CacheLoader<String, OmSnapshot> loader;
     loader = new CacheLoader<String, OmSnapshot>() {
       @Override
-      // Create the snapshot manager by finding the corresponding
-      // RocksDB instance,
-      //  creating an OmMetadataManagerImpl instance based on that
-      //  and creating the other manager instances based on that metadataManager
+
+      // load the snapshot into the cache if not already there
       public OmSnapshot load(String snapshotTableKey) throws IOException{
         SnapshotInfo snapshotInfo;
         // see if the snapshot exists
@@ -79,6 +72,9 @@ public final class OmSnapshotManager {
         // read in the snapshot
         OzoneConfiguration conf = ozoneManager.getConfiguration();
         OMMetadataManager snapshotMetadataManager;
+
+        // Create the snapshot metadata manager by finding the corresponding RocksDB
+        // instance, creating an OmMetadataManagerImpl instance based on that
         try {
           snapshotMetadataManager = OmMetadataManagerImpl
               .createSnapshotMetadataManager(
@@ -88,13 +84,14 @@ public final class OmSnapshotManager {
           throw e;
         }
 
-        // Create the metadata readers
+        // create the other manager instances based on snapshot metadataManager
         PrefixManagerImpl pm = new PrefixManagerImpl(snapshotMetadataManager,
             false);
         KeyManagerImpl km = new KeyManagerImpl(null,
             ozoneManager.getScmClient(), snapshotMetadataManager, conf, null,
             ozoneManager.getBlockTokenSecretManager(),
             ozoneManager.getKmsProvider(), pm );
+
         return new OmSnapshot(km, pm, snapshotMetadataManager, ozoneManager,
             snapshotInfo.getVolumeName(),
             snapshotInfo.getBucketName(),
@@ -102,13 +99,13 @@ public final class OmSnapshotManager {
       }
     };
 
-    // LRU
+    // init LRU cache
     snapshotCache = CacheBuilder.newBuilder()
         .maximumSize(cacheSize).build(loader);
     
   }
   /**
-   * Creates snapshot checkpoint that corresponds with SnapshotInfo.
+   * Creates snapshot checkpoint that corresponds to snapshotInfo.
    * @param omMetadataManager the metadata manager
    * @param snapshotInfo The metadata of snapshot to be created
    * @return instance of DBCheckpoint
@@ -120,7 +117,7 @@ public final class OmSnapshotManager {
     return store.getSnapshot(snapshotInfo.getCheckpointDirName());
   }
 
-  // Get OmSnapshot if the keyname has the indicator
+  // Get OmSnapshot if the keyname has ".snapshot" key indicator
   public IOmMReader checkForSnapshot(String volumeName,
                                      String bucketName, String keyname)
       throws IOException {
@@ -133,7 +130,8 @@ public final class OmSnapshotManager {
     if (isSnapshotKey(keyParts)) {
       String snapshotName = keyParts[1];
       if (snapshotName == null || snapshotName.isEmpty()) {
-        return ozoneManager.getOmMReader();
+        // don't allow snapshot indicator without snapshot name
+        throw new OMException(INVALID_KEY_NAME);
       }
       String snapshotTableKey = SnapshotInfo.getTableKey(volumeName,
           bucketName, snapshotName);
@@ -155,6 +153,7 @@ public final class OmSnapshotManager {
     return getSnapshotInfo(SnapshotInfo.getTableKey(volumeName,
         bucketName, snapshotName));
   }
+
   private SnapshotInfo getSnapshotInfo(String key) throws IOException {
     SnapshotInfo snapshotInfo;
     try {
@@ -166,7 +165,7 @@ public final class OmSnapshotManager {
       throw e;
     }
     if (snapshotInfo == null) {
-      throw new FileNotFoundException(key + " does not exist");
+      throw new OMException(KEY_NOT_FOUND);
     }
     return snapshotInfo;
   }
