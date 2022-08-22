@@ -187,11 +187,13 @@ public class TestOmSnapshotFileSystem {
   @Test
   // based on TestObjectStoreWithFSO:testListKeysAtDifferentLevels
   public void testListKeysAtDifferentLevels() throws Exception {
+    OzoneClient client = cluster.getClient();
 
+    ObjectStore objectStore = client.getObjectStore();
     OzoneVolume ozoneVolume = objectStore.getVolume(volumeName);
-    assertTrue(ozoneVolume.getName().equals(volumeName));
+    Assert.assertTrue(ozoneVolume.getName().equals(volumeName));
     OzoneBucket ozoneBucket = ozoneVolume.getBucket(bucketName);
-    assertTrue(ozoneBucket.getName().equals(bucketName));
+    Assert.assertTrue(ozoneBucket.getName().equals(bucketName));
 
     String keyc1 = "/a/b1/c1/c1.tx";
     String keyc2 = "/a/b1/c2/c2.tx";
@@ -329,14 +331,14 @@ public class TestOmSnapshotFileSystem {
     }
   }
 
-  static void createKey(OzoneBucket ozoneBucket, String key, int length,
+  private void createKey(OzoneBucket ozoneBucket, String key, int length,
       byte[] input) throws Exception {
 
     OzoneOutputStream ozoneOutputStream =
             ozoneBucket.createKey(key, length);
 
     ozoneOutputStream.write(input);
-    // ozoneOutputStream.write(input, 0, 10);
+    ozoneOutputStream.write(input, 0, 10);
     ozoneOutputStream.close();
 
     // Read the key with given key name.
@@ -348,6 +350,17 @@ public class TestOmSnapshotFileSystem {
     String inputString = new String(input, StandardCharsets.UTF_8);
     Assert.assertEquals(inputString, new String(read, StandardCharsets.UTF_8));
 
+    // Read using filesystem.
+    String rootPath = String.format("%s://%s.%s/", OZONE_URI_SCHEME,
+            bucketName, volumeName, StandardCharsets.UTF_8);
+    OzoneFileSystem o3fs = (OzoneFileSystem) FileSystem.get(new URI(rootPath),
+            conf);
+    FSDataInputStream fsDataInputStream = o3fs.open(new Path(key));
+    read = new byte[length];
+    fsDataInputStream.read(read, 0, length);
+    ozoneInputStream.close();
+
+    Assert.assertEquals(inputString, new String(read, StandardCharsets.UTF_8));
   }
 
   @Test
@@ -466,6 +479,7 @@ public class TestOmSnapshotFileSystem {
   // based on TestOzoneFileSystem:testListStatusOnLargeDirectory
   public void testListStatusOnLargeDirectory() throws Exception {
     Path root = new Path("/");
+    deleteRootDir(); // cleanup
     Set<String> paths = new TreeSet<>();
     int numDirs = LISTING_PAGE_SIZE + LISTING_PAGE_SIZE / 2;
     for (int i = 0; i < numDirs; i++) {
