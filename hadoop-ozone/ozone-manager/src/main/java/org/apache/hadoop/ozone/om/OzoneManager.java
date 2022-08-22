@@ -425,7 +425,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final boolean isSecurityEnabled;
 
   private OmMReader omMReader;
-  private final OmSnapshotManager omSnapshotManager;
+  private OmSnapshotManager omSnapshotManager;
 
   @SuppressWarnings("methodlength")
   private OzoneManager(OzoneConfiguration conf, StartupOption startupOption)
@@ -608,7 +608,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       omState = State.INITIALIZED;
     }
 
-    omSnapshotManager = new OmSnapshotManager(this);
   }
 
   public boolean isStopped() {
@@ -708,6 +707,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         omStorage.getOmId());
     omMReader = new OmMReader(keyManager, prefixManager,
         metadataManager, this, LOG, AUDIT, metrics);
+    omSnapshotManager = new OmSnapshotManager(this);
 
     if (withNewSnapshot) {
       Integer layoutVersionInDB = getLayoutVersionInDB();
