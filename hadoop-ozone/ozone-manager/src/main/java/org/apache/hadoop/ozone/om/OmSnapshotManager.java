@@ -44,6 +44,8 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 import static org.apache.hadoop.hdds.utils.HAUtils.getScmContainerClient;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_INDICATOR;
 
 
 /**
@@ -65,7 +67,8 @@ public final class OmSnapshotManager {
     CacheLoader<String, OmSnapshot> loader;
     loader = new CacheLoader<String, OmSnapshot>() {
       @Override
-      // Create the snapshot manager by finding the corresponding RocksDB instance,
+      // Create the snapshot manager by finding the corresponding
+      // RocksDB instance,
       //  creating an OmMetadataManagerImpl instance based on that
       //  and creating the other manager instances based on that metadataManager
       public OmSnapshot load(String snapshotTableKey) throws IOException{
@@ -77,7 +80,8 @@ public final class OmSnapshotManager {
         OzoneConfiguration conf = ozoneManager.getConfiguration();
         OMMetadataManager snapshotMetadataManager;
         try {
-          snapshotMetadataManager = OmMetadataManagerImpl.createSnapshotMetadataManager(
+          snapshotMetadataManager = OmMetadataManagerImpl
+              .createSnapshotMetadataManager(
               conf, snapshotInfo.getCheckpointDirName());
         } catch (IOException e) {
           LOG.error("Failed to retrieve snapshot: {}, {}", snapshotTableKey, e);
@@ -85,7 +89,8 @@ public final class OmSnapshotManager {
         }
 
         // Create the metadata readers
-        PrefixManagerImpl pm = new PrefixManagerImpl(snapshotMetadataManager, false);
+        PrefixManagerImpl pm = new PrefixManagerImpl(snapshotMetadataManager,
+            false);
         KeyManagerImpl km = new KeyManagerImpl(null,
             ozoneManager.getScmClient(), snapshotMetadataManager, conf, null,
             ozoneManager.getBlockTokenSecretManager(),
@@ -116,7 +121,8 @@ public final class OmSnapshotManager {
   }
 
   // Get OmSnapshot if the keyname has the indicator
-  public IOmMReader checkForSnapshot(String volumeName, String bucketName, String keyname)
+  public IOmMReader checkForSnapshot(String volumeName,
+                                     String bucketName, String keyname)
       throws IOException {
     if (keyname == null) {
       return ozoneManager.getOmMReader();
@@ -124,12 +130,13 @@ public final class OmSnapshotManager {
 
     // see if key is for a snapshot
     String[] keyParts = keyname.split("/");
-    if ((keyParts.length > 1) &&keyParts[0].compareTo(".snapshot") == 0) {
+    if (isSnapshotKey(keyParts)) {
       String snapshotName = keyParts[1];
       if (snapshotName == null || snapshotName.isEmpty()) {
         return ozoneManager.getOmMReader();
       }
-      String snapshotTableKey = SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName);
+      String snapshotTableKey = SnapshotInfo.getTableKey(volumeName,
+          bucketName, snapshotName);
 
       // retrieve the snapshot from the cache
       try {
@@ -142,9 +149,11 @@ public final class OmSnapshotManager {
     }
   }
 
-  public SnapshotInfo getSnapshotInfo(String volumeName, String bucketName, String snapshotName)
+  public SnapshotInfo getSnapshotInfo(String volumeName,
+                                      String bucketName, String snapshotName)
       throws IOException {
-    return getSnapshotInfo(SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName));
+    return getSnapshotInfo(SnapshotInfo.getTableKey(volumeName,
+        bucketName, snapshotName));
   }
   private SnapshotInfo getSnapshotInfo(String key) throws IOException {
     SnapshotInfo snapshotInfo;
@@ -161,5 +170,14 @@ public final class OmSnapshotManager {
     }
     return snapshotInfo;
   }
-  
+
+  public static String getSnapshotPrefix(String snapshotName) {
+    return OM_SNAPSHOT_INDICATOR + OM_KEY_PREFIX +
+        snapshotName + OM_KEY_PREFIX;
+  }
+
+  public static boolean isSnapshotKey(String [] keyParts) {
+    return (keyParts.length > 1) &&
+        (keyParts[0].compareTo(OM_SNAPSHOT_INDICATOR) == 0);
+  }
 }

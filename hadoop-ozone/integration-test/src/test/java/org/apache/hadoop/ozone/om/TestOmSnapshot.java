@@ -394,7 +394,7 @@ public class TestOmSnapshot {
     String snapshotName = UUID.randomUUID().toString();
     writeClient = store.getClientProxy().getOzoneManagerClient();
     writeClient.createSnapshot(vname, bname, snapshotName);
-    String snapshotKeyPrefix = ".snapshot/" + snapshotName + "/";
+    String snapshotKeyPrefix = OmSnapshotManager.getSnapshotPrefix(snapshotName);
     SnapshotInfo snapshotInfo = ozoneManager.getMetadataManager().getSnapshotInfoTable()
         .get(SnapshotInfo.getTableKey(vname, bname, snapshotName));
     String snapshotDirName = metaDir + OM_KEY_PREFIX +

@@ -113,7 +113,7 @@ public class OmSnapshot implements IOmMReader {
       return null;
     }
     String[] keyParts = keyname.split("/");
-    if ((keyParts.length > 1) && (keyParts[0].compareTo(".snapshot") == 0)) {
+    if (OmSnapshotManager.isSnapshotKey(keyParts)) {
       if (keyParts.length == 2) {
         return "";
       }
@@ -131,7 +131,7 @@ public class OmSnapshot implements IOmMReader {
     if (keyname == null) {
       return null;
     }
-    return ".snapshot/" + snapshotName + "/" + keyname;
+    return OmSnapshotManager.getSnapshotPrefix(snapshotName) + keyname;
   }
 
   private OmKeyInfo denormalizeOmKeyInfo(OmKeyInfo keyInfo) {
