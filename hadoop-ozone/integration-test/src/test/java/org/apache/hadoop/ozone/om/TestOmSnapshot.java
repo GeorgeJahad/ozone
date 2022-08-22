@@ -172,6 +172,7 @@ public class TestOmSnapshot {
   }
 
   @Test
+  // based on TestOzoneRpcClientAbstract:testListKey
   public void testListKey()
       throws IOException, InterruptedException, TimeoutException {
     String volumeA = "vol-a-" + RandomStringUtils.randomNumeric(5);
@@ -321,6 +322,7 @@ public class TestOmSnapshot {
   }
 
   @Test
+  // based on TestOzoneRpcClientAbstract:testListKeyOnEmptyBucket
   public void testListKeyOnEmptyBucket()
       throws IOException, InterruptedException, TimeoutException {
     String volume = "vol-" + RandomStringUtils.randomNumeric(5);

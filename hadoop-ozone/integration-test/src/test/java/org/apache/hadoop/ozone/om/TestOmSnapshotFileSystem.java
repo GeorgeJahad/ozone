@@ -185,6 +185,7 @@ public class TestOmSnapshotFileSystem {
   }
 
   @Test
+  // based on TestObjectStoreWithFSO:testListKeysAtDifferentLevels
   public void testListKeysAtDifferentLevels() throws Exception {
 
     OzoneVolume ozoneVolume = objectStore.getVolume(volumeName);
@@ -349,24 +350,8 @@ public class TestOmSnapshotFileSystem {
 
   }
 
-  private String createSnapshot()
-      throws IOException, InterruptedException, TimeoutException {
-    String snapshotName = UUID.randomUUID().toString();
-    writeClient = objectStore.getClientProxy().getOzoneManagerClient();
-    writeClient.createSnapshot(volumeName, bucketName, snapshotName);
-    String snapshotKeyPrefix = OM_KEY_PREFIX + OmSnapshotManager.getSnapshotPrefix(snapshotName);
-
-    SnapshotInfo snapshotInfo = ozoneManager.getMetadataManager().getSnapshotInfoTable()
-        .get(SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName));
-    String snapshotDirName = metaDir + OM_KEY_PREFIX +
-        OM_SNAPSHOT_DIR + OM_KEY_PREFIX + OM_DB_NAME +
-        snapshotInfo.getCheckpointDirName() + OM_KEY_PREFIX + "CURRENT";
-    GenericTestUtils.waitFor(() -> new File(snapshotDirName).exists(), 1000, 120000);
-
-    return snapshotKeyPrefix;
-  }
-    
   @Test
+  // based on TestOzoneFileSystem:testListStatus
   public void testListStatus() throws Exception {
     Path root = new Path("/");
     Path parent = new Path(root, "/testListStatus");
@@ -406,6 +391,7 @@ public class TestOmSnapshotFileSystem {
   }
 
   @Test
+  // based on TestOzoneFileSystem:testListStatusWithIntermediateDir
   public void testListStatusWithIntermediateDir() throws Exception {
     String keyName = "object-dir/object-name";
     OmKeyArgs keyArgs = new OmKeyArgs.Builder()
@@ -447,6 +433,7 @@ public class TestOmSnapshotFileSystem {
    * Tests listStatus operation on root directory.
    */
   @Test
+  // based on TestOzoneFileSystem:testListStatusOnRoot
   public void testListStatusOnRoot() throws Exception {
     Path root = new Path("/");
     Path dir1 = new Path(root, "dir1");
@@ -476,6 +463,7 @@ public class TestOmSnapshotFileSystem {
    * Tests listStatus operation on root directory.
    */
   @Test
+  // based on TestOzoneFileSystem:testListStatusOnLargeDirectory
   public void testListStatusOnLargeDirectory() throws Exception {
     Path root = new Path("/");
     Set<String> paths = new TreeSet<>();
@@ -554,5 +542,22 @@ public class TestOmSnapshotFileSystem {
         .setLocationInfoList(new ArrayList<>())
         .build();
   }
+  private String createSnapshot()
+      throws IOException, InterruptedException, TimeoutException {
+    String snapshotName = UUID.randomUUID().toString();
+    writeClient = objectStore.getClientProxy().getOzoneManagerClient();
+    writeClient.createSnapshot(volumeName, bucketName, snapshotName);
+    String snapshotKeyPrefix = OM_KEY_PREFIX + OmSnapshotManager.getSnapshotPrefix(snapshotName);
+
+    SnapshotInfo snapshotInfo = ozoneManager.getMetadataManager().getSnapshotInfoTable()
+        .get(SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName));
+    String snapshotDirName = metaDir + OM_KEY_PREFIX +
+        OM_SNAPSHOT_DIR + OM_KEY_PREFIX + OM_DB_NAME +
+        snapshotInfo.getCheckpointDirName() + OM_KEY_PREFIX + "CURRENT";
+    GenericTestUtils.waitFor(() -> new File(snapshotDirName).exists(), 1000, 120000);
+
+    return snapshotKeyPrefix;
+  }
+    
   
 }
