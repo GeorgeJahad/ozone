@@ -356,7 +356,8 @@ public class TestOmSnapshotFileSystem {
     writeClient.createSnapshot(volumeName, bucketName, snapshotName);
     String snapshotKeyPrefix = "/.snapshot/" + snapshotName + "/";
 
-    SnapshotInfo snapshotInfo = OmSnapshotManager.getInstance(ozoneManager).getSnapshotInfo(volumeName, bucketName, snapshotName);
+    SnapshotInfo snapshotInfo = ozoneManager.getMetadataManager().getSnapshotInfoTable()
+        .get(SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName));
     String snapshotDirName = metaDir + OM_KEY_PREFIX +
         OM_SNAPSHOT_DIR + OM_KEY_PREFIX + OM_DB_NAME +
         snapshotInfo.getCheckpointDirName() + OM_KEY_PREFIX + "CURRENT";
@@ -398,6 +399,7 @@ public class TestOmSnapshotFileSystem {
     ContractTestUtils.touch(fs, file3);
     ContractTestUtils.touch(fs, file4);
     snapshotKeyPrefix = createSnapshot();
+    deleteRootDir();
     fileStatuses = o3fs.listStatus(new Path(snapshotKeyPrefix + parent));
     assertEquals("FileStatus did not return all children of the directory",
         3, fileStatuses.length);
@@ -434,11 +436,11 @@ public class TestOmSnapshotFileSystem {
     }
 
     String snapshotKeyPrefix = createSnapshot();
+    deleteRootDir();
     FileStatus[] fileStatuses = fs.listStatus(new Path(snapshotKeyPrefix + parent));
 
     // the number of immediate children of root is 1
     Assert.assertEquals(1, fileStatuses.length);
-    writeClient.deleteKey(keyArgs);
   }
 
   /**
@@ -457,6 +459,8 @@ public class TestOmSnapshotFileSystem {
     // exist) and dir2 only. dir12 is not an immediate child of root and
     // hence should not be listed.
     String snapshotKeyPrefix = createSnapshot();
+    deleteRootDir();
+
     FileStatus[] fileStatuses = o3fs.listStatus(new Path(snapshotKeyPrefix + root));
     assertEquals("FileStatus should return only the immediate children",
         2, fileStatuses.length);
@@ -483,6 +487,7 @@ public class TestOmSnapshotFileSystem {
     }
 
     String snapshotKeyPrefix = createSnapshot();
+    deleteRootDir();
     FileStatus[] fileStatuses = o3fs.listStatus(new Path(snapshotKeyPrefix + root));
     // Added logs for debugging failures, to check any sub-path mismatches.
     Set<String> actualPaths = new TreeSet<>();

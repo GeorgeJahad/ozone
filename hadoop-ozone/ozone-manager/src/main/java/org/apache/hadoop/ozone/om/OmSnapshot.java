@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 
 public class OmSnapshot implements IOmMReader {
 
-  public static final Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(OmSnapshot.class);
 
   private static final AuditLogger AUDIT = new AuditLogger(
@@ -34,6 +34,7 @@ public class OmSnapshot implements IOmMReader {
   private final String volumeName;
   private final String bucketName;
   private final String snapshotName;
+
   public OmSnapshot(KeyManager keyManager,
                     PrefixManager prefixManager,
                     OMMetadataManager omMetadataManager,
@@ -133,7 +134,7 @@ public class OmSnapshot implements IOmMReader {
     return ".snapshot/" + snapshotName + "/" + keyname;
   }
 
-  private  OmKeyInfo  denormalizeOmKeyInfo(OmKeyInfo keyInfo) {
+  private OmKeyInfo denormalizeOmKeyInfo(OmKeyInfo keyInfo) {
     if (keyInfo == null) {
       return null;
     }

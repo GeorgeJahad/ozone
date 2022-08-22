@@ -608,7 +608,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       omState = State.INITIALIZED;
     }
 
-    omSnapshotManager = OmSnapshotManager.getInstance(this);
+    omSnapshotManager = new OmSnapshotManager(this);
   }
 
   public boolean isStopped() {

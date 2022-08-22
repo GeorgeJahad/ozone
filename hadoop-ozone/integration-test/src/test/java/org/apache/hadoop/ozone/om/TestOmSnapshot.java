@@ -260,7 +260,6 @@ public class TestOmSnapshot {
 
 
     String snapshotKeyPrefix = createSnapshot(volumeA, bucketA);
-
     Iterator<? extends OzoneKey> volABucketAIter =
         volAbucketA.listKeys(snapshotKeyPrefix + "key-");
     int volABucketAKeyCount = 0;
@@ -271,6 +270,7 @@ public class TestOmSnapshot {
     Assert.assertEquals(20, volABucketAKeyCount);
 
     snapshotKeyPrefix = createSnapshot(volumeA, bucketB);
+    deleteKeys(volAbucketB);
     Iterator<? extends OzoneKey> volABucketBIter =
         volAbucketB.listKeys(snapshotKeyPrefix + "key-");
     int volABucketBKeyCount = 0;
@@ -281,6 +281,7 @@ public class TestOmSnapshot {
     Assert.assertEquals(20, volABucketBKeyCount);
 
     snapshotKeyPrefix = createSnapshot(volumeB, bucketA);
+    deleteKeys(volBbucketA);
     Iterator<? extends OzoneKey> volBBucketAIter =
         volBbucketA.listKeys(snapshotKeyPrefix + "key-");
     int volBBucketAKeyCount = 0;
@@ -301,6 +302,7 @@ public class TestOmSnapshot {
     Assert.assertEquals(20, volBBucketBKeyCount);
 
     snapshotKeyPrefix = createSnapshot(volumeA, bucketA);
+    deleteKeys(volAbucketA);
     Iterator<? extends OzoneKey> volABucketAKeyAIter =
         volAbucketA.listKeys(snapshotKeyPrefix + "key-a-");
     int volABucketAKeyACount = 0;
@@ -354,14 +356,23 @@ public class TestOmSnapshot {
     assertTrue(ozoneBucket.getName().equals(bucketName));
 
     String s = "testData";
-    String key1 = "checkKey/key1";
+    String dir1 = "dir1";
+    String key1 = dir1 + "/key1";
     createKey(ozoneBucket, key1, s.length(), s.getBytes(
         StandardCharsets.UTF_8) );
 
     OmKeyInfo originalKeyInfo = writeClient.lookupKey(genKeyArgs(key1));
     
     String snapshotKeyPrefix = createSnapshot();
-
+    ozoneBucket.deleteKey(key1);
+    try {
+      ozoneBucket.deleteKey(dir1);
+    } catch (OMException e) {
+      // OBJECT_STORE won't have directory entry so ignore KEY_NOT_FOUND
+      if (e.getResult() != KEY_NOT_FOUND) {
+        fail("got exception on cleanup: " + e.getMessage());
+      }
+    }
     OmKeyArgs keyArgs = genKeyArgs(snapshotKeyPrefix + key1);
     
     OmKeyInfo omKeyInfo = writeClient.lookupKey(keyArgs);
@@ -384,7 +395,8 @@ public class TestOmSnapshot {
     writeClient = store.getClientProxy().getOzoneManagerClient();
     writeClient.createSnapshot(vname, bname, snapshotName);
     String snapshotKeyPrefix = ".snapshot/" + snapshotName + "/";
-    SnapshotInfo snapshotInfo = OmSnapshotManager.getInstance(ozoneManager).getSnapshotInfo(vname, bname, snapshotName);
+    SnapshotInfo snapshotInfo = ozoneManager.getMetadataManager().getSnapshotInfoTable()
+        .get(SnapshotInfo.getTableKey(vname, bname, snapshotName));
     String snapshotDirName = metaDir + OM_KEY_PREFIX +
         OM_SNAPSHOT_DIR + OM_KEY_PREFIX + OM_DB_NAME +
         snapshotInfo.getCheckpointDirName() + OM_KEY_PREFIX + "CURRENT";
@@ -395,4 +407,16 @@ public class TestOmSnapshot {
   }
 
 
+  private void deleteKeys(OzoneBucket bucket) throws IOException {
+    Iterator<? extends OzoneKey> bucketIter =
+        bucket.listKeys(null);
+    while (bucketIter.hasNext()) {
+      OzoneKey key = bucketIter.next();
+      bucket.deleteKey(key.getName());
+    }
+    bucketIter = bucket.listKeys(null);
+    if (bucketIter.hasNext()) {
+      fail();
+    }
+  }
 }

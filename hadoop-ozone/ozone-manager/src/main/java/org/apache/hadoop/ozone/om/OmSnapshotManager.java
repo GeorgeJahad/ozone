@@ -53,15 +53,10 @@ public final class OmSnapshotManager {
   private final OzoneManager ozoneManager;
   private final LoadingCache<String, OmSnapshot> snapshotCache;
 
-  public static final Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(OmSnapshotManager.class);
 
-
-  public static OmSnapshotManager getInstance(OzoneManager ozoneManager) {
-    return new OmSnapshotManager(ozoneManager);
-  }
-
-  private OmSnapshotManager(OzoneManager ozoneManager) {
+  OmSnapshotManager(OzoneManager ozoneManager) {
     this.ozoneManager = ozoneManager;
     int cacheSize = ozoneManager.getConfiguration().getInt(
         OzoneConfigKeys.OZONE_OM_SNAPSHOT_CACHE_MAX_SIZE,
