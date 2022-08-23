@@ -289,12 +289,14 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     this.omEpoch = 0;
   }
 
+  //  metadata constructor for snapshots
   private OmMetadataManagerImpl(OzoneConfiguration conf, String snapshotName)
       throws IOException {
     lock = new OmReadOnlyLock();
     omEpoch = 0;
-    setStore(loadDB(conf, new File(OMStorage.getOmDbDir(conf).toString() +
-        OM_KEY_PREFIX + OM_SNAPSHOT_DIR), OM_DB_NAME + snapshotName, true));
+    String snapshotDir = OMStorage.getOmDbDir(conf).toString() +
+        OM_KEY_PREFIX + OM_SNAPSHOT_DIR;
+    setStore(loadDB(conf, new File(snapshotDir), OM_DB_NAME + snapshotName, true));
     initializeOmTables();
   }
 
