@@ -64,12 +64,11 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
  * This abstraction manages all the metadata key/acl reading
  * from a rocksDb instance, for both the OM and OM snapshots.
  */
-public class OmMReader implements Auditor {
+public class OmMReader implements IOmMReader, Auditor {
   private final KeyManager keyManager;
   private final PrefixManager prefixManager;
   private final VolumeManager volumeManager;
   private final BucketManager bucketManager;
-  private final OMMetadataManager metadataManager;
   private final OzoneManager ozoneManager;
   private final boolean isAclEnabled;
   private final IAccessAuthorizer accessAuthorizer;
@@ -80,7 +79,6 @@ public class OmMReader implements Auditor {
 
   public OmMReader(KeyManager keyManager,
                    PrefixManager prefixManager,
-                   OMMetadataManager metadataManager,
                    OzoneManager ozoneManager,
                    Logger log,
                    AuditLogger audit,
@@ -89,7 +87,6 @@ public class OmMReader implements Auditor {
     this.bucketManager = ozoneManager.getBucketManager();
     this.volumeManager = ozoneManager.getVolumeManager();
     this.prefixManager = prefixManager;
-    this.metadataManager = metadataManager;
     OzoneConfiguration configuration = ozoneManager.getConfiguration();
     this.ozoneManager = ozoneManager;
     this.isAclEnabled = ozoneManager.getAclsEnabled();
@@ -125,6 +122,7 @@ public class OmMReader implements Auditor {
    * @return OmKeyInfo - the info about the requested key.
    * @throws IOException
    */
+  @Override
   public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
     ResolvedBucket bucket = ozoneManager.resolveBucketLink(args);
 
@@ -155,8 +153,10 @@ public class OmMReader implements Auditor {
     }
   }
 
+  @Override
   public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
-      String startKey, long numEntries, boolean allowPartialPrefixes)
+                                          String startKey, long numEntries,
+                                          boolean allowPartialPrefixes)
       throws IOException {
 
     ResolvedBucket bucket = ozoneManager.resolveBucketLink(args);
@@ -189,6 +189,7 @@ public class OmMReader implements Auditor {
     }
   }
   
+  @Override
   public OzoneFileStatus getFileStatus(OmKeyArgs args) throws IOException {
     ResolvedBucket bucket = ozoneManager.resolveBucketLink(args);
 
@@ -214,6 +215,7 @@ public class OmMReader implements Auditor {
     }
   }
 
+  @Override
   public OmKeyInfo lookupFile(OmKeyArgs args) throws IOException {
     ResolvedBucket bucket = ozoneManager.resolveBucketLink(args);
 
@@ -244,8 +246,10 @@ public class OmMReader implements Auditor {
     }
   }
 
+  @Override
   public List<OmKeyInfo> listKeys(String volumeName, String bucketName,
-      String startKey, String keyPrefix, int maxKeys) throws IOException {
+                                  String startKey, String keyPrefix,
+                                  int maxKeys) throws IOException {
 
     ResolvedBucket bucket = ozoneManager.resolveBucketLink(
         Pair.of(volumeName, bucketName));
@@ -446,6 +450,7 @@ public class OmMReader implements Auditor {
     return clientMachine;
   }
 
+  @Override
   public AuditMessage buildAuditMessageForSuccess(AuditAction op,
       Map<String, String> auditMap) {
 
@@ -458,6 +463,7 @@ public class OmMReader implements Auditor {
         .build();
   }
 
+  @Override
   public AuditMessage buildAuditMessageForFailure(AuditAction op,
       Map<String, String> auditMap, Throwable throwable) {
 
