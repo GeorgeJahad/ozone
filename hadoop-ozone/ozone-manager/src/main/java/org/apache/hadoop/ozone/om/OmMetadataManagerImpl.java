@@ -296,7 +296,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     omEpoch = 0;
     String snapshotDir = OMStorage.getOmDbDir(conf).toString() +
         OM_KEY_PREFIX + OM_SNAPSHOT_DIR;
-    setStore(loadDB(conf, new File(snapshotDir), OM_DB_NAME + snapshotName, true));
+    setStore(loadDB(conf, new File(snapshotDir),
+        OM_DB_NAME + snapshotName, true));
     initializeOmTables();
   }
 
