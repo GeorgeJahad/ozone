@@ -706,7 +706,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     keyManager = new KeyManagerImpl(this, scmClient, configuration,
         omStorage.getOmId());
     omMReader = new OmMReader(keyManager, prefixManager,
-        metadataManager, this, LOG, AUDIT, metrics);
+        this, LOG, AUDIT, metrics);
     omSnapshotManager = new OmSnapshotManager(this);
 
     if (withNewSnapshot) {

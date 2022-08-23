@@ -69,7 +69,6 @@ public class OmMReader implements IOmMReader, Auditor {
   private final PrefixManager prefixManager;
   private final VolumeManager volumeManager;
   private final BucketManager bucketManager;
-  private final OMMetadataManager metadataManager;
   private final OzoneManager ozoneManager;
   private final boolean isAclEnabled;
   private final IAccessAuthorizer accessAuthorizer;
@@ -80,7 +79,6 @@ public class OmMReader implements IOmMReader, Auditor {
 
   public OmMReader(KeyManager keyManager,
                    PrefixManager prefixManager,
-                   OMMetadataManager metadataManager,
                    OzoneManager ozoneManager,
                    Logger log,
                    AuditLogger audit,
@@ -89,7 +87,6 @@ public class OmMReader implements IOmMReader, Auditor {
     this.bucketManager = ozoneManager.getBucketManager();
     this.volumeManager = ozoneManager.getVolumeManager();
     this.prefixManager = prefixManager;
-    this.metadataManager = metadataManager;
     OzoneConfiguration configuration = ozoneManager.getConfiguration();
     this.ozoneManager = ozoneManager;
     this.isAclEnabled = ozoneManager.getAclsEnabled();

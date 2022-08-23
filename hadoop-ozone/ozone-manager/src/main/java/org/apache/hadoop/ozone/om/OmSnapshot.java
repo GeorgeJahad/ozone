@@ -37,13 +37,12 @@ public class OmSnapshot implements IOmMReader {
 
   public OmSnapshot(KeyManager keyManager,
                     PrefixManager prefixManager,
-                    OMMetadataManager omMetadataManager,
                     OzoneManager ozoneManager,
                     String volumeName,
                     String bucketName,
                     String snapshotName) {
     omMReader = new OmMReader(keyManager, prefixManager,
-        omMetadataManager, ozoneManager, LOG, AUDIT,
+        ozoneManager, LOG, AUDIT,
         OmSnapshotMetrics.getInstance());
     this.snapshotName = snapshotName;
     this.bucketName = bucketName;

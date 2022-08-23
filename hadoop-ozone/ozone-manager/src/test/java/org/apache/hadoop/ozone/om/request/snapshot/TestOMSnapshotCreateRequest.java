@@ -35,7 +35,6 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.upgrade.OMLayoutVersionManager;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.ozone.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Assert;
@@ -89,7 +88,7 @@ public class TestOMSnapshotCreateRequest {
     when(ozoneManager.getMetrics()).thenReturn(omMetrics);
     when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
     when(ozoneManager.isRatisEnabled()).thenReturn(true);
-    when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(false);
+    when(ozoneManager.isAdmin(any())).thenReturn(false);
     when(ozoneManager.isOwner(any(), any())).thenReturn(false);
     when(ozoneManager.getBucketOwner(any(), any(),
         any(), any())).thenReturn("dummyBucketOwner");
@@ -151,7 +150,7 @@ public class TestOMSnapshotCreateRequest {
   
   @Test
   public void testValidateAndUpdateCache() throws Exception {
-    when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
+    when(ozoneManager.isAdmin(any())).thenReturn(true);
     OMRequest omRequest =
         OMRequestTestUtils.createSnapshotRequest(
         volumeName, bucketName, snapshotName);
@@ -190,7 +189,7 @@ public class TestOMSnapshotCreateRequest {
 
   @Test
   public void testEntryExists() throws Exception {
-    when(ozoneManager.isAdmin((UserGroupInformation) any())).thenReturn(true);
+    when(ozoneManager.isAdmin(any())).thenReturn(true);
     OMRequest omRequest =
         OMRequestTestUtils.createSnapshotRequest(
         volumeName, bucketName, snapshotName);

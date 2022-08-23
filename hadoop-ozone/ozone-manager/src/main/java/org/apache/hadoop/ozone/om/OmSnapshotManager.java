@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
 import java.util.concurrent.ExecutionException;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
@@ -64,7 +65,8 @@ public final class OmSnapshotManager {
       @Override
 
       // load the snapshot into the cache if not already there
-      public OmSnapshot load(String snapshotTableKey) throws IOException{
+      @Nonnull
+      public OmSnapshot load(@Nonnull String snapshotTableKey) throws IOException{
         SnapshotInfo snapshotInfo;
         // see if the snapshot exists
         snapshotInfo = getSnapshotInfo(snapshotTableKey);
@@ -92,7 +94,7 @@ public final class OmSnapshotManager {
             ozoneManager.getBlockTokenSecretManager(),
             ozoneManager.getKmsProvider(), pm );
 
-        return new OmSnapshot(km, pm, snapshotMetadataManager, ozoneManager,
+        return new OmSnapshot(km, pm, ozoneManager,
             snapshotInfo.getVolumeName(),
             snapshotInfo.getBucketName(),
             snapshotInfo.getName());

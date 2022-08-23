@@ -16,7 +16,6 @@ public interface IOmMReader {
    *
    * @param args the args of the key.
    * @return OmKeyInfo instance that client uses to talk to container.
-   * @throws IOException
    */
   OmKeyInfo lookupKey(OmKeyArgs args) throws IOException;
 
@@ -86,7 +85,6 @@ public interface IOmMReader {
    *   the maximum number of keys to return. It ensures
    *   the size of the result will not exceed this limit.
    * @return a list of keys.
-   * @throws IOException
    */
   List<OmKeyInfo> listKeys(String volumeName, String bucketName,
                            String startKey, String keyPrefix, int maxKeys)
