@@ -336,8 +336,8 @@ public class TestOmSnapshotFileSystem {
     // Read using filesystem.
     String rootPath = String.format("%s://%s.%s/", OZONE_URI_SCHEME,
             bucketName, volumeName, StandardCharsets.UTF_8);
-    OzoneFileSystem o3fsNew = (OzoneFileSystem) FileSystem.get(new URI(rootPath),
-            conf);
+    OzoneFileSystem o3fsNew = (OzoneFileSystem) FileSystem
+        .get(new URI(rootPath), conf);
     FSDataInputStream fsDataInputStream = o3fsNew.open(new Path(key));
     read = new byte[length];
     fsDataInputStream.read(read, 0, length);

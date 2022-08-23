@@ -155,8 +155,7 @@ public class OmMReader implements IOmMReader, Auditor {
 
   @Override
   public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
-                                          String startKey, long numEntries,
-                                          boolean allowPartialPrefixes)
+      String startKey, long numEntries, boolean allowPartialPrefixes)
       throws IOException {
 
     ResolvedBucket bucket = ozoneManager.resolveBucketLink(args);
@@ -248,8 +247,7 @@ public class OmMReader implements IOmMReader, Auditor {
 
   @Override
   public List<OmKeyInfo> listKeys(String volumeName, String bucketName,
-                                  String startKey, String keyPrefix,
-                                  int maxKeys) throws IOException {
+      String startKey, String keyPrefix, int maxKeys) throws IOException {
 
     ResolvedBucket bucket = ozoneManager.resolveBucketLink(
         Pair.of(volumeName, bucketName));
