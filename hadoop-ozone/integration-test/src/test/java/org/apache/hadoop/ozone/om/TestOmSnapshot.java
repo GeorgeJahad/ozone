@@ -70,7 +70,6 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
-import static org.apache.hadoop.ozone.om.TestOmSnapshotFileSystem.createKey;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_ALREADY_EXISTS;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.helpers.BucketLayout.FILE_SYSTEM_OPTIMIZED;
@@ -360,11 +359,14 @@ public class TestOmSnapshot {
     String s = "testData";
     String dir1 = "dir1";
     String key1 = dir1 + "/key1";
-    createKey(ozoneBucket, key1, s.length(), s.getBytes(
-        StandardCharsets.UTF_8) );
 
-    OmKeyInfo originalKeyInfo = writeClient.lookupKey(genKeyArgs(key1));
-    
+    // create key1
+    OzoneOutputStream ozoneOutputStream =
+            ozoneBucket.createKey(key1, s.length());
+    byte[] input = s.getBytes(StandardCharsets.UTF_8);
+    ozoneOutputStream.write(input);
+    ozoneOutputStream.close();
+
     String snapshotKeyPrefix = createSnapshot();
     ozoneBucket.deleteKey(key1);
     try {
