@@ -149,7 +149,7 @@ public class TestOmSnapshot {
   @Test
   // based on TestOzoneRpcClientAbstract:testListKey
   public void testListKey()
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException {
     String volumeA = "vol-a-" + RandomStringUtils.randomNumeric(5);
     String volumeB = "vol-b-" + RandomStringUtils.randomNumeric(5);
     String bucketA = "buc-a-" + RandomStringUtils.randomNumeric(5);
@@ -233,54 +233,40 @@ public class TestOmSnapshot {
       four.write(value);
       four.close();
     }
-
-
-    String snapshotKeyPrefix = createSnapshot(volumeA, bucketA);
     Iterator<? extends OzoneKey> volABucketAIter =
-        volAbucketA.listKeys(snapshotKeyPrefix + "key-");
+        volAbucketA.listKeys("key-");
     int volABucketAKeyCount = 0;
     while (volABucketAIter.hasNext()) {
       volABucketAIter.next();
       volABucketAKeyCount++;
     }
     Assert.assertEquals(20, volABucketAKeyCount);
-
-    snapshotKeyPrefix = createSnapshot(volumeA, bucketB);
-    deleteKeys(volAbucketB);
     Iterator<? extends OzoneKey> volABucketBIter =
-        volAbucketB.listKeys(snapshotKeyPrefix + "key-");
+        volAbucketB.listKeys("key-");
     int volABucketBKeyCount = 0;
     while (volABucketBIter.hasNext()) {
       volABucketBIter.next();
       volABucketBKeyCount++;
     }
     Assert.assertEquals(20, volABucketBKeyCount);
-
-    snapshotKeyPrefix = createSnapshot(volumeB, bucketA);
-    deleteKeys(volBbucketA);
     Iterator<? extends OzoneKey> volBBucketAIter =
-        volBbucketA.listKeys(snapshotKeyPrefix + "key-");
+        volBbucketA.listKeys("key-");
     int volBBucketAKeyCount = 0;
     while (volBBucketAIter.hasNext()) {
       volBBucketAIter.next();
       volBBucketAKeyCount++;
     }
     Assert.assertEquals(20, volBBucketAKeyCount);
-
-    snapshotKeyPrefix = createSnapshot(volumeB, bucketB);
     Iterator<? extends OzoneKey> volBBucketBIter =
-        volBbucketB.listKeys(snapshotKeyPrefix + "key-");
+        volBbucketB.listKeys("key-");
     int volBBucketBKeyCount = 0;
     while (volBBucketBIter.hasNext()) {
       volBBucketBIter.next();
       volBBucketBKeyCount++;
     }
     Assert.assertEquals(20, volBBucketBKeyCount);
-
-    snapshotKeyPrefix = createSnapshot(volumeA, bucketA);
-    deleteKeys(volAbucketA);
     Iterator<? extends OzoneKey> volABucketAKeyAIter =
-        volAbucketA.listKeys(snapshotKeyPrefix + "key-a-");
+        volAbucketA.listKeys("key-a-");
     int volABucketAKeyACount = 0;
     while (volABucketAKeyAIter.hasNext()) {
       volABucketAKeyAIter.next();
@@ -288,10 +274,10 @@ public class TestOmSnapshot {
     }
     Assert.assertEquals(10, volABucketAKeyACount);
     Iterator<? extends OzoneKey> volABucketAKeyBIter =
-        volAbucketA.listKeys(snapshotKeyPrefix + "key-b-");
+        volAbucketA.listKeys("key-b-");
     for (int i = 0; i < 10; i++) {
       Assert.assertTrue(volABucketAKeyBIter.next().getName()
-          .startsWith(snapshotKeyPrefix + "key-b-" + i + "-"));
+          .startsWith("key-b-" + i + "-"));
     }
     Assert.assertFalse(volABucketBIter.hasNext());
   }
@@ -299,15 +285,14 @@ public class TestOmSnapshot {
   @Test
   // based on TestOzoneRpcClientAbstract:testListKeyOnEmptyBucket
   public void testListKeyOnEmptyBucket()
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException {
     String volume = "vol-" + RandomStringUtils.randomNumeric(5);
     String bucket = "buc-" + RandomStringUtils.randomNumeric(5);
     store.createVolume(volume);
     OzoneVolume vol = store.getVolume(volume);
     vol.createBucket(bucket);
-    String snapshotKeyPrefix = createSnapshot(volume, bucket);
     OzoneBucket buc = vol.getBucket(bucket);
-    Iterator<? extends OzoneKey> keys = buc.listKeys(snapshotKeyPrefix);
+    Iterator<? extends OzoneKey> keys = buc.listKeys("");
     while (keys.hasNext()) {
       fail();
     }
