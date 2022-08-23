@@ -17,6 +17,8 @@
 
 package org.apache.hadoop.ozone.om.lock;
 
+// ReadOnly "Lock"  has no lock.  Always returns true when aquiring
+//  read lock and false for write locks
 public class OmReadOnlyLock implements OmLock{
   @Override
   public boolean acquireLock(OzoneManagerLock.Resource resource,

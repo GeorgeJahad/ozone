@@ -127,8 +127,8 @@ public class TestOmSnapshotFileSystem {
             TestOmSnapshotFileSystem.bucketLayout != newBucketLayout) {
       TestOmSnapshotFileSystem.enabledFileSystemPaths = newEnableFileSystemPaths;
       TestOmSnapshotFileSystem.bucketLayout = newBucketLayout;
-        tearDown();
-        init();
+      tearDown();
+      init();
     }
   }
 
@@ -164,14 +164,15 @@ public class TestOmSnapshotFileSystem {
       conf.setInt(OZONE_FS_ITERATE_BATCH_SIZE, 5);
       fs = FileSystem.get(conf);
       o3fs = (OzoneFileSystem) fs;
+
       OzoneClient client = cluster.getClient();
       objectStore = client.getObjectStore();
       writeClient = objectStore.getClientProxy().getOzoneManagerClient();
       ozoneManager = cluster.getOzoneManager();
       metaDir = OMStorage.getOmDbDir(conf);
 
-      KeyManagerImpl keyManager = (KeyManagerImpl) ozoneManager.getKeyManager();
       // stop the deletion services so that keys can still be read
+      KeyManagerImpl keyManager = (KeyManagerImpl) ozoneManager.getKeyManager();
       keyManager.stop();
 
 
@@ -558,11 +559,12 @@ public class TestOmSnapshotFileSystem {
   }
   private String createSnapshot()
       throws IOException, InterruptedException, TimeoutException {
-    String snapshotName = UUID.randomUUID().toString();
-    writeClient = objectStore.getClientProxy().getOzoneManagerClient();
-    writeClient.createSnapshot(volumeName, bucketName, snapshotName);
-    String snapshotKeyPrefix = OM_KEY_PREFIX + OmSnapshotManager.getSnapshotPrefix(snapshotName);
 
+    // create snapshot
+    String snapshotName = UUID.randomUUID().toString();
+    writeClient.createSnapshot(volumeName, bucketName, snapshotName);
+
+    // wait till the snapshot directory exists
     SnapshotInfo snapshotInfo = ozoneManager.getMetadataManager().getSnapshotInfoTable()
         .get(SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName));
     String snapshotDirName = metaDir + OM_KEY_PREFIX +
@@ -570,7 +572,7 @@ public class TestOmSnapshotFileSystem {
         snapshotInfo.getCheckpointDirName() + OM_KEY_PREFIX + "CURRENT";
     GenericTestUtils.waitFor(() -> new File(snapshotDirName).exists(), 1000, 120000);
 
-    return snapshotKeyPrefix;
+    return OM_KEY_PREFIX + OmSnapshotManager.getSnapshotPrefix(snapshotName);
   }
     
   

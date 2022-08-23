@@ -96,8 +96,6 @@ public class TestOmSnapshot {
   private static ObjectStore store;
   private static File metaDir;
   private static OzoneManager ozoneManager;
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestOmSnapshot.class);
 
 
 
