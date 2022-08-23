@@ -359,24 +359,26 @@ public class TestOmSnapshotFileSystem {
     Path file2 = new Path(parent, "key2");
 
     String snapshotKeyPrefix = createSnapshot();
-    FileStatus[] fileStatuses = o3fs.listStatus(
-        new Path(snapshotKeyPrefix + root));
+    Path snapshotRoot = new Path(snapshotKeyPrefix + root);
+    FileStatus[] fileStatuses = o3fs.listStatus(snapshotRoot);
     Assert.assertEquals("Should be empty", 0, fileStatuses.length);
 
     ContractTestUtils.touch(fs, file1);
     ContractTestUtils.touch(fs, file2);
 
     snapshotKeyPrefix = createSnapshot();
-    fileStatuses = o3fs.listStatus(new Path(snapshotKeyPrefix + root));
+    snapshotRoot = new Path(snapshotKeyPrefix + root);
+    Path snapshotParent = new Path(snapshotKeyPrefix + parent);
+    fileStatuses = o3fs.listStatus(snapshotRoot);
     Assert.assertEquals("Should have created parent",
             1, fileStatuses.length);
     Assert.assertEquals("Parent path doesn't match",
             fileStatuses[0].getPath().toUri().getPath(),
-            new Path(snapshotKeyPrefix + parent).toString());
+            snapshotParent.toString());
 
     // ListStatus on a directory should return all subdirs along with
     // files, even if there exists a file and sub-dir with the same name.
-    fileStatuses = o3fs.listStatus(new Path(snapshotKeyPrefix + parent));
+    fileStatuses = o3fs.listStatus(snapshotParent);
     assertEquals("FileStatus did not return all children of the directory",
         2, fileStatuses.length);
 
@@ -386,8 +388,9 @@ public class TestOmSnapshotFileSystem {
     ContractTestUtils.touch(fs, file3);
     ContractTestUtils.touch(fs, file4);
     snapshotKeyPrefix = createSnapshot();
+    snapshotParent = new Path(snapshotKeyPrefix + parent);
     deleteRootDir();
-    fileStatuses = o3fs.listStatus(new Path(snapshotKeyPrefix + parent));
+    fileStatuses = o3fs.listStatus(snapshotParent);
     assertEquals("FileStatus did not return all children of the directory",
         3, fileStatuses.length);
   }
@@ -425,8 +428,8 @@ public class TestOmSnapshotFileSystem {
 
     String snapshotKeyPrefix = createSnapshot();
     deleteRootDir();
-    FileStatus[] fileStatuses = fs.listStatus(
-        new Path(snapshotKeyPrefix + parent));
+    Path snapshotParent = new Path(snapshotKeyPrefix + parent);
+    FileStatus[] fileStatuses = fs.listStatus(snapshotParent);
 
     // the number of immediate children of root is 1
     Assert.assertEquals(1, fileStatuses.length);
@@ -450,9 +453,8 @@ public class TestOmSnapshotFileSystem {
     // hence should not be listed.
     String snapshotKeyPrefix = createSnapshot();
     deleteRootDir();
-
-    FileStatus[] fileStatuses = o3fs.listStatus(
-        new Path(snapshotKeyPrefix + root));
+    Path snapshotRoot = new Path(snapshotKeyPrefix + root);
+    FileStatus[] fileStatuses = o3fs.listStatus(snapshotRoot);
     assertEquals("FileStatus should return only the immediate children",
         2, fileStatuses.length);
 
@@ -481,8 +483,8 @@ public class TestOmSnapshotFileSystem {
 
     String snapshotKeyPrefix = createSnapshot();
     deleteRootDir();
-    FileStatus[] fileStatuses = o3fs.listStatus(
-        new Path(snapshotKeyPrefix + root));
+    Path snapshotRoot = new Path(snapshotKeyPrefix + root);
+    FileStatus[] fileStatuses = o3fs.listStatus(snapshotRoot);
     // Added logs for debugging failures, to check any sub-path mismatches.
     Set<String> actualPaths = new TreeSet<>();
     ArrayList<String> actualPathList = new ArrayList<>();
