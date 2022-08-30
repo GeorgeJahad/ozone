@@ -226,25 +226,20 @@ public class TestOmSnapshotFileSystem {
 
     createKeys(ozoneBucket, keys);
 
-
-    setKeyPrefix(createSnapshot().substring(1));
-   
-    // Delete the active fs so that we don't inadvertently read it
-    deleteRootDir();
     // Root level listing keys
     Iterator<? extends OzoneKey> ozoneKeyIterator =
-        ozoneBucket.listKeys(keyPrefix, null);
+        ozoneBucket.listKeys(null, null);
     verifyFullTreeStructure(ozoneKeyIterator);
 
     ozoneKeyIterator =
-        ozoneBucket.listKeys(keyPrefix + "a/", null);
+        ozoneBucket.listKeys("a/", null);
     verifyFullTreeStructure(ozoneKeyIterator);
 
     LinkedList<String> expectedKeys;
 
     // Intermediate level keyPrefix - 2nd level
     ozoneKeyIterator =
-        ozoneBucket.listKeys(keyPrefix + "a///b2///", null);
+        ozoneBucket.listKeys("a///b2///", null);
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/");
     expectedKeys.add("a/b2/d1/");
@@ -258,7 +253,7 @@ public class TestOmSnapshotFileSystem {
 
     // Intermediate level keyPrefix - 3rd level
     ozoneKeyIterator =
-        ozoneBucket.listKeys(keyPrefix + "a/b2/d1", null);
+        ozoneBucket.listKeys("a/b2/d1", null);
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/d1/");
     expectedKeys.add("a/b2/d1/d11.tx");
@@ -266,14 +261,14 @@ public class TestOmSnapshotFileSystem {
 
     // Boundary of a level
     ozoneKeyIterator =
-      ozoneBucket.listKeys(keyPrefix + "a/b2/d2", keyPrefix + "a/b2/d2/d21.tx");
+        ozoneBucket.listKeys("a/b2/d2", "a/b2/d2/d21.tx");
     expectedKeys = new LinkedList<>();
     expectedKeys.add("a/b2/d2/d22.tx");
     checkKeyList(ozoneKeyIterator, expectedKeys);
 
     // Boundary case - last node in the depth-first-traversal
     ozoneKeyIterator =
-      ozoneBucket.listKeys(keyPrefix + "a/b3/e3", keyPrefix + "a/b3/e3/e31.tx");
+        ozoneBucket.listKeys("a/b3/e3", "a/b3/e3/e31.tx");
     expectedKeys = new LinkedList<>();
     checkKeyList(ozoneKeyIterator, expectedKeys);
   }
@@ -310,12 +305,9 @@ public class TestOmSnapshotFileSystem {
     LinkedList<String> outputKeys = new LinkedList<>();
     while (ozoneKeyIterator.hasNext()) {
       OzoneKey ozoneKey = ozoneKeyIterator.next();
-      String keyName = ozoneKey.getName();
-      if (keyName.startsWith(keyPrefix)) {
-        keyName = keyName.substring(keyPrefix.length());
-      }
-      outputKeys.add(keyName);
+      outputKeys.add(ozoneKey.getName());
     }
+
     Assert.assertEquals(keys, outputKeys);
   }
 
@@ -351,9 +343,9 @@ public class TestOmSnapshotFileSystem {
     // Read using filesystem.
     String rootPath = String.format("%s://%s.%s/", OZONE_URI_SCHEME,
             bucketName, volumeName, StandardCharsets.UTF_8);
-    OzoneFileSystem o3fsNew = (OzoneFileSystem) FileSystem
-        .get(new URI(rootPath), conf);
-    FSDataInputStream fsDataInputStream = o3fsNew.open(new Path(key));
+    OzoneFileSystem o3fs = (OzoneFileSystem) FileSystem.get(new URI(rootPath),
+            conf);
+    FSDataInputStream fsDataInputStream = o3fs.open(new Path(key));
     read = new byte[length];
     fsDataInputStream.read(read, 0, length);
     ozoneInputStream.close();
@@ -373,27 +365,21 @@ public class TestOmSnapshotFileSystem {
     Path file1 = new Path(parent, "key1");
     Path file2 = new Path(parent, "key2");
 
-    String snapshotKeyPrefix = createSnapshot();
-    Path snapshotRoot = new Path(snapshotKeyPrefix + root);
-    FileStatus[] fileStatuses = o3fs.listStatus(snapshotRoot);
+    FileStatus[] fileStatuses = o3fs.listStatus(root);
     Assert.assertEquals("Should be empty", 0, fileStatuses.length);
 
     ContractTestUtils.touch(fs, file1);
     ContractTestUtils.touch(fs, file2);
 
-    snapshotKeyPrefix = createSnapshot();
-    snapshotRoot = new Path(snapshotKeyPrefix + root);
-    Path snapshotParent = new Path(snapshotKeyPrefix + parent);
-    fileStatuses = o3fs.listStatus(snapshotRoot);
+    fileStatuses = o3fs.listStatus(root);
     Assert.assertEquals("Should have created parent",
             1, fileStatuses.length);
     Assert.assertEquals("Parent path doesn't match",
-            fileStatuses[0].getPath().toUri().getPath(),
-            snapshotParent.toString());
+            fileStatuses[0].getPath().toUri().getPath(), parent.toString());
 
     // ListStatus on a directory should return all subdirs along with
     // files, even if there exists a file and sub-dir with the same name.
-    fileStatuses = o3fs.listStatus(snapshotParent);
+    fileStatuses = o3fs.listStatus(parent);
     assertEquals("FileStatus did not return all children of the directory",
         2, fileStatuses.length);
 
@@ -402,10 +388,7 @@ public class TestOmSnapshotFileSystem {
     Path file4 = new Path(parent, "dir1/key4");
     ContractTestUtils.touch(fs, file3);
     ContractTestUtils.touch(fs, file4);
-    snapshotKeyPrefix = createSnapshot();
-    snapshotParent = new Path(snapshotKeyPrefix + parent);
-    deleteRootDir();
-    fileStatuses = o3fs.listStatus(snapshotParent);
+    fileStatuses = o3fs.listStatus(parent);
     assertEquals("FileStatus did not return all children of the directory",
         3, fileStatuses.length);
   }
@@ -441,13 +424,11 @@ public class TestOmSnapshotFileSystem {
       }, 1000, 120000);
     }
 
-    String snapshotKeyPrefix = createSnapshot();
-    deleteRootDir();
-    Path snapshotParent = new Path(snapshotKeyPrefix + parent);
-    FileStatus[] fileStatuses = fs.listStatus(snapshotParent);
+    FileStatus[] fileStatuses = fs.listStatus(parent);
 
     // the number of immediate children of root is 1
     Assert.assertEquals(1, fileStatuses.length);
+    writeClient.deleteKey(keyArgs);
   }
 
   /**
@@ -466,10 +447,7 @@ public class TestOmSnapshotFileSystem {
     // ListStatus on root should return dir1 (even though /dir1 key does not
     // exist) and dir2 only. dir12 is not an immediate child of root and
     // hence should not be listed.
-    String snapshotKeyPrefix = createSnapshot();
-    deleteRootDir();
-    Path snapshotRoot = new Path(snapshotKeyPrefix + root);
-    FileStatus[] fileStatuses = o3fs.listStatus(snapshotRoot);
+    FileStatus[] fileStatuses = o3fs.listStatus(root);
     assertEquals("FileStatus should return only the immediate children",
         2, fileStatuses.length);
 
@@ -496,10 +474,7 @@ public class TestOmSnapshotFileSystem {
       paths.add(p.getName());
     }
 
-    String snapshotKeyPrefix = createSnapshot();
-    deleteRootDir();
-    Path snapshotRoot = new Path(snapshotKeyPrefix + root);
-    FileStatus[] fileStatuses = o3fs.listStatus(snapshotRoot);
+    FileStatus[] fileStatuses = o3fs.listStatus(root);
     // Added logs for debugging failures, to check any sub-path mismatches.
     Set<String> actualPaths = new TreeSet<>();
     ArrayList<String> actualPathList = new ArrayList<>();
