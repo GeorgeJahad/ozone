@@ -3832,7 +3832,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     // Start jvm monitor
     jvmPauseMonitor = new JvmPauseMonitor();
     jvmPauseMonitor.init(configuration);
-    jvmPauseMonitor.start();
+    //jvmPauseMonitor.start();
   }
 
   public ResolvedBucket resolveBucketLink(KeyArgs args,

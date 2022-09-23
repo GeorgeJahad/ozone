@@ -288,7 +288,7 @@ public class DatanodeStateMachine implements Closeable {
     jvmPauseMonitor = new JvmPauseMonitor();
     jvmPauseMonitor
         .init(LegacyHadoopConfigurationSource.asHadoopConfiguration(conf));
-    jvmPauseMonitor.start();
+    //jvmPauseMonitor.start();
 
     while (context.getState() != DatanodeStates.SHUTDOWN) {
       try {

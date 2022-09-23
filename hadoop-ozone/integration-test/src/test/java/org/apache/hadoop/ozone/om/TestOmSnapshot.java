@@ -70,6 +70,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import java.util.stream.Collectors;
 
 
 /**
@@ -87,8 +88,8 @@ public class TestOmSnapshot {
   private static File metaDir;
   private static OzoneManager ozoneManager;
 
-  @Rule
-  public Timeout timeout = new Timeout(180, TimeUnit.SECONDS);
+  //  @Rule
+  //  public Timeout timeout = new Timeout(180, TimeUnit.SECONDS);
 
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
@@ -386,6 +387,7 @@ public class TestOmSnapshot {
         Thread.sleep(1000);
       }
     }
+    if (failCount > 0) debugWait("stopa");
     assertEquals(failCount, 0);
     omKeyInfo = writeClient.lookupKey(keyArgs);
     assertEquals(omKeyInfo.getKeyName(), snapshotKeyPrefix + key1);
@@ -431,5 +433,15 @@ public class TestOmSnapshot {
       bucket.deleteKey(key.getName());
     }
   }
+  private void debugWait(String name) throws InterruptedException {
+    try {
+      new File("/tmp/gbj" + name).createNewFile();
+    } catch (Exception e) {
+    }
+    boolean waitForDebugger = true;
+    while (waitForDebugger) {
+      Thread.sleep(1000);
+    }
+  }    
 }
 

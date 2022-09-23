@@ -1491,7 +1491,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     // Start jvm monitor
     jvmPauseMonitor = new JvmPauseMonitor();
     jvmPauseMonitor.init(configuration);
-    jvmPauseMonitor.start();
+    //jvmPauseMonitor.start();
 
     try {
       httpServer = new StorageContainerManagerHttpServer(configuration, this);

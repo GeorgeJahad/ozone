@@ -80,6 +80,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import java.util.stream.Collectors;
 
 /**
  * OmSnapshot file system tests.
@@ -104,8 +105,8 @@ public class TestOmSnapshotFileSystem {
 
 
 
-  @Rule
-  public Timeout timeout = new Timeout(120, TimeUnit.SECONDS);
+  //  @Rule
+  //  public Timeout timeout = new Timeout(120, TimeUnit.SECONDS);
 
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
@@ -404,7 +405,13 @@ public class TestOmSnapshotFileSystem {
       }
       Thread.sleep(1000);
     }
-    assertEquals(failCount, 0);
+    if (failCount > 0) debugWait("stop1");
+    boolean loop = false;
+    while (loop)
+      fileStatuses = o3fs.listStatus(snapshotParent);
+    String names = Arrays.stream(fileStatuses).map(FileStatus::getPath).map(Path::toString).collect(
+        Collectors.joining(","));
+    assertEquals(names, failCount, 0);
     assertEquals("FileStatus did not return all children of the directory",
         2, fileStatuses.length);
     // ListStatus should return only the immediate children of a directory.
@@ -454,7 +461,26 @@ public class TestOmSnapshotFileSystem {
     String snapshotKeyPrefix = createSnapshot();
     deleteRootDir();
     Path snapshotParent = new Path(snapshotKeyPrefix + parent);
-    FileStatus[] fileStatuses = fs.listStatus(snapshotParent);
+    FileStatus[] fileStatuses;
+    int failCount = 0;
+    while (true) {
+      fileStatuses = fs.listStatus(snapshotParent);
+      if (fileStatuses.length == 1) {
+        break;
+      }
+      failCount++;
+      if (failCount > 50) {
+        break;
+      }
+      Thread.sleep(1000);
+    }
+    if (failCount > 0) debugWait("stop2");
+    boolean loop = false;
+    while (loop)
+      fileStatuses = fs.listStatus(snapshotParent);
+    String names = Arrays.stream(fileStatuses).map(FileStatus::getPath).map(Path::toString).collect(
+        Collectors.joining(","));
+    assertEquals(names, failCount, 0);
 
     // the number of immediate children of root is 1
     Assert.assertEquals(1, fileStatuses.length);
@@ -479,7 +505,26 @@ public class TestOmSnapshotFileSystem {
     String snapshotKeyPrefix = createSnapshot();
     deleteRootDir();
     Path snapshotRoot = new Path(snapshotKeyPrefix + root);
-    FileStatus[] fileStatuses = o3fs.listStatus(snapshotRoot);
+    FileStatus[] fileStatuses;
+    int failCount = 0;
+    while (true) {
+      fileStatuses = o3fs.listStatus(snapshotRoot);
+      if (fileStatuses.length == 2) {
+        break;
+      }
+      failCount++;
+      if (failCount > 50) {
+        break;
+      }
+      Thread.sleep(1000);
+    }
+    if (failCount > 0) debugWait("stop3");
+    boolean loop = false;
+    while (loop)
+      fileStatuses = o3fs.listStatus(snapshotRoot);
+    String names = Arrays.stream(fileStatuses).map(FileStatus::getPath).map(Path::toString).collect(
+        Collectors.joining(","));
+    assertEquals(names, failCount, 0);
     assertEquals("FileStatus should return only the immediate children",
         2, fileStatuses.length);
 
@@ -589,4 +634,14 @@ public class TestOmSnapshotFileSystem {
 
     return OM_KEY_PREFIX + OmSnapshotManager.getSnapshotPrefix(snapshotName);
   }
+  private void debugWait(String name) throws InterruptedException {
+    try {
+      new File("/tmp/gbj" + name).createNewFile();
+    } catch (Exception e) {
+    }
+    boolean waitForDebugger = true;
+    while (waitForDebugger) {
+      Thread.sleep(1000);
+    }
+  }    
 }
