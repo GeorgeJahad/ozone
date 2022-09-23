@@ -43,6 +43,7 @@ import org.apache.hadoop.hdds.utils.db.DBColumnFamilyDefinition;
 import org.apache.hadoop.ozone.om.codec.OMDBDefinition;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.ozone.om.response.CleanupTableInfo;
+import org.apache.hadoop.ozone.om.response.key.OMKeyCommitResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
@@ -510,7 +511,8 @@ public final class OzoneManagerDoubleBuffer {
   public synchronized CompletableFuture<Void> add(OMClientResponse response,
       long transactionIndex) {
     currentBuffer.add(new DoubleBufferEntry<>(transactionIndex, response));
-    notify();
+    if (! (response instanceof OMKeyCommitResponse))
+      notify();
 
     if (!isRatisEnabled) {
       CompletableFuture<Void> future = new CompletableFuture<>();

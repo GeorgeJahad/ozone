@@ -393,25 +393,7 @@ public class TestOmSnapshotFileSystem {
 
     // ListStatus on a directory should return all subdirs along with
     // files, even if there exists a file and sub-dir with the same name.
-    int failCount = 0;
-    while (true) {
-      fileStatuses = o3fs.listStatus(snapshotParent);
-      if (fileStatuses.length == 2) {
-        break;
-      }
-      failCount++;
-      if (failCount > 50) {
-        break;
-      }
-      Thread.sleep(1000);
-    }
-    if (failCount > 0) debugWait("stop1");
-    boolean loop = false;
-    while (loop)
-      fileStatuses = o3fs.listStatus(snapshotParent);
-    String names = Arrays.stream(fileStatuses).map(FileStatus::getPath).map(Path::toString).collect(
-        Collectors.joining(","));
-    assertEquals(names, failCount, 0);
+    fileStatuses = o3fs.listStatus(snapshotParent);
     assertEquals("FileStatus did not return all children of the directory",
         2, fileStatuses.length);
     // ListStatus should return only the immediate children of a directory.
@@ -461,26 +443,7 @@ public class TestOmSnapshotFileSystem {
     String snapshotKeyPrefix = createSnapshot();
     deleteRootDir();
     Path snapshotParent = new Path(snapshotKeyPrefix + parent);
-    FileStatus[] fileStatuses;
-    int failCount = 0;
-    while (true) {
-      fileStatuses = fs.listStatus(snapshotParent);
-      if (fileStatuses.length == 1) {
-        break;
-      }
-      failCount++;
-      if (failCount > 50) {
-        break;
-      }
-      Thread.sleep(1000);
-    }
-    if (failCount > 0) debugWait("stop2");
-    boolean loop = false;
-    while (loop)
-      fileStatuses = fs.listStatus(snapshotParent);
-    String names = Arrays.stream(fileStatuses).map(FileStatus::getPath).map(Path::toString).collect(
-        Collectors.joining(","));
-    assertEquals(names, failCount, 0);
+    FileStatus[] fileStatuses = fs.listStatus(snapshotParent);
 
     // the number of immediate children of root is 1
     Assert.assertEquals(1, fileStatuses.length);
@@ -505,26 +468,7 @@ public class TestOmSnapshotFileSystem {
     String snapshotKeyPrefix = createSnapshot();
     deleteRootDir();
     Path snapshotRoot = new Path(snapshotKeyPrefix + root);
-    FileStatus[] fileStatuses;
-    int failCount = 0;
-    while (true) {
-      fileStatuses = o3fs.listStatus(snapshotRoot);
-      if (fileStatuses.length == 2) {
-        break;
-      }
-      failCount++;
-      if (failCount > 50) {
-        break;
-      }
-      Thread.sleep(1000);
-    }
-    if (failCount > 0) debugWait("stop3");
-    boolean loop = false;
-    while (loop)
-      fileStatuses = o3fs.listStatus(snapshotRoot);
-    String names = Arrays.stream(fileStatuses).map(FileStatus::getPath).map(Path::toString).collect(
-        Collectors.joining(","));
-    assertEquals(names, failCount, 0);
+    FileStatus[] fileStatuses = o3fs.listStatus(snapshotRoot);
     assertEquals("FileStatus should return only the immediate children",
         2, fileStatuses.length);
 
@@ -634,14 +578,4 @@ public class TestOmSnapshotFileSystem {
 
     return OM_KEY_PREFIX + OmSnapshotManager.getSnapshotPrefix(snapshotName);
   }
-  private void debugWait(String name) throws InterruptedException {
-    try {
-      new File("/tmp/gbj" + name).createNewFile();
-    } catch (Exception e) {
-    }
-    boolean waitForDebugger = true;
-    while (waitForDebugger) {
-      Thread.sleep(1000);
-    }
-  }    
 }
