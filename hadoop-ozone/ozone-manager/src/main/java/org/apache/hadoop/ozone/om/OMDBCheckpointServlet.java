@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -102,7 +103,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
   }
 
   private void getFilesFromCheckpoint(DBCheckpoint checkpoint,
-                                      Map<Object, Path> noCopyFiles)
+                                      Map<Object, Path> copyFiles)
       throws IOException {
     Path dir = checkpoint.getCheckpointLocation();
 
@@ -111,7 +112,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
         // get the inode
         Object key = Files.readAttributes(
             file, BasicFileAttributes.class).fileKey();
-        noCopyFiles.put(key, file);
+        copyFiles.put(key, file);
       }
     }
   }
@@ -152,8 +153,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
       throw new IOException("snapshot dir doesn't exist: " + dir);
     }
   }
-  private void processDir(Path dir, Map<Object,Path> noCopyFiles,
-                          Map<Object, Path> copyFiles,
+  private void processDir(Path dir, Map<Object,Path> copyFiles,
                           Map<Path, Path> hardLinkFiles)
       throws IOException, InterruptedException {
     waitForDirToExist(dir);
@@ -162,9 +162,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
         // get the inode
         Object key = Files.readAttributes(
             file, BasicFileAttributes.class).fileKey();
-        if (noCopyFiles.containsKey(key)) {
-          hardLinkFiles.put(file, noCopyFiles.get(key));
-        } else if (copyFiles.containsKey(key)) {
+        if (copyFiles.containsKey(key)) {
           hardLinkFiles.put(file, copyFiles.get(key));
         } else {
           copyFiles.put(key, file);
@@ -173,15 +171,17 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     }
 
   }
+
   public void createTarBall(DBCheckpoint checkpoint, OutputStream destination)
       throws IOException, InterruptedException, CompressorException {
-    HashMap<Object, Path> noCopyFiles = new HashMap<>();
     HashMap<Object, Path> copyFiles = new HashMap<>();
     HashMap<Path, Path> hardLinkFiles = new HashMap<>();
-    getFilesFromCheckpoint(checkpoint, noCopyFiles);
+
+    getFilesFromCheckpoint(checkpoint, copyFiles);
     for (Path dir : getSnapshotDirs(checkpoint)) {
-      processDir(dir, noCopyFiles, copyFiles, hardLinkFiles);
+      processDir(dir, copyFiles, hardLinkFiles);
     }
+
     try (CompressorOutputStream gzippedOut = new CompressorStreamFactory()
         .createCompressorOutputStream(CompressorStreamFactory.GZIP,
             destination)) {
@@ -190,23 +190,15 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
           new TarArchiveOutputStream(gzippedOut)) {
 
         Path checkpointPath = checkpoint.getCheckpointLocation();
-        try (Stream<Path> files = Files.list(checkpointPath)) {
-          for (Path path : files.collect(Collectors.toList())) {
-            if (path != null) {
-              Path fileName = path.getFileName();
-              if (fileName != null) {
-                includeFile(path.toFile(), fileName.toString(),
-                    archiveOutputStream);
-              }
-            }
-          }
-        }
+
         for (Path file : copyFiles.values()) {
           includeFile(file.toFile(), file.getFileName().toString(),
               archiveOutputStream);
         }
-        Path hardLinkList = createHardLinkList(checkpointPath, hardLinkFiles);
-        includeFile(hardLinkList.toFile(), hardLinkList.getFileName().toString(),
+        Path hardLinkFile = createHardLinkList(hardLinkFiles);
+        includeFile(hardLinkFile.toFile(),
+            Paths.get(checkpointPath.toString(),
+                "hardLinkFile").toString(),
             archiveOutputStream);
       }
     } catch (CompressorException e) {
@@ -214,6 +206,20 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
           "Can't compress the checkpoint: " +
               checkpoint.getCheckpointLocation(), e);
     }
+  }
+
+  private Path createHardLinkList(Map<Path, Path> hardLinkFiles)
+      throws IOException {
+    Path data = Files.createTempFile("hardLinkData", "txt");
+    StringBuilder sb = new StringBuilder();
+    for (Map.Entry<Path, Path> entry : hardLinkFiles.entrySet()) {
+      sb.append(entry.getKey())
+          .append("\t")
+          .append(entry.getValue())
+          .append("\n");
+    }
+    Files.write(data, sb.toString().getBytes(StandardCharsets.UTF_8));
+    return data;
   }
 
 }
