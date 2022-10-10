@@ -46,6 +46,7 @@ import org.rocksdb.TransactionLogIterator.BatchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OM_CHECKPOINT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_DIR;
 
 /**
@@ -85,7 +86,7 @@ public class RDBStore implements DBStore {
       rocksDBCheckpointDiffer =
           new RocksDBCheckpointDiffer(
               dbLocation.getAbsolutePath(), maxFSSnapshots,
-          Paths.get(dbLocation.getParent(), "db.checkpoints").toString(),
+          Paths.get(dbLocation.getParent(), OM_CHECKPOINT_DIR).toString(),
           Paths.get(dbLocation.getParent(), "db.savedSSTFiles").toString(),
           dbLocation.getAbsolutePath(), 0, "Snapshot_");
       rocksDBCheckpointDiffer.setRocksDBForCompactionTracking(dbOptions);
@@ -108,7 +109,7 @@ public class RDBStore implements DBStore {
 
       //create checkpoints directory if not exists.
       checkpointsParentDir =
-              Paths.get(dbLocation.getParent(), "db.checkpoints").toString();
+              Paths.get(dbLocation.getParent(), OM_CHECKPOINT_DIR).toString();
       File checkpointsDir = new File(checkpointsParentDir);
       if (!checkpointsDir.exists()) {
         boolean success = checkpointsDir.mkdir();
