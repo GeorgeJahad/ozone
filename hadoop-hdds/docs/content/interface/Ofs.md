@@ -85,6 +85,8 @@ You also need to add the ozone-filesystem-hadoop3.jar file to the classpath:
 export HADOOP_CLASSPATH=/opt/ozone/share/ozone/lib/ozone-filesystem-hadoop3-*.jar:$HADOOP_CLASSPATH
 {{< /highlight >}}
 
+(Note: with Spark 3.2 or greater, or any hdfs client using the hadoop-client-api-*.jar, use the `ozone-filesystem-hadoop3-client-*.jar`)
+
 (Note: with Hadoop 2.x, use the `ozone-filesystem-hadoop2-*.jar`)
 
 Once the default Filesystem has been setup, users can run commands like ls, put, mkdir, etc.
