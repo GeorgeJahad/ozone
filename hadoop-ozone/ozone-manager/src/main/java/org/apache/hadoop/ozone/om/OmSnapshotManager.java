@@ -28,6 +28,7 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -36,9 +37,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OM_CHECKPOINT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_DIR;
@@ -227,4 +236,54 @@ public final class OmSnapshotManager {
     return (keyParts.length > 1) &&
         (keyParts[0].compareTo(OM_SNAPSHOT_INDICATOR) == 0);
   }
+
+  static void createHardLinks(Path dbPath) throws IOException {
+    File hardLinkFile = new File(dbPath.toString(),
+        OMDBCheckpointServlet.OM_HARDLINK_FILE);
+    if (hardLinkFile.exists()) {
+      List<String> lines =
+          Files.lines(hardLinkFile.toPath()).collect(Collectors.toList());
+      for (String l : lines) {
+        String from = l.split("\t")[1];
+        String to = l.split("\t")[0];
+        Path fixedFrom = fixName(dbPath, from);
+        Path fixedTo = fixName(dbPath, to);
+        Files.createLink(fixedTo, fixedFrom);
+      }
+      hardLinkFile.delete();
+    }
+  }
+
+  private static Path fixName(Path dbPath, String fileName) {
+    File file = new File(fileName);
+    if (!file.getName().equals(fileName)) {
+      return Paths.get(dbPath.getParent().toString(), fileName);
+    }
+    return Paths.get(dbPath.toString(), fileName);
+  }
+
+  static Path createHardLinkList(int truncateLength,
+                                  Map<Path, Path> hardLinkFiles)
+      throws IOException {
+    Path data = Files.createTempFile("data", "txt");
+    StringBuilder sb = new StringBuilder();
+    for (Map.Entry<Path, Path> entry : hardLinkFiles.entrySet()) {
+      String fixedFile = fixFileName(truncateLength, entry.getValue());
+      if (fixedFile.startsWith(OM_CHECKPOINT_DIR)) {
+        fixedFile = Paths.get(fixedFile).getFileName().toString();
+      }
+      sb.append(fixFileName(truncateLength, entry.getKey()))
+          .append("\t")
+          .append(fixedFile)
+          .append("\n");
+    }
+    Files.write(data, sb.toString().getBytes(StandardCharsets.UTF_8));
+    return data;
+  }
+
+  static String fixFileName(int truncateLength, Path file) {
+    return file.toString().substring(truncateLength);
+  }
+
+
 }
