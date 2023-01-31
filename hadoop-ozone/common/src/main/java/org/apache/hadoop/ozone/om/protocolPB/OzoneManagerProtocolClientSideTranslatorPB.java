@@ -292,8 +292,11 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     }
 
     OMResponse response;
-
-    if (!Strings.isNullOrEmpty(threadLocalS3Auth.get().getAccessID())) {
+    if (threadLocalS3Auth.get() == null) {
+      response = transport.submitRequest(
+          builder.setTraceID(TracingUtil.exportCurrentSpan()).build());
+    }
+    else if (!Strings.isNullOrEmpty(threadLocalS3Auth.get().getAccessID()) && threadLocalS3Auth.get().getAccessID().startsWith("testuser2")) {
       LOG.info("xbisClient: " + threadLocalS3Auth.get().getAccessID());
       UserGroupInformation proxyUser = UserGroupInformation
           .createProxyUser(threadLocalS3Auth.get().getAccessID(),

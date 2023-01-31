@@ -57,7 +57,6 @@ services:
     ports:
       - 9874:9874
       - 9862:9862
-      - 3003:3003
     environment:
       ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
       OZONE_OPTS: -Dcom.sun.net.ssl.checkRevocation=false
@@ -74,7 +73,6 @@ services:
       - ./krb5.conf:/etc/krb5.conf
     ports:
       - 9878:9878
-      - 7007:7007
     env_file:
       - ./docker-config
     command: ["/opt/hadoop/bin/ozone","s3g"]

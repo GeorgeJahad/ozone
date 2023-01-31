@@ -79,7 +79,7 @@ OZONE-SITE.XML_hdds.scm.replication.event.timeout=10s
 OZONE-SITE.XML_ozone.scm.stale.node.interval=30s
 OZONE-SITE.XML_ozone.scm.dead.node.interval=45s
 OZONE-SITE.XML_hdds.container.report.interval=60s
-OZONE-SITE.XML_ozone.om.s3.grpc.server_enabled=true
+OZONE-SITE.XML_ozone.om.s3.grpc.server_enabled=false
 
 OZONE-SITE.XML_dfs.container.ratis.datastream.enabled=true
 
@@ -170,8 +170,3 @@ OZONE-SITE.XML_ozone.om.multitenancy.ranger.sync.timeout=10s
 # change or let all OMs write to AccessController if this dev flag is set.
 #
 OZONE-SITE.XML_ozone.om.tenant.dev.skip.ranger=true
-
-LOG4J.PROPERTIES_log4j.rootLogger=ALL, stdout
-LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
-LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
-LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern='%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n'

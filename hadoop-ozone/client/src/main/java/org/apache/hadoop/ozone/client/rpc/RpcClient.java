@@ -82,7 +82,6 @@ import org.apache.hadoop.ozone.OzoneManagerVersion;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneIdentityProvider;
 import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.OzoneKeyLocation;
@@ -695,23 +694,7 @@ public class RpcClient implements ClientProtocol {
             "Storage Type set to {} and Encryption set to {} ",
         volumeName, bucketName, layoutMsg, owner, isVersionEnabled,
         storageType, bek != null);
-
-    UserGroupInformation proxyUser = UserGroupInformation
-        .createProxyUser(owner,
-            UserGroupInformation.getCurrentUser());
-    LOG.info("xbisRpcClient : " + proxyUser.getShortUserName());
-    try {
-      proxyUser.doAs(new PrivilegedExceptionAction<Void>() {
-        @Override
-        public Void run() throws IOException {
-          ozoneManagerClient.createBucket(builder.build());
-          return null;
-        }
-      });
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-//    ozoneManagerClient.createBucket(builder.build());
+    ozoneManagerClient.createBucket(builder.build());
   }
 
   private static void verifyVolumeName(String volumeName) throws OMException {
@@ -1291,7 +1274,6 @@ public class RpcClient implements ClientProtocol {
         Preconditions.checkNotNull(userPrincipal);
         UserGroupInformation s3gUGI = UserGroupInformation.createRemoteUser(
             userPrincipal);
-        LOG.info("xbisRpcClient2: " + s3gUGI.getShortUserName());
         proxyUser = UserGroupInformation.createProxyUser(
             s3gUGI.getShortUserName(), loginUser);
         decrypted = proxyUser.doAs(
