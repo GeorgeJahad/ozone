@@ -33,6 +33,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ozone.ClientVersion;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -291,31 +292,18 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
           "be set but is null " + omRequest.toString());
     }
 
-    OMResponse response;
-    if (threadLocalS3Auth.get() == null) {
-      response = transport.submitRequest(
-          builder.setTraceID(TracingUtil.exportCurrentSpan()).build());
-    }
-    else if (!Strings.isNullOrEmpty(threadLocalS3Auth.get().getAccessID())) {
-      LOG.info("xbisClient: " + threadLocalS3Auth.get().getAccessID());
-      UserGroupInformation proxyUser = UserGroupInformation
-          .createProxyUser(threadLocalS3Auth.get().getAccessID(),
-              UserGroupInformation.getCurrentUser());
-      try {
-        response = proxyUser.doAs(new PrivilegedExceptionAction<OMResponse>() {
-          @Override
-          public OMResponse run() throws IOException {
-            return transport.submitRequest(
-                builder.setTraceID(TracingUtil.exportCurrentSpan()).build());
-          }
-        });
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
+    if (threadLocalS3Auth.get() != null) {
+      if (!Strings.isNullOrEmpty(threadLocalS3Auth.get().getAccessID())) {
+        LOG.info("gbj2Client: " + threadLocalS3Auth.get().getAccessID());
+        CallerContext callerContext =
+            new CallerContext.Builder(
+                threadLocalS3Auth.get().getAccessID()).build();
+        CallerContext.setCurrent(callerContext);
       }
-    } else {
-      response = transport.submitRequest(
-          builder.setTraceID(TracingUtil.exportCurrentSpan()).build());
     }
+    OMResponse response =
+        transport.submitRequest(
+            builder.setTraceID(TracingUtil.exportCurrentSpan()).build());
     return response;
   }
 

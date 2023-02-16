@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ozone.client;
 
+import io.netty.util.internal.StringUtil;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.IdentityProvider;
 import org.apache.hadoop.ipc.Schedulable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -38,7 +40,14 @@ public class OzoneIdentityProvider implements IdentityProvider {
   @Override
   public String makeIdentity(Schedulable schedulable) {
     UserGroupInformation ugi = schedulable.getUserGroupInformation();
-    LOG.info("xbis2: " + ugi.getShortUserName() + " / Thread: " + Thread.currentThread().getName());
+    CallerContext callerContext = schedulable.getCallerContext();
+    if (callerContext != null) {
+      if (!StringUtil.isNullOrEmpty( callerContext.getContext())) {
+        LOG.info("gbj2context is: " + callerContext.getContext());
+        return callerContext.getContext();
+      }
+    }
+    LOG.info("gbj2ugi: " + ugi.getShortUserName() + " / Thread: " + Thread.currentThread().getName());
     return ugi.getShortUserName() == null ? null : ugi.getShortUserName();
   }
 }
