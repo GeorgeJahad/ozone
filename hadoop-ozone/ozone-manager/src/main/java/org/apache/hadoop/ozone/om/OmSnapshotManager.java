@@ -55,6 +55,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_DIFF_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_INDICATOR;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SNAPSHOT_DIFF_DB_DIR;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_KEY_NAME;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_SNAPSHOT_ERROR;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
 import static org.apache.hadoop.ozone.snapshot.SnapshotDiffResponse.JobStatus.DONE;
 
@@ -204,7 +205,7 @@ public final class OmSnapshotManager implements AutoCloseable {
   public IOmMetadataReader checkForSnapshot(String volumeName,
                                             String bucketName, String keyname,
                                             EnumSet<SnapshotStatus> allowedStatuses)
-      throws IOException, IllegalArgumentException {
+      throws IOException {
     if (keyname == null) {
       return ozoneManager.getOmMetadataReader();
     }
@@ -221,8 +222,7 @@ public final class OmSnapshotManager implements AutoCloseable {
           bucketName, snapshotName);
       SnapshotInfo.SnapshotStatus snapshotStatus = getSnapshotInfo(snapshotTableKey).getSnapshotStatus();
       if (!allowedStatuses.contains(snapshotStatus)) {
-        throw new IllegalArgumentException("Unexpected Snapshot Status:" +
-            snapshotStatus);
+        throw new OMException(INVALID_SNAPSHOT_ERROR);
       }
       // retrieve the snapshot from the cache
       try {
