@@ -25,6 +25,7 @@ import com.google.common.cache.RemovalListener;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.EnumSet;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -195,8 +196,15 @@ public final class OmSnapshotManager implements AutoCloseable {
 
   // Get OmSnapshot if the keyname has ".snapshot" key indicator
   public IOmMetadataReader checkForSnapshot(String volumeName,
-                                     String bucketName, String keyname)
-      throws IOException {
+                                            String bucketName, String keyname)
+      throws IOException, IllegalArgumentException {
+    return checkForSnapshot(volumeName, bucketName, keyname,
+        EnumSet.of(SnapshotStatus.SNAPSHOT_ACTIVE));
+  }
+  public IOmMetadataReader checkForSnapshot(String volumeName,
+                                            String bucketName, String keyname,
+                                            EnumSet<SnapshotStatus> allowedStatuses)
+      throws IOException, IllegalArgumentException {
     if (keyname == null) {
       return ozoneManager.getOmMetadataReader();
     }
@@ -211,7 +219,11 @@ public final class OmSnapshotManager implements AutoCloseable {
       }
       String snapshotTableKey = SnapshotInfo.getTableKey(volumeName,
           bucketName, snapshotName);
-
+      SnapshotInfo.SnapshotStatus snapshotStatus = getSnapshotInfo(snapshotTableKey).getSnapshotStatus();
+      if (!allowedStatuses.contains(snapshotStatus)) {
+        throw new IllegalArgumentException("Unexpected Snapshot Status:" +
+            snapshotStatus);
+      }
       // retrieve the snapshot from the cache
       try {
         return snapshotCache.get(snapshotTableKey);
