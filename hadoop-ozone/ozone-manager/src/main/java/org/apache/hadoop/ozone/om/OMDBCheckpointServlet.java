@@ -30,7 +30,6 @@ import org.apache.hadoop.hdds.utils.db.Table;
 import org.apache.hadoop.hdds.utils.db.TableIterator;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
-import org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +58,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_CHECKPOINT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_CHECKPOINT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_DB_CHECKPOINT_INCLUDE_SNAPSHOT_DATA;
+import static org.apache.hadoop.ozone.OzoneConsts.ROCKSDB_SST_SUFFIX;
 import static org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils.createHardLinkList;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPath;
 import static org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils.truncateFileName;
@@ -122,43 +122,37 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
       throws IOException, InterruptedException {
     List<String> excluded = new ArrayList<>();
 
-    // Map of inodes to path.
-    Map<Object, Path> copyFiles = new HashMap<>();
+    // Files to be copied
+    Set<Path> copyFiles = new HashSet<>();
     // Map of link to path.
     Map<Path, Path> hardLinkFiles = new HashMap<>();
 
-    getFilesForArchive(checkpoint, copyFiles, hardLinkFiles,
-        includeSnapshotData(request));
+    Set<Path> excludeFiles = toExcludeList.stream().
+        map(Paths::get).
+        collect(Collectors.toSet());
 
-    // Exclude file
-    Map<Object, Path> finalCopyFiles = new HashMap<>();
-    copyFiles.forEach((o, path) -> {
-      String fName = path.getFileName().toString();
-      if (!toExcludeList.contains(fName)) {
-        finalCopyFiles.put(o, path);
-      } else {
-        excluded.add(fName);
-      }
-    });
+    getFilesForArchive(checkpoint, copyFiles, hardLinkFiles, excludeFiles,
+        includeSnapshotData(request));
 
     try (TarArchiveOutputStream archiveOutputStream =
             new TarArchiveOutputStream(destination)) {
       archiveOutputStream
           .setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
-      writeFilesToArchive(finalCopyFiles, hardLinkFiles, archiveOutputStream);
+      writeFilesToArchive(copyFiles, hardLinkFiles, archiveOutputStream);
     }
     return excluded;
   }
 
   private void getFilesForArchive(DBCheckpoint checkpoint,
-                                  Map<Object, Path> copyFiles,
+                                  Set<Path> copyFiles,
                                   Map<Path, Path> hardLinkFiles,
+                                  Set<Path> excludeFiles,
                                   boolean includeSnapshotData)
       throws IOException {
 
     // Get the active fs files.
     Path dir = checkpoint.getCheckpointLocation();
-    processDir(dir, copyFiles, hardLinkFiles, new HashSet<>());
+    processDir(dir, copyFiles, hardLinkFiles, excludeFiles, new HashSet<>());
 
     if (!includeSnapshotData) {
       return;
@@ -168,7 +162,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     Set<Path> snapshotPaths = waitForSnapshotDirs(checkpoint);
     Path snapshotDir = Paths.get(OMStorage.getOmDbDir(getConf()).toString(),
         OM_SNAPSHOT_DIR);
-    processDir(snapshotDir, copyFiles, hardLinkFiles, snapshotPaths);
+    processDir(snapshotDir, copyFiles, hardLinkFiles, excludeFiles, snapshotPaths);
   }
 
   /**
@@ -209,8 +203,9 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     }
   }
 
-  private void processDir(Path dir, Map<Object, Path> copyFiles,
+  private void processDir(Path dir, Set<Path> copyFiles,
                           Map<Path, Path> hardLinkFiles,
+                          Set<Path> excludeFiles,
                           Set<Path> snapshotPaths)
       throws IOException {
     try (Stream<Path> files = Files.list(dir)) {
@@ -224,24 +219,46 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
             LOG.debug("Skipping unneeded file: " + file);
             continue;
           }
-          processDir(file, copyFiles, hardLinkFiles, snapshotPaths);
+          processDir(file, copyFiles, hardLinkFiles, excludeFiles,
+              snapshotPaths);
         } else {
-          processFile(file, copyFiles, hardLinkFiles);
+          processFile(file, copyFiles, hardLinkFiles, excludeFiles);
         }
       }
     }
   }
 
-  private void processFile(Path file, Map<Object, Path> copyFiles,
-                           Map<Path, Path> hardLinkFiles) throws IOException {
-    // Get the inode.
-    Object key = OmSnapshotUtils.getINode(file);
-    // If we already have the inode, store as hard link.
-    if (copyFiles.containsKey(key)) {
-      hardLinkFiles.put(file, copyFiles.get(key));
-    } else {
-      copyFiles.put(key, file);
+  private void processFile(Path file, Set<Path> copyFiles,
+                           Map<Path, Path> hardLinkFiles,
+                           Set<Path> excludeFiles) {
+    if (!excludeFiles.contains(file)) {
+      String fileName = file.getFileName().toString();
+      if (fileName.endsWith(ROCKSDB_SST_SUFFIX)) {
+        // see if there is a link for the sst file
+        Path linkPath = findLinkPath(excludeFiles, fileName);
+        if (linkPath != null) {
+          hardLinkFiles.put(file, linkPath);
+        } else {
+          linkPath = findLinkPath(copyFiles, fileName);
+          if (linkPath != null) {
+            hardLinkFiles.put(file, linkPath);
+          } else {
+            copyFiles.add(file);
+          }
+        }
+      } else {// not sst file
+        copyFiles.add(file);
+      }
     }
+  }
+
+  private Path findLinkPath(Set<Path> files, String fileName) {
+    for (Path p: files) {
+      if (p.toString().endsWith(fileName)) {
+        return p;
+      }
+    }
+    return null;
   }
 
   // Returns value of http request parameter.
@@ -251,16 +268,16 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     return Boolean.parseBoolean(includeParam);
   }
 
-  private void writeFilesToArchive(Map<Object, Path> copyFiles,
-                         Map<Path, Path> hardLinkFiles,
-                         ArchiveOutputStream archiveOutputStream)
+  private void writeFilesToArchive(Set<Path> copyFiles,
+                                   Map<Path, Path> hardLinkFiles,
+                                   ArchiveOutputStream archiveOutputStream)
       throws IOException {
 
     File metaDirPath = ServerUtils.getOzoneMetaDirPath(getConf());
     int truncateLength = metaDirPath.toString().length() + 1;
 
     // Go through each of the files to be copied and add to archive.
-    for (Path file : copyFiles.values()) {
+    for (Path file : copyFiles) {
       String fixedFile = truncateFileName(truncateLength, file);
       if (fixedFile.startsWith(OM_CHECKPOINT_DIR)) {
         // checkpoint files go to root of tarball

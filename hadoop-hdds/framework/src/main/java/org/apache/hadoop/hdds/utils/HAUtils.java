@@ -66,6 +66,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CA_LIST_RETRY_INTERVAL;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CA_LIST_RETRY_INTERVAL_DEFAULT;
@@ -363,20 +365,17 @@ public final class HAUtils {
    * @param db the file representing the DB to be scanned
    * @return the list of SST file name. If db not exist, will return empty list
    */
-  public static List<String> getExistingSstFiles(File db) {
+  public static List<String> getExistingSstFiles(File db) throws IOException {
     List<String> sstList = new ArrayList<>();
     if (!db.exists()) {
       return sstList;
     }
-    FilenameFilter filter = new FilenameFilter() {
-      @Override
-      public boolean accept(File dir, String name) {
-        return name.endsWith(ROCKSDB_SST_SUFFIX);
-      }
-    };
-    String[] tempArray = db.list(filter);
-    if (tempArray != null) {
-      sstList = Arrays.asList(tempArray);
+
+    try(Stream<Path> files = Files.walk(db.toPath())) {
+      sstList.addAll(
+          files.filter(path -> path.endsWith(ROCKSDB_SST_SUFFIX))
+              .map(Path::toString)
+              .collect(Collectors.toList()));
       if (LOG.isDebugEnabled()) {
         LOG.debug("Scanned SST files {} in {}.", sstList, db.getAbsolutePath());
       }
