@@ -73,7 +73,7 @@ import static org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils.truncateFileNa
  *
  * If Kerberos is enabled, the principal should be appended to
  * `ozone.administrator`, e.g. `scm/scm@EXAMPLE.COM`
- * If Kerberos is not enabled, simply append the login user name to
+ * If Kerberos is not enabled, simply append the login username to
  * `ozone.administrator`, e.g. `scm`
  */
 public class OMDBCheckpointServlet extends DBCheckpointServlet {
@@ -127,10 +127,10 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     // Map of link to path.
     Map<Path, Path> hardLinkFiles = new HashMap<>();
 
-    Set<Path> excludeFiles = normalizeExcludeList(toExcludeList, checkpoint);
+    Set<Path> toExcludeFiles = normalizeExcludeList(toExcludeList, checkpoint);
 
-    getFilesForArchive(checkpoint, copyFiles, hardLinkFiles, excludeFiles,
-        includeSnapshotData(request));
+    getFilesForArchive(checkpoint, copyFiles, hardLinkFiles, toExcludeFiles,
+        includeSnapshotData(request), excluded);
 
     try (TarArchiveOutputStream archiveOutputStream =
             new TarArchiveOutputStream(destination)) {
@@ -162,13 +162,14 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
   private void getFilesForArchive(DBCheckpoint checkpoint,
                                   Set<Path> copyFiles,
                                   Map<Path, Path> hardLinkFiles,
-                                  Set<Path> excludeFiles,
-                                  boolean includeSnapshotData)
+                                  Set<Path> toExcludeFiles,
+                                  boolean includeSnapshotData,
+                                  List<String> excluded)
       throws IOException {
 
     // Get the active fs files.
     Path dir = checkpoint.getCheckpointLocation();
-    processDir(dir, copyFiles, hardLinkFiles, excludeFiles, new HashSet<>());
+    processDir(dir, copyFiles, hardLinkFiles, toExcludeFiles, new HashSet<>(), excluded);
 
     if (!includeSnapshotData) {
       return;
@@ -178,7 +179,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     Set<Path> snapshotPaths = waitForSnapshotDirs(checkpoint);
     Path snapshotDir = Paths.get(OMStorage.getOmDbDir(getConf()).toString(),
         OM_SNAPSHOT_DIR);
-    processDir(snapshotDir, copyFiles, hardLinkFiles, excludeFiles, snapshotPaths);
+    processDir(snapshotDir, copyFiles, hardLinkFiles, toExcludeFiles, snapshotPaths, excluded);
   }
 
   /**
@@ -221,8 +222,9 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
 
   private void processDir(Path dir, Set<Path> copyFiles,
                           Map<Path, Path> hardLinkFiles,
-                          Set<Path> excludeFiles,
-                          Set<Path> snapshotPaths)
+                          Set<Path> toExcludeFiles,
+                          Set<Path> snapshotPaths,
+                          List<String> excluded)
       throws IOException {
     try (Stream<Path> files = Files.list(dir)) {
       for (Path file : files.collect(Collectors.toList())) {
@@ -235,10 +237,10 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
             LOG.debug("Skipping unneeded file: " + file);
             continue;
           }
-          processDir(file, copyFiles, hardLinkFiles, excludeFiles,
-              snapshotPaths);
+          processDir(file, copyFiles, hardLinkFiles, toExcludeFiles,
+              snapshotPaths, excluded);
         } else {
-          processFile(file, copyFiles, hardLinkFiles, excludeFiles);
+          processFile(file, copyFiles, hardLinkFiles, toExcludeFiles, excluded);
         }
       }
     }
@@ -246,12 +248,15 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
 
   private void processFile(Path file, Set<Path> copyFiles,
                            Map<Path, Path> hardLinkFiles,
-                           Set<Path> excludeFiles) {
-    if (!excludeFiles.contains(file)) {
+                           Set<Path> toExcludeFiles,
+                           List<String> excluded) {
+    if (toExcludeFiles.contains(file)) {
+      excluded.add(file.toString());
+    } else {
       String fileName = file.getFileName().toString();
       if (fileName.endsWith(ROCKSDB_SST_SUFFIX)) {
         // see if there is a link for the sst file
-        Path linkPath = findLinkPath(excludeFiles, fileName);
+        Path linkPath = findLinkPath(toExcludeFiles, fileName);
         if (linkPath != null) {
           hardLinkFiles.put(file, linkPath);
         } else {
