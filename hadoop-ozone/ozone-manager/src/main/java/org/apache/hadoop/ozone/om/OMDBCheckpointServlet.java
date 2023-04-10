@@ -127,9 +127,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     // Map of link to path.
     Map<Path, Path> hardLinkFiles = new HashMap<>();
 
-    Set<Path> excludeFiles = toExcludeList.stream().
-        map(Paths::get).
-        collect(Collectors.toSet());
+    Set<Path> excludeFiles = normalizeExcludeList(toExcludeList, checkpoint);
 
     getFilesForArchive(checkpoint, copyFiles, hardLinkFiles, excludeFiles,
         includeSnapshotData(request));
@@ -141,6 +139,24 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
       writeFilesToArchive(copyFiles, hardLinkFiles, archiveOutputStream);
     }
     return excluded;
+  }
+
+  private Set<Path> normalizeExcludeList(List<String> toExcludeList, DBCheckpoint checkpoint) {
+    Set<Path> paths = new HashSet<>();
+    String metaDirPath = ServerUtils.getOzoneMetaDirPath(getConf()).toString();
+    for (String s: toExcludeList) {
+      if (!s.startsWith(OM_SNAPSHOT_DIR)) {
+        Path fixedPath = Paths.get(checkpoint.getCheckpointLocation().toString(), s);
+        // Don't include files that have been compacted away, because they will disappear
+        //  when the new sst files are read in.
+        if (fixedPath.toFile().exists()) {
+          paths.add(fixedPath);
+        }
+      } else {
+        paths.add(Paths.get(metaDirPath, s));
+      }
+    }
+    return paths;
   }
 
   private void getFilesForArchive(DBCheckpoint checkpoint,

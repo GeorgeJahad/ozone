@@ -371,10 +371,11 @@ public final class HAUtils {
       return sstList;
     }
 
+    int truncateLength = db.toString().length() + 1;
     try(Stream<Path> files = Files.walk(db.toPath())) {
       sstList.addAll(
-          files.filter(path -> path.endsWith(ROCKSDB_SST_SUFFIX))
-              .map(Path::toString)
+          files.filter(path -> path.toString().endsWith(ROCKSDB_SST_SUFFIX))
+              .map(p -> p.toString().substring(truncateLength))
               .collect(Collectors.toList()));
       if (LOG.isDebugEnabled()) {
         LOG.debug("Scanned SST files {} in {}.", sstList, db.getAbsolutePath());
