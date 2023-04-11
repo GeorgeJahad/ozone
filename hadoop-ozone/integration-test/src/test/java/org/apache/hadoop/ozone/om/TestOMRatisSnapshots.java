@@ -346,6 +346,9 @@ public class TestOMRatisSnapshots {
     List<String> firstKeys = writeKeysToIncreaseLogIndex(leaderRatisServer,
         80);
 
+    createOzoneSnapshot(leaderOM, "snap2");
+
+
     // Start the inactive OM. Checkpoint installation will happen spontaneously.
     cluster.startInactiveOM(followerNodeId);
 
@@ -359,6 +362,7 @@ public class TestOMRatisSnapshots {
     List<String> secondKeys = writeKeysToIncreaseLogIndex(leaderRatisServer,
         160);
 
+    createOzoneSnapshot(leaderOM, "snap3");
     // Resume the follower thread, it would download the incremental snapshot.
     faultInjector.resume();
 
@@ -380,8 +384,7 @@ public class TestOMRatisSnapshots {
     for (String s: sstFiles) {
       File sstFile = getFullPath(followerActiveDir, s).toFile();
       Assertions.assertFalse(sstFile.exists(),
-          "Incremental checkpoint should not " +
-              "duplicate existing files");
+          sstFile + " should not duplicate existing files");
     }
     Path hardLinkFile = Paths.get(tempDir.toString(), OM_HARDLINK_FILE);
     try (Stream<String> lines = Files.lines(hardLinkFile)) {
@@ -892,13 +895,18 @@ public class TestOMRatisSnapshots {
     Assert.assertTrue(logCapture.getOutput().contains(msg));
   }
 
+
   private SnapshotInfo createOzoneSnapshot(OzoneManager leaderOM)
       throws IOException {
-    objectStore.createSnapshot(volumeName, bucketName, "snap1");
+    return createOzoneSnapshot(leaderOM, "snap1");
+  }
+  private SnapshotInfo createOzoneSnapshot(OzoneManager leaderOM, String name)
+      throws IOException {
+    objectStore.createSnapshot(volumeName, bucketName, name);
 
     String tableKey = SnapshotInfo.getTableKey(volumeName,
                                                bucketName,
-                                               "snap1");
+                                               name);
     SnapshotInfo snapshotInfo = leaderOM.getMetadataManager()
         .getSnapshotInfoTable()
         .get(tableKey);
@@ -966,7 +974,7 @@ public class TestOMRatisSnapshots {
         reduce("", (s1, s2) -> {
           return s1.compareToIgnoreCase(s2) > 0 ? s1 : s2;
         });
-    FileUtil.unTar(new File(tarBall), tempDir.toFile());
+    FileUtil.unTar(new File(snapshotDir, tarBall), tempDir.toFile());
     return tempDir;
   }
 
