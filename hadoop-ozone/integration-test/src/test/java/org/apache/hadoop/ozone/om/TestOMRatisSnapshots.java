@@ -17,6 +17,7 @@
 package org.apache.hadoop.ozone.om;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.ExitManager;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
@@ -56,15 +57,18 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -76,8 +80,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
+import static org.apache.hadoop.ozone.om.OmSnapshotManager.OM_HARDLINK_FILE;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPath;
 import static org.apache.hadoop.ozone.om.TestOzoneManagerHAWithData.createKey;
+import static org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils.getFullPath;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -315,7 +321,8 @@ public class TestOMRatisSnapshots {
 
   @Test
   @Timeout(300)
-  public void testInstallIncrementalSnapshot() throws Exception {
+  public void testInstallIncrementalSnapshot(@TempDir Path tempDir)
+      throws Exception {
     // Get the leader OM
     String leaderOMNodeId = OmFailoverProxyUtil
         .getFailoverProxyProvider(objectStore.getClientProxy())
@@ -353,6 +360,40 @@ public class TestOMRatisSnapshots {
         160);
 
     // Resume the follower thread, it would download the incremental snapshot.
+    faultInjector.resume();
+
+    // Pause the follower thread again to block the second-time install
+    faultInjector.reset();
+
+    // Wait the follower download the incremental snapshot, but get stuck
+    // by injector
+    GenericTestUtils.waitFor(() -> {
+      return followerOM.getOmSnapshotProvider().getNumDownloaded() == 2;
+    }, 1000, 10000);
+
+    unTarLatestTarBall(followerOM, tempDir);
+    List<String> sstFiles = HAUtils.getExistingSstFiles(tempDir.toFile());
+    File followerMetaDir = OMStorage.getOmDbDir(followerOM.getConfiguration());
+    Path followerActiveDir =
+        Paths.get(followerMetaDir.toString(), OM_DB_NAME);
+
+    for (String s: sstFiles) {
+      File sstFile = getFullPath(followerActiveDir, s).toFile();
+      Assertions.assertFalse(sstFile.exists(),
+          "Incremental checkpoint should not " +
+              "duplicate existing files");
+    }
+    Path hardLinkFile = Paths.get(tempDir.toString(), OM_HARDLINK_FILE);
+    try (Stream<String> lines = Files.lines(hardLinkFile)) {
+      for (String line: lines.collect(Collectors.toList())) {
+        String link = line.split("\t")[0];
+        File linkFile = getFullPath(followerActiveDir, link).toFile();
+        Assertions.assertFalse(linkFile.exists(),
+            "Incremental checkpoint should not " +
+                "duplicate existing links");
+      }
+    }
+
     faultInjector.resume();
 
     // Get the latest db checkpoint from the leader OM.
@@ -912,6 +953,21 @@ public class TestOMRatisSnapshots {
       inputStream.read(data, 0, 100);
       inputStream.close();
     }
+  }
+
+  // Returns temp dir where tarball was untarred.
+  private Path unTarLatestTarBall(OzoneManager followerOm, Path tempDir)
+      throws IOException {
+    File snapshotDir = followerOm.getOmSnapshotProvider().getSnapshotDir();
+    String tarBall = Arrays.stream(snapshotDir.list()).
+        filter(s -> {
+          return s.toLowerCase().endsWith(".tar");
+        }).
+        reduce("", (s1, s2) -> {
+          return s1.compareToIgnoreCase(s2) > 0 ? s1 : s2;
+        });
+    FileUtil.unTar(new File(tarBall), tempDir.toFile());
+    return tempDir;
   }
 
   private static class DummyExitManager extends ExitManager {

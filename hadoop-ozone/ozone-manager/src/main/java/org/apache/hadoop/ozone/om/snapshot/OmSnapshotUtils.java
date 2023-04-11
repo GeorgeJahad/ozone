@@ -127,7 +127,8 @@ public final class OmSnapshotUtils {
   }
 
   // Prepend the full path to the hard link entry entry.
-  private static Path getFullPath(Path dbPath, String fileName)
+  @VisibleForTesting
+  public static Path getFullPath(Path dbPath, String fileName)
       throws IOException {
     File file = new File(fileName);
     // If there is no directory then this file belongs in the db.
