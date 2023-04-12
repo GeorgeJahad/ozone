@@ -141,14 +141,19 @@ public final class OmSnapshotUtils {
     int truncateLength = oldDir.toString().length() + 1;
     List<String> oldDirList = new ArrayList();
     try (Stream<Path> files = Files.walk(oldDir.toPath())) {
-      oldDirList =
-          files.map(p -> p.toString().substring(truncateLength)).
-              collect(Collectors.toList());
+      oldDirList = files.map(Path::toString).
+          filter(s -> !s.equals(oldDir.toString())).
+          map(s -> s.substring(truncateLength)).
+          sorted().
+          collect(Collectors.toList());
     }
-    oldDirList.sort(String::compareToIgnoreCase);
     for (String s: oldDirList) {
       File oldFile = new File(oldDir, s);
       File newFile = new File(newDir, s);
+      File newParent = newFile.getParentFile();
+      if (!newParent.exists()) {
+        newParent.mkdirs();
+      }
       if (oldFile.isDirectory()) {
         newFile.mkdirs();
       } else {

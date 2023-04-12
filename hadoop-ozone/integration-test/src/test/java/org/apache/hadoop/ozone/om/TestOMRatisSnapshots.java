@@ -321,7 +321,7 @@ public class TestOMRatisSnapshots {
 
   @Test
   //gbjfix
-  @Timeout(300000)
+  @Timeout(300)
   public void testInstallIncrementalSnapshot(@TempDir Path tempDir)
       throws Exception {
     // Get the leader OM
@@ -357,7 +357,7 @@ public class TestOMRatisSnapshots {
     //gbjfix
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmSnapshotProvider().getNumDownloaded() == 1;
-    }, 1000, 10000000);
+    }, 1000, 10000);
 
     // Do some transactions, let leader OM take a new snapshot and purge the
     // old logs, so that follower must download the new snapshot again.
@@ -376,7 +376,7 @@ public class TestOMRatisSnapshots {
     // by injector
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmSnapshotProvider().getNumDownloaded() == 2;
-    }, 1000, 1000000);
+    }, 1000, 10000);
 
     unTarLatestTarBall(followerOM, tempDir);
     List<String> sstFiles = HAUtils.getExistingSstFiles(tempDir.toFile());
