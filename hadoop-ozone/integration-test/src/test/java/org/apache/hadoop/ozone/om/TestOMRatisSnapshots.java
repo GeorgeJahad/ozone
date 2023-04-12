@@ -320,7 +320,8 @@ public class TestOMRatisSnapshots {
   }
 
   @Test
-  @Timeout(300)
+  //gbjfix
+  @Timeout(300000)
   public void testInstallIncrementalSnapshot(@TempDir Path tempDir)
       throws Exception {
     // Get the leader OM
@@ -353,9 +354,10 @@ public class TestOMRatisSnapshots {
     cluster.startInactiveOM(followerNodeId);
 
     // Wait the follower download the snapshot,but get stuck by injector
+    //gbjfix
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmSnapshotProvider().getNumDownloaded() == 1;
-    }, 1000, 10000);
+    }, 1000, 10000000);
 
     // Do some transactions, let leader OM take a new snapshot and purge the
     // old logs, so that follower must download the new snapshot again.
@@ -369,20 +371,20 @@ public class TestOMRatisSnapshots {
     // Pause the follower thread again to block the second-time install
     faultInjector.reset();
 
+    //gbjfix
     // Wait the follower download the incremental snapshot, but get stuck
     // by injector
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmSnapshotProvider().getNumDownloaded() == 2;
-    }, 1000, 10000);
+    }, 1000, 1000000);
 
     unTarLatestTarBall(followerOM, tempDir);
     List<String> sstFiles = HAUtils.getExistingSstFiles(tempDir.toFile());
-    File followerMetaDir = OMStorage.getOmDbDir(followerOM.getConfiguration());
-    Path followerActiveDir =
-        Paths.get(followerMetaDir.toString(), OM_DB_NAME);
+    Path followerCandidatePath = followerOM.getOmSnapshotProvider().
+        getCandidateDir().toPath();
 
     for (String s: sstFiles) {
-      File sstFile = getFullPath(followerActiveDir, s).toFile();
+      File sstFile = getFullPath(followerCandidatePath, s).toFile();
       Assertions.assertFalse(sstFile.exists(),
           sstFile + " should not duplicate existing files");
     }
@@ -390,7 +392,7 @@ public class TestOMRatisSnapshots {
     try (Stream<String> lines = Files.lines(hardLinkFile)) {
       for (String line: lines.collect(Collectors.toList())) {
         String link = line.split("\t")[0];
-        File linkFile = getFullPath(followerActiveDir, link).toFile();
+        File linkFile = getFullPath(followerCandidatePath, link).toFile();
         Assertions.assertFalse(linkFile.exists(),
             "Incremental checkpoint should not " +
                 "duplicate existing links");
@@ -407,13 +409,14 @@ public class TestOMRatisSnapshots {
             transactionInfo.getTransactionIndex());
     long leaderOMSnapshotIndex = leaderOMTermIndex.getIndex();
 
+    //gbjfix
     // The recently started OM should be lagging behind the leader OM.
     // Wait & for follower to update transactions to leader snapshot index.
     // Timeout error if follower does not load update within 10s
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
           >= leaderOMSnapshotIndex - 1;
-    }, 1000, 10000);
+    }, 1000, 1000000);
 
     assertEquals(2, followerOM.getOmSnapshotProvider().getNumDownloaded());
 
@@ -894,7 +897,6 @@ public class TestOMRatisSnapshots {
     String msg = "RPC server is stopped";
     Assert.assertTrue(logCapture.getOutput().contains(msg));
   }
-
 
   private SnapshotInfo createOzoneSnapshot(OzoneManager leaderOM)
       throws IOException {

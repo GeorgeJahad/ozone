@@ -147,11 +147,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     for (String s: toExcludeList) {
       if (!s.startsWith(OM_SNAPSHOT_DIR)) {
         Path fixedPath = Paths.get(checkpoint.getCheckpointLocation().toString(), s);
-        // Don't include files that have been compacted away, because they will disappear
-        //  when the new sst files are read in.
-        if (fixedPath.toFile().exists()) {
-          paths.add(fixedPath);
-        }
+        paths.add(fixedPath);
       } else {
         paths.add(Paths.get(metaDirPath, s));
       }

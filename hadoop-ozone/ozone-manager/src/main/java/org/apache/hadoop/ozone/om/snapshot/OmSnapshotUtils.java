@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -40,7 +41,8 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_CHECKPOINT_DIR;
  */
 public final class OmSnapshotUtils {
 
-  private OmSnapshotUtils() { }
+  private OmSnapshotUtils() {
+  }
 
   /**
    * Get the filename without the introductory metadata directory.
@@ -131,15 +133,27 @@ public final class OmSnapshotUtils {
   public static Path getFullPath(Path dbPath, String fileName)
       throws IOException {
     File file = new File(fileName);
-    // If there is no directory then this file belongs in the db.
-    if (file.getName().equals(fileName)) {
-      return Paths.get(dbPath.toString(), fileName);
+    return Paths.get(dbPath.toString(), fileName);
+  }
+
+  public static void linkFiles(File oldDir, File newDir)
+      throws IOException {
+    int truncateLength = oldDir.toString().length() + 1;
+    List<String> oldDirList = new ArrayList();
+    try (Stream<Path> files = Files.walk(oldDir.toPath())) {
+      oldDirList =
+          files.map(p -> p.toString().substring(truncateLength)).
+              collect(Collectors.toList());
     }
-    // Else this file belong in a directory parallel to the db.
-    Path parent = dbPath.getParent();
-    if (parent == null) {
-      throw new IOException("Invalid database " + dbPath);
+    oldDirList.sort(String::compareToIgnoreCase);
+    for (String s: oldDirList) {
+      File oldFile = new File(oldDir, s);
+      File newFile = new File(newDir, s);
+      if (oldFile.isDirectory()) {
+        newFile.mkdirs();
+      } else {
+        Files.createLink(newFile.toPath(), oldFile.toPath());
+      }
     }
-    return Paths.get(parent.toString(), fileName);
   }
 }

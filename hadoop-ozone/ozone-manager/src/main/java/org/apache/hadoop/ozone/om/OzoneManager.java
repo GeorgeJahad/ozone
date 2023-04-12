@@ -3782,8 +3782,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       // an inconsistent state and this marker file will fail OM from
       // starting up.
       Files.createFile(markerFile);
-      // Copy the candidate DB to real DB
-      org.apache.commons.io.FileUtils.copyDirectory(checkpointPath.toFile(),
+      // Link each of the candidate DB files to real DB
+      OmSnapshotUtils.linkFiles(checkpointPath.toFile(),
           oldDB);
       moveOmSnapshotData(oldDB.toPath(), dbSnapshotsDir.toPath());
       Files.deleteIfExists(markerFile);
@@ -3814,7 +3814,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         OM_SNAPSHOT_DIR);
     if (incomingSnapshotsDir.toFile().exists()) {
       Files.move(incomingSnapshotsDir, dbSnapshotsDir);
-      OmSnapshotUtils.createHardLinks(dbPath);
     }
   }
 
