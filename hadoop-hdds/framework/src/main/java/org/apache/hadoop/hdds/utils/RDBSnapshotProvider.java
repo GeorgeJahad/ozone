@@ -60,6 +60,7 @@ public abstract class RDBSnapshotProvider implements Closeable {
   private final AtomicReference<String> lastLeaderRef;
   private final AtomicLong numDownloaded;
   private FaultInjector injector;
+  private final AtomicLong initCount;
 
   public RDBSnapshotProvider(File snapshotDir, String dbName) {
     this.snapshotDir = snapshotDir;
@@ -68,6 +69,7 @@ public abstract class RDBSnapshotProvider implements Closeable {
     this.injector = null;
     this.lastLeaderRef = new AtomicReference<>(null);
     this.numDownloaded = new AtomicLong();
+    this.initCount = new AtomicLong();
     init();
   }
 
@@ -91,6 +93,7 @@ public abstract class RDBSnapshotProvider implements Closeable {
 
     // reset leader info
     lastLeaderRef.set(null);
+    initCount.incrementAndGet();
   }
 
   /**
@@ -230,5 +233,10 @@ public abstract class RDBSnapshotProvider implements Closeable {
   @VisibleForTesting
   public long getNumDownloaded() {
     return numDownloaded.get();
+  }
+
+  @VisibleForTesting
+  public long getInitCount() {
+    return initCount.get();
   }
 }

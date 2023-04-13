@@ -518,7 +518,7 @@ public class TestOMRatisSnapshots {
     omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
-        .setKeyName(".snapshot/snap3/" + secondKeys.get(0)).build();
+        .setKeyName(".snapshot/snap3/" + secondKeys.get(secondKeys.size() - 1)).build();
     omKeyInfo = followerOM.lookupKey(omKeyArgs);
     Assertions.assertNotNull(omKeyInfo);
     Assertions.assertEquals(omKeyInfo.getKeyName(), omKeyArgs.getKeyName());
@@ -564,7 +564,8 @@ public class TestOMRatisSnapshots {
       }
     }
     Assertions.assertTrue(hardLinkCount > 0, "No hard links were found");
-
+    Assertions.assertEquals(followerOM.getOmSnapshotProvider().getInitCount(), 2,
+        "Only initialized twice");
   }
 
   @Test
