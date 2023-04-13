@@ -83,7 +83,6 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.OM_HARDLINK_FILE;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPath;
 import static org.apache.hadoop.ozone.om.TestOzoneManagerHAWithData.createKey;
-import static org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils.getFullPath;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -384,7 +383,7 @@ public class TestOMRatisSnapshots {
         getCandidateDir().toPath();
 
     for (String s: sstFiles) {
-      File sstFile = getFullPath(followerCandidatePath, s).toFile();
+      File sstFile = Paths.get(followerCandidatePath.toString(), s).toFile();
       Assertions.assertFalse(sstFile.exists(),
           sstFile + " should not duplicate existing files");
     }
@@ -392,7 +391,7 @@ public class TestOMRatisSnapshots {
     try (Stream<String> lines = Files.lines(hardLinkFile)) {
       for (String line: lines.collect(Collectors.toList())) {
         String link = line.split("\t")[0];
-        File linkFile = getFullPath(followerCandidatePath, link).toFile();
+        File linkFile = Paths.get(followerCandidatePath.toString(), link).toFile();
         Assertions.assertFalse(linkFile.exists(),
             "Incremental checkpoint should not " +
                 "duplicate existing links");

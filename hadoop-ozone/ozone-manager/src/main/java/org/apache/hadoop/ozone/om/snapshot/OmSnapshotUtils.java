@@ -28,7 +28,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -41,8 +40,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_CHECKPOINT_DIR;
  */
 public final class OmSnapshotUtils {
 
-  private OmSnapshotUtils() {
-  }
+  private OmSnapshotUtils() { }
 
   /**
    * Get the filename without the introductory metadata directory.
@@ -117,8 +115,8 @@ public final class OmSnapshotUtils {
         for (String l : lines) {
           String from = l.split("\t")[1];
           String to = l.split("\t")[0];
-          Path fullFromPath = getFullPath(dbPath, from);
-          Path fullToPath = getFullPath(dbPath, to);
+          Path fullFromPath = Paths.get(dbPath.toString(), from);
+          Path fullToPath = Paths.get(dbPath.toString(), to);
           Files.createLink(fullToPath, fullFromPath);
         }
         if (!hardLinkFile.delete()) {
@@ -128,17 +126,10 @@ public final class OmSnapshotUtils {
     }
   }
 
-  // Prepend the full path to the hard link entry entry.
-  @VisibleForTesting
-  public static Path getFullPath(Path dbPath, String fileName)
-      throws IOException {
-    return Paths.get(dbPath.toString(), fileName);
-  }
-
   public static void linkFiles(File oldDir, File newDir)
       throws IOException {
     int truncateLength = oldDir.toString().length() + 1;
-    List<String> oldDirList = new ArrayList();
+    List<String> oldDirList;
     try (Stream<Path> files = Files.walk(oldDir.toPath())) {
       oldDirList = files.map(Path::toString).
           filter(s -> !s.equals(oldDir.toString())).
