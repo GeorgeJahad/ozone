@@ -153,18 +153,18 @@ public class TestOmSnapshotManager {
     }
 
     // Create map of links to dummy files.
-    File checkpointDir1 = new File(testDir.toString(),
+    File checkpointDir1 = new File(candidateDir.toString(),
         OM_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir1");
     Map<Path, Path> hardLinkFiles = new HashMap<>();
-    hardLinkFiles.put(fixPath(snapDir2.toString(), "f1"),
-        fixPath(checkpointDir1.toString(), "f1"));
-    hardLinkFiles.put(fixPath(snapDir2.toString(), "s1"),
-        fixPath(snapDir1.toString(), "s1"));
+    hardLinkFiles.put(Paths.get(snapDir2.toString(), "f1"),
+        Paths.get(checkpointDir1.toString(), "f1"));
+    hardLinkFiles.put(Paths.get(snapDir2.toString(), "s1"),
+        Paths.get(snapDir1.toString(), "s1"));
 
     // Create link list.
     Path hardLinkList =
         OmSnapshotUtils.createHardLinkList(
-            testDir.toString().length() + 1, hardLinkFiles);
+            candidateDir.toString().length() + 1, hardLinkFiles);
     Files.move(hardLinkList, Paths.get(candidateDir.toString(),
         OM_HARDLINK_FILE));
 
@@ -173,33 +173,17 @@ public class TestOmSnapshotManager {
 
     // Confirm expected links.
     for (Map.Entry<Path, Path> entry : hardLinkFiles.entrySet()) {
-      Path key = restorePath(entry.getKey());
-      Assert.assertTrue(key.toFile().exists());
-      Path value = restorePath(entry.getValue());
+      Assert.assertTrue(entry.getKey().toFile().exists());
+      Path value = entry.getValue();
       // Convert checkpoint path to om.db.
       if (value.toString().contains(OM_CHECKPOINT_DIR)) {
         value = Paths.get(candidateDir.toString(),
                           value.getFileName().toString());
       }
       Assert.assertEquals("link matches original file",
-          getINode(key), getINode(value));
+          getINode(entry.getKey()), getINode(value));
     }
   }
-
-  private Path fixPath(String dirString, String fileName) {
-    String fixedDirstring = dirString.replace(
-        CANDIDATE_DIR_NAME + OM_KEY_PREFIX + OM_SNAPSHOT_CHECKPOINT_DIR,
-        OM_SNAPSHOT_CHECKPOINT_DIR);
-    return Paths.get(fixedDirstring, fileName);
-  }
-
-  private Path restorePath(Path p) {
-    return Paths.get(p.toString().replace(
-        OM_SNAPSHOT_CHECKPOINT_DIR,
-        CANDIDATE_DIR_NAME + OM_KEY_PREFIX +
-            OM_SNAPSHOT_CHECKPOINT_DIR));
-  }
-
 
   private SnapshotInfo createSnapshotInfo() {
     String snapshotName = UUID.randomUUID().toString();

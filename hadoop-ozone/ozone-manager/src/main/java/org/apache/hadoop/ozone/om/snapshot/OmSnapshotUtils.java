@@ -132,7 +132,6 @@ public final class OmSnapshotUtils {
   @VisibleForTesting
   public static Path getFullPath(Path dbPath, String fileName)
       throws IOException {
-    File file = new File(fileName);
     return Paths.get(dbPath.toString(), fileName);
   }
 
