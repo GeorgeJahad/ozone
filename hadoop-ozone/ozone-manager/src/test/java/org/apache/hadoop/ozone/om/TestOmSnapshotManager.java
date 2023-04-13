@@ -48,6 +48,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_CHECKPOINT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_CHECKPOINT_DIR;
+import static org.apache.hadoop.ozone.OzoneConsts.SNAPSHOT_CANDIDATE_DIR;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.OM_HARDLINK_FILE;
 import static org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils.getINode;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPrefix;
@@ -64,7 +65,7 @@ public class TestOmSnapshotManager {
 
   private OzoneManager om;
   private File testDir;
-
+  private static final String CANDIDATE_DIR_NAME = OM_DB_NAME + SNAPSHOT_CANDIDATE_DIR;
   @Before
   public void init() throws Exception {
     OzoneConfiguration configuration = new OzoneConfiguration();
@@ -127,31 +128,27 @@ public class TestOmSnapshotManager {
     verify(firstSnapshotStore, timeout(3000).times(1)).close();
   }
 
-  // gbjfix
-  //@Test
+  @Test
   @SuppressFBWarnings({"NP_NULL_ON_SOME_PATH"})
   public void testHardLinkCreation() throws IOException {
     byte[] dummyData = {0};
 
     // Create dummy files to be linked to.
-    File dbDir = new File(testDir.toString(), OM_DB_NAME);
-    Files.write(Paths.get(dbDir.toString(), "f1"), dummyData);
+    File candidateDir = new File(testDir.toString(),
+        CANDIDATE_DIR_NAME);
+    candidateDir.mkdirs();
+    Files.write(Paths.get(candidateDir.toString(), "f1"), dummyData);
 
-    // Create dummy files to be linked to.
-    File snapDir1 = new File(testDir.toString(),
+    File snapDir1 = new File(candidateDir.toString(),
         OM_SNAPSHOT_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir1");
-    File fullSnapDir1 = new File(dbDir.toString(),
-        OM_SNAPSHOT_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir1");
-    if (!fullSnapDir1.mkdirs()) {
+    if (!snapDir1.mkdirs()) {
       throw new IOException("failed to make directory: " + snapDir1);
     }
-    Files.write(Paths.get(fullSnapDir1.toString(), "s1"), dummyData);
+    Files.write(Paths.get(snapDir1.toString(), "s1"), dummyData);
 
-    File snapDir2 = new File(testDir.toString(),
+    File snapDir2 = new File(candidateDir.toString(),
         OM_SNAPSHOT_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir2");
-    File fullSnapDir2 = new File(dbDir.toString(),
-        OM_SNAPSHOT_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir2");
-    if (!fullSnapDir2.mkdirs()) {
+    if (!snapDir2.mkdirs()) {
       throw new IOException("failed to make directory: " + snapDir2);
     }
 
@@ -159,33 +156,50 @@ public class TestOmSnapshotManager {
     File checkpointDir1 = new File(testDir.toString(),
         OM_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir1");
     Map<Path, Path> hardLinkFiles = new HashMap<>();
-    hardLinkFiles.put(Paths.get(snapDir2.toString(), "f1"),
-        Paths.get(checkpointDir1.toString(), "f1"));
-    hardLinkFiles.put(Paths.get(snapDir2.toString(), "s1"),
-        Paths.get(snapDir1.toString(), "s1"));
+    hardLinkFiles.put(fixPath(snapDir2.toString(), "f1"),
+        fixPath(checkpointDir1.toString(), "f1"));
+    hardLinkFiles.put(fixPath(snapDir2.toString(), "s1"),
+        fixPath(snapDir1.toString(), "s1"));
 
     // Create link list.
     Path hardLinkList =
         OmSnapshotUtils.createHardLinkList(
             testDir.toString().length() + 1, hardLinkFiles);
-    Files.move(hardLinkList, Paths.get(dbDir.toString(), OM_HARDLINK_FILE));
+    Files.move(hardLinkList, Paths.get(candidateDir.toString(),
+        OM_HARDLINK_FILE));
 
     // Create links from list.
-    OmSnapshotUtils.createHardLinks(dbDir.toPath());
+    OmSnapshotUtils.createHardLinks(candidateDir.toPath());
 
     // Confirm expected links.
     for (Map.Entry<Path, Path> entry : hardLinkFiles.entrySet()) {
-      Assert.assertTrue(entry.getKey().toFile().exists());
-      Path value = entry.getValue();
+      Path key = restorePath(entry.getKey());
+      Assert.assertTrue(key.toFile().exists());
+      Path value = restorePath(entry.getValue());
       // Convert checkpoint path to om.db.
       if (value.toString().contains(OM_CHECKPOINT_DIR)) {
-        value = Paths.get(dbDir.toString(),
+        value = Paths.get(candidateDir.toString(),
                           value.getFileName().toString());
       }
       Assert.assertEquals("link matches original file",
-          getINode(entry.getKey()), getINode(value));
+          getINode(key), getINode(value));
     }
   }
+
+  private Path fixPath(String dirString, String fileName) {
+    String fixedDirstring = dirString.replace(
+        CANDIDATE_DIR_NAME + OM_KEY_PREFIX + OM_SNAPSHOT_CHECKPOINT_DIR,
+        OM_SNAPSHOT_CHECKPOINT_DIR);
+    return Paths.get(fixedDirstring, fileName);
+  }
+
+  private Path restorePath(Path p) {
+    return Paths.get(p.toString().replace(
+        OM_SNAPSHOT_CHECKPOINT_DIR,
+        CANDIDATE_DIR_NAME + OM_KEY_PREFIX +
+            OM_SNAPSHOT_CHECKPOINT_DIR));
+  }
+
 
   private SnapshotInfo createSnapshotInfo() {
     String snapshotName = UUID.randomUUID().toString();
