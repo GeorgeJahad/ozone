@@ -347,7 +347,7 @@ public class TestOMRatisSnapshots {
     List<String> firstKeys = writeKeysToIncreaseLogIndex(leaderRatisServer,
         80);
 
-    createOzoneSnapshot(leaderOM, "snap2");
+    SnapshotInfo snapshotInfo2 = createOzoneSnapshot(leaderOM, "snap2");
 
 
     // Start the inactive OM. Checkpoint installation will happen spontaneously.
@@ -364,7 +364,7 @@ public class TestOMRatisSnapshots {
     List<String> secondKeys = writeKeysToIncreaseLogIndex(leaderRatisServer,
         160);
 
-    createOzoneSnapshot(leaderOM, "snap3");
+    SnapshotInfo snapshotInfo3 = createOzoneSnapshot(leaderOM, "snap3");
     // Resume the follower thread, it would download the incremental snapshot.
     faultInjector.resume();
 
@@ -461,6 +461,110 @@ public class TestOMRatisSnapshots {
         getCandidateDir().list();
     assertNotNull(filesInCandidate);
     assertEquals(0, filesInCandidate.length);
+
+    // Read back data from the OM snapshot.
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(".snapshot/snap2/" + firstKeys.get(0)).build();
+    OmKeyInfo omKeyInfo;
+    omKeyInfo = followerOM.lookupKey(omKeyArgs);
+    Assertions.assertNotNull(omKeyInfo);
+    Assertions.assertEquals(omKeyInfo.getKeyName(), omKeyArgs.getKeyName());
+
+    // Confirm followers snapshot hard links are as expected
+    File followerMetaDir = OMStorage.getOmDbDir(followerOM.getConfiguration());
+    Path followerActiveDir = Paths.get(followerMetaDir.toString(), OM_DB_NAME);
+    Path followerSnapshotDir =
+        Paths.get(getSnapshotPath(followerOM.getConfiguration(), snapshotInfo2));
+    File leaderMetaDir = OMStorage.getOmDbDir(leaderOM.getConfiguration());
+    Path leaderActiveDir = Paths.get(leaderMetaDir.toString(), OM_DB_NAME);
+    Path leaderSnapshotDir =
+        Paths.get(getSnapshotPath(leaderOM.getConfiguration(), snapshotInfo2));
+    // Get the list of hardlinks from the leader.  Then confirm those links
+    //  are on the follower
+    int hardLinkCount = 0;
+    try (Stream<Path>list = Files.list(leaderSnapshotDir)) {
+      for (Path leaderSnapshotSST: list.collect(Collectors.toList())) {
+        String fileName = leaderSnapshotSST.getFileName().toString();
+        if (fileName.toLowerCase().endsWith(".sst")) {
+
+          Path leaderActiveSST =
+              Paths.get(leaderActiveDir.toString(), fileName);
+          // Skip if not hard link on the leader
+          if (!leaderActiveSST.toFile().exists()) {
+            continue;
+          }
+          // If it is a hard link on the leader, it should be a hard
+          // link on the follower
+          if (OmSnapshotUtils.getINode(leaderActiveSST)
+              .equals(OmSnapshotUtils.getINode(leaderSnapshotSST))) {
+            Path followerSnapshotSST =
+                Paths.get(followerSnapshotDir.toString(), fileName);
+            Path followerActiveSST =
+                Paths.get(followerActiveDir.toString(), fileName);
+            Assertions.assertEquals(
+                OmSnapshotUtils.getINode(followerActiveSST),
+                OmSnapshotUtils.getINode(followerSnapshotSST),
+                "Snapshot sst file is supposed to be a hard link");
+            hardLinkCount++;
+          }
+        }
+      }
+    }
+    Assertions.assertTrue(hardLinkCount > 0, "No hard links were found");
+
+    // Read back data from the OM snapshot.
+    omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(".snapshot/snap3/" + secondKeys.get(0)).build();
+    omKeyInfo = followerOM.lookupKey(omKeyArgs);
+    Assertions.assertNotNull(omKeyInfo);
+    Assertions.assertEquals(omKeyInfo.getKeyName(), omKeyArgs.getKeyName());
+
+    // Confirm followers snapshot hard links are as expected
+    followerMetaDir = OMStorage.getOmDbDir(followerOM.getConfiguration());
+    followerActiveDir = Paths.get(followerMetaDir.toString(), OM_DB_NAME);
+    followerSnapshotDir =
+        Paths.get(getSnapshotPath(followerOM.getConfiguration(), snapshotInfo3));
+    leaderMetaDir = OMStorage.getOmDbDir(leaderOM.getConfiguration());
+    leaderActiveDir = Paths.get(leaderMetaDir.toString(), OM_DB_NAME);
+    leaderSnapshotDir =
+        Paths.get(getSnapshotPath(leaderOM.getConfiguration(), snapshotInfo3));
+    // Get the list of hardlinks from the leader.  Then confirm those links
+    //  are on the follower
+    hardLinkCount = 0;
+    try (Stream<Path>list = Files.list(leaderSnapshotDir)) {
+      for (Path leaderSnapshotSST: list.collect(Collectors.toList())) {
+        String fileName = leaderSnapshotSST.getFileName().toString();
+        if (fileName.toLowerCase().endsWith(".sst")) {
+
+          Path leaderActiveSST =
+              Paths.get(leaderActiveDir.toString(), fileName);
+          // Skip if not hard link on the leader
+          if (!leaderActiveSST.toFile().exists()) {
+            continue;
+          }
+          // If it is a hard link on the leader, it should be a hard
+          // link on the follower
+          if (OmSnapshotUtils.getINode(leaderActiveSST)
+              .equals(OmSnapshotUtils.getINode(leaderSnapshotSST))) {
+            Path followerSnapshotSST =
+                Paths.get(followerSnapshotDir.toString(), fileName);
+            Path followerActiveSST =
+                Paths.get(followerActiveDir.toString(), fileName);
+            Assertions.assertEquals(
+                OmSnapshotUtils.getINode(followerActiveSST),
+                OmSnapshotUtils.getINode(followerSnapshotSST),
+                "Snapshot sst file is supposed to be a hard link");
+            hardLinkCount++;
+          }
+        }
+      }
+    }
+    Assertions.assertTrue(hardLinkCount > 0, "No hard links were found");
+
   }
 
   @Test
