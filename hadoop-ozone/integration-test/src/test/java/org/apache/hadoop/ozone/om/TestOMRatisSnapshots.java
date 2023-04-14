@@ -17,6 +17,7 @@
 package org.apache.hadoop.ozone.om;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.ExitManager;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
@@ -56,15 +57,18 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -76,6 +80,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
+import static org.apache.hadoop.ozone.om.OmSnapshotManager.OM_HARDLINK_FILE;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPath;
 import static org.apache.hadoop.ozone.om.TestOzoneManagerHAWithData.createKey;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -314,8 +319,10 @@ public class TestOMRatisSnapshots {
   }
 
   @Test
+  //gbjfix
   @Timeout(300)
-  public void testInstallIncrementalSnapshot() throws Exception {
+  public void testInstallIncrementalSnapshot(@TempDir Path tempDir)
+      throws Exception {
     // Get the leader OM
     String leaderOMNodeId = OmFailoverProxyUtil
         .getFailoverProxyProvider(objectStore.getClientProxy())
@@ -339,10 +346,14 @@ public class TestOMRatisSnapshots {
     List<String> firstKeys = writeKeysToIncreaseLogIndex(leaderRatisServer,
         80);
 
+    SnapshotInfo snapshotInfo2 = createOzoneSnapshot(leaderOM, "snap2");
+
+
     // Start the inactive OM. Checkpoint installation will happen spontaneously.
     cluster.startInactiveOM(followerNodeId);
 
     // Wait the follower download the snapshot,but get stuck by injector
+    //gbjfix
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmSnapshotProvider().getNumDownloaded() == 1;
     }, 1000, 10000);
@@ -352,7 +363,41 @@ public class TestOMRatisSnapshots {
     List<String> secondKeys = writeKeysToIncreaseLogIndex(leaderRatisServer,
         160);
 
+    SnapshotInfo snapshotInfo3 = createOzoneSnapshot(leaderOM, "snap3");
     // Resume the follower thread, it would download the incremental snapshot.
+    faultInjector.resume();
+
+    // Pause the follower thread again to block the second-time install
+    faultInjector.reset();
+
+    //gbjfix
+    // Wait the follower download the incremental snapshot, but get stuck
+    // by injector
+    GenericTestUtils.waitFor(() -> {
+      return followerOM.getOmSnapshotProvider().getNumDownloaded() == 2;
+    }, 1000, 10000);
+
+    unTarLatestTarBall(followerOM, tempDir);
+    List<String> sstFiles = HAUtils.getExistingSstFiles(tempDir.toFile());
+    Path followerCandidatePath = followerOM.getOmSnapshotProvider().
+        getCandidateDir().toPath();
+
+    for (String s: sstFiles) {
+      File sstFile = Paths.get(followerCandidatePath.toString(), s).toFile();
+      Assertions.assertFalse(sstFile.exists(),
+          sstFile + " should not duplicate existing files");
+    }
+    Path hardLinkFile = Paths.get(tempDir.toString(), OM_HARDLINK_FILE);
+    try (Stream<String> lines = Files.lines(hardLinkFile)) {
+      for (String line: lines.collect(Collectors.toList())) {
+        String link = line.split("\t")[0];
+        File linkFile = Paths.get(followerCandidatePath.toString(), link).toFile();
+        Assertions.assertFalse(linkFile.exists(),
+            "Incremental checkpoint should not " +
+                "duplicate existing links");
+      }
+    }
+
     faultInjector.resume();
 
     // Get the latest db checkpoint from the leader OM.
@@ -363,13 +408,14 @@ public class TestOMRatisSnapshots {
             transactionInfo.getTransactionIndex());
     long leaderOMSnapshotIndex = leaderOMTermIndex.getIndex();
 
+    //gbjfix
     // The recently started OM should be lagging behind the leader OM.
     // Wait & for follower to update transactions to leader snapshot index.
     // Timeout error if follower does not load update within 10s
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
           >= leaderOMSnapshotIndex - 1;
-    }, 1000, 10000);
+    }, 1000, 1000000);
 
     assertEquals(2, followerOM.getOmSnapshotProvider().getNumDownloaded());
 
@@ -414,6 +460,111 @@ public class TestOMRatisSnapshots {
         getCandidateDir().list();
     assertNotNull(filesInCandidate);
     assertEquals(0, filesInCandidate.length);
+
+    // Read back data from the OM snapshot.
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(".snapshot/snap2/" + firstKeys.get(0)).build();
+    OmKeyInfo omKeyInfo;
+    omKeyInfo = followerOM.lookupKey(omKeyArgs);
+    Assertions.assertNotNull(omKeyInfo);
+    Assertions.assertEquals(omKeyInfo.getKeyName(), omKeyArgs.getKeyName());
+
+    // Confirm followers snapshot hard links are as expected
+    File followerMetaDir = OMStorage.getOmDbDir(followerOM.getConfiguration());
+    Path followerActiveDir = Paths.get(followerMetaDir.toString(), OM_DB_NAME);
+    Path followerSnapshotDir =
+        Paths.get(getSnapshotPath(followerOM.getConfiguration(), snapshotInfo2));
+    File leaderMetaDir = OMStorage.getOmDbDir(leaderOM.getConfiguration());
+    Path leaderActiveDir = Paths.get(leaderMetaDir.toString(), OM_DB_NAME);
+    Path leaderSnapshotDir =
+        Paths.get(getSnapshotPath(leaderOM.getConfiguration(), snapshotInfo2));
+    // Get the list of hardlinks from the leader.  Then confirm those links
+    //  are on the follower
+    int hardLinkCount = 0;
+    try (Stream<Path>list = Files.list(leaderSnapshotDir)) {
+      for (Path leaderSnapshotSST: list.collect(Collectors.toList())) {
+        String fileName = leaderSnapshotSST.getFileName().toString();
+        if (fileName.toLowerCase().endsWith(".sst")) {
+
+          Path leaderActiveSST =
+              Paths.get(leaderActiveDir.toString(), fileName);
+          // Skip if not hard link on the leader
+          if (!leaderActiveSST.toFile().exists()) {
+            continue;
+          }
+          // If it is a hard link on the leader, it should be a hard
+          // link on the follower
+          if (OmSnapshotUtils.getINode(leaderActiveSST)
+              .equals(OmSnapshotUtils.getINode(leaderSnapshotSST))) {
+            Path followerSnapshotSST =
+                Paths.get(followerSnapshotDir.toString(), fileName);
+            Path followerActiveSST =
+                Paths.get(followerActiveDir.toString(), fileName);
+            Assertions.assertEquals(
+                OmSnapshotUtils.getINode(followerActiveSST),
+                OmSnapshotUtils.getINode(followerSnapshotSST),
+                "Snapshot sst file is supposed to be a hard link");
+            hardLinkCount++;
+          }
+        }
+      }
+    }
+    Assertions.assertTrue(hardLinkCount > 0, "No hard links were found");
+
+    // Read back data from the OM snapshot.
+    omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(".snapshot/snap3/" + secondKeys.get(secondKeys.size() - 1)).build();
+    omKeyInfo = followerOM.lookupKey(omKeyArgs);
+    Assertions.assertNotNull(omKeyInfo);
+    Assertions.assertEquals(omKeyInfo.getKeyName(), omKeyArgs.getKeyName());
+
+    // Confirm followers snapshot hard links are as expected
+    followerMetaDir = OMStorage.getOmDbDir(followerOM.getConfiguration());
+    followerActiveDir = Paths.get(followerMetaDir.toString(), OM_DB_NAME);
+    followerSnapshotDir =
+        Paths.get(getSnapshotPath(followerOM.getConfiguration(), snapshotInfo3));
+    leaderMetaDir = OMStorage.getOmDbDir(leaderOM.getConfiguration());
+    leaderActiveDir = Paths.get(leaderMetaDir.toString(), OM_DB_NAME);
+    leaderSnapshotDir =
+        Paths.get(getSnapshotPath(leaderOM.getConfiguration(), snapshotInfo3));
+    // Get the list of hardlinks from the leader.  Then confirm those links
+    //  are on the follower
+    hardLinkCount = 0;
+    try (Stream<Path>list = Files.list(leaderSnapshotDir)) {
+      for (Path leaderSnapshotSST: list.collect(Collectors.toList())) {
+        String fileName = leaderSnapshotSST.getFileName().toString();
+        if (fileName.toLowerCase().endsWith(".sst")) {
+
+          Path leaderActiveSST =
+              Paths.get(leaderActiveDir.toString(), fileName);
+          // Skip if not hard link on the leader
+          if (!leaderActiveSST.toFile().exists()) {
+            continue;
+          }
+          // If it is a hard link on the leader, it should be a hard
+          // link on the follower
+          if (OmSnapshotUtils.getINode(leaderActiveSST)
+              .equals(OmSnapshotUtils.getINode(leaderSnapshotSST))) {
+            Path followerSnapshotSST =
+                Paths.get(followerSnapshotDir.toString(), fileName);
+            Path followerActiveSST =
+                Paths.get(followerActiveDir.toString(), fileName);
+            Assertions.assertEquals(
+                OmSnapshotUtils.getINode(followerActiveSST),
+                OmSnapshotUtils.getINode(followerSnapshotSST),
+                "Snapshot sst file is supposed to be a hard link");
+            hardLinkCount++;
+          }
+        }
+      }
+    }
+    Assertions.assertTrue(hardLinkCount > 0, "No hard links were found");
+    Assertions.assertEquals(followerOM.getOmSnapshotProvider().getInitCount(), 2,
+        "Only initialized twice");
   }
 
   @Test
@@ -853,11 +1004,15 @@ public class TestOMRatisSnapshots {
 
   private SnapshotInfo createOzoneSnapshot(OzoneManager leaderOM)
       throws IOException {
-    objectStore.createSnapshot(volumeName, bucketName, "snap1");
+    return createOzoneSnapshot(leaderOM, "snap1");
+  }
+  private SnapshotInfo createOzoneSnapshot(OzoneManager leaderOM, String name)
+      throws IOException {
+    objectStore.createSnapshot(volumeName, bucketName, name);
 
     String tableKey = SnapshotInfo.getTableKey(volumeName,
                                                bucketName,
-                                               "snap1");
+                                               name);
     SnapshotInfo snapshotInfo = leaderOM.getMetadataManager()
         .getSnapshotInfoTable()
         .get(tableKey);
@@ -912,6 +1067,21 @@ public class TestOMRatisSnapshots {
       inputStream.read(data, 0, 100);
       inputStream.close();
     }
+  }
+
+  // Returns temp dir where tarball was untarred.
+  private Path unTarLatestTarBall(OzoneManager followerOm, Path tempDir)
+      throws IOException {
+    File snapshotDir = followerOm.getOmSnapshotProvider().getSnapshotDir();
+    String tarBall = Arrays.stream(snapshotDir.list()).
+        filter(s -> {
+          return s.toLowerCase().endsWith(".tar");
+        }).
+        reduce("", (s1, s2) -> {
+          return s1.compareToIgnoreCase(s2) > 0 ? s1 : s2;
+        });
+    FileUtil.unTar(new File(snapshotDir, tarBall), tempDir.toFile());
+    return tempDir;
   }
 
   private static class DummyExitManager extends ExitManager {
