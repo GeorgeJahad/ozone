@@ -126,13 +126,21 @@ public final class OmSnapshotUtils {
     }
   }
 
+  /**
+   * Link each of the subfiles in oldDir to newDir.
+   *
+   * @param oldDir The dir to create links from.
+   * @param newDir The dir to create links to.
+   */
   public static void linkFiles(File oldDir, File newDir)
       throws IOException {
     int truncateLength = oldDir.toString().length() + 1;
     List<String> oldDirList;
     try (Stream<Path> files = Files.walk(oldDir.toPath())) {
       oldDirList = files.map(Path::toString).
+          // Don't copy the directory itself
           filter(s -> !s.equals(oldDir.toString())).
+          // Remove the old path
           map(s -> s.substring(truncateLength)).
           sorted().
           collect(Collectors.toList());

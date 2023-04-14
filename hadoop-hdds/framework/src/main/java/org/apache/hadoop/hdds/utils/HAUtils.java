@@ -359,7 +359,8 @@ public final class HAUtils {
   }
 
   /**
-   * Scan the DB dir and return the existing SST files.
+   * Scan the DB dir and return the existing SST files,
+   * including omSnapshot sst files.
    * SSTs could be used for avoiding repeated download.
    *
    * @param db the file representing the DB to be scanned
@@ -372,6 +373,7 @@ public final class HAUtils {
     }
 
     int truncateLength = db.toString().length() + 1;
+    // Walk the db dir and get all sst files including omSnapshot files.
     try(Stream<Path> files = Files.walk(db.toPath())) {
       sstList =
           files.filter(path -> path.toString().endsWith(ROCKSDB_SST_SUFFIX)).

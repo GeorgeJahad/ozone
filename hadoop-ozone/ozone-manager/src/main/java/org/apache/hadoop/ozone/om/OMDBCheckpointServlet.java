@@ -73,7 +73,7 @@ import static org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils.truncateFileNa
  *
  * If Kerberos is enabled, the principal should be appended to
  * `ozone.administrator`, e.g. `scm/scm@EXAMPLE.COM`
- * If Kerberos is not enabled, simply append the login username to
+ * If Kerberos is not enabled, simply append the login user name to
  * `ozone.administrator`, e.g. `scm`
  */
 public class OMDBCheckpointServlet extends DBCheckpointServlet {
@@ -122,11 +122,12 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
       throws IOException, InterruptedException {
     List<String> excluded = new ArrayList<>();
 
-    // Files to be copied
+    // Files to be added to tarball
     Set<Path> copyFiles = new HashSet<>();
     // Map of link to path.
     Map<Path, Path> hardLinkFiles = new HashMap<>();
 
+    // Files to be excluded from tarball
     Set<Path> toExcludeFiles = normalizeExcludeList(toExcludeList, checkpoint);
 
     getFilesForArchive(checkpoint, copyFiles, hardLinkFiles, toExcludeFiles,
@@ -141,6 +142,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     return excluded;
   }
 
+  // format list from leader to match data on follower
   private Set<Path> normalizeExcludeList(List<String> toExcludeList, DBCheckpoint checkpoint) {
     Set<Path> paths = new HashSet<>();
     String metaDirPath = ServerUtils.getOzoneMetaDirPath(getConf()).toString();
@@ -251,24 +253,28 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     } else {
       String fileName = file.getFileName().toString();
       if (fileName.endsWith(ROCKSDB_SST_SUFFIX)) {
-        // see if there is a link for the sst file
+        // If same as existing excluded file, add a link for it.
         Path linkPath = findLinkPath(toExcludeFiles, fileName);
         if (linkPath != null) {
           hardLinkFiles.put(file, linkPath);
         } else {
+          // If already in tarball add a link for it.
           linkPath = findLinkPath(copyFiles, fileName);
           if (linkPath != null) {
             hardLinkFiles.put(file, linkPath);
           } else {
+            // Add to tarball.
             copyFiles.add(file);
           }
         }
-      } else {// not sst file
+      } else {// Not sst file.
         copyFiles.add(file);
       }
     }
   }
 
+  // If fileName exists in "files" parameter,
+  // it should be linked to path in files.
   private Path findLinkPath(Set<Path> files, String fileName) {
     for (Path p: files) {
       if (p.toString().endsWith(fileName)) {
