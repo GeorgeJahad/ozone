@@ -132,8 +132,7 @@ public final class OmSnapshotUtils {
    * @param oldDir The dir to create links from.
    * @param newDir The dir to create links to.
    */
-  public static void linkFiles(File oldDir, File newDir)
-      throws IOException {
+  public static void linkFiles(File oldDir, File newDir) throws IOException {
     int truncateLength = oldDir.toString().length() + 1;
     List<String> oldDirList;
     try (Stream<Path> files = Files.walk(oldDir.toPath())) {

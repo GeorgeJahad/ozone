@@ -244,6 +244,17 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     }
   }
 
+  /**
+   * Takes a db file and determines whether it should be included in
+   * the tarball, or added as a link, or excluded altogether.
+   * Uses the toExcludeFiles list to know what already
+   * exists on the follower.
+   * @param file The db file to be processed.
+   * @param copyFiles The db files to be added to tarball.
+   * @param hardLinkFiles The db files to be added as hard links.
+   * @param toExcludeFiles The db files to be excluded from tarball.
+   * @param excluded The list of db files that actually were excluded.
+   */
   private void processFile(Path file, Set<Path> copyFiles,
                            Map<Path, Path> hardLinkFiles,
                            Set<Path> toExcludeFiles,
