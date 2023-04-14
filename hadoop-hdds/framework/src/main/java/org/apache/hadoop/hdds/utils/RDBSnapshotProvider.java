@@ -131,7 +131,7 @@ public abstract class RDBSnapshotProvider implements Closeable {
    *
    * @param currentLeader the ID of leader node
    */
-  private void checkLeaderConsistent(String currentLeader) {
+  private void checkLeaderConsistent(String currentLeader) throws IOException {
     String lastLeader = lastLeaderRef.get();
     if (lastLeader != null) {
       if (!lastLeader.equals(currentLeader)) {
