@@ -65,6 +65,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.concurrent.Semaphore;
+import org.apache.hadoop.ozone.lock.BootstrapStateHandler;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Arrays.asList;
@@ -90,14 +92,14 @@ import static java.util.Arrays.asList;
  * It is important to note that compaction log is per-DB instance. Since
  * each OM DB instance might trigger compactions at different timings.
  */
-public class RocksDBCheckpointDiffer implements AutoCloseable {
+public class RocksDBCheckpointDiffer implements AutoCloseable,
+    BootstrapStateHandler {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RocksDBCheckpointDiffer.class);
 
   private final String sstBackupDir;
   private final String activeDBLocationStr;
-
   private final String compactionLogDir;
 
   /**
@@ -169,6 +171,7 @@ public class RocksDBCheckpointDiffer implements AutoCloseable {
   private final ScheduledExecutorService executor;
   private boolean closed;
   private final long maxAllowedTimeInDag;
+  private final Semaphore bootstrapStateLock = new Semaphore(1);
 
   private ColumnFamilyHandle snapshotInfoTableCFHandle;
 
@@ -1118,14 +1121,19 @@ public class RocksDBCheckpointDiffer implements AutoCloseable {
 
     Set<String> sstFileNodesRemoved =
         pruneSnapshotFileNodesFromDag(lastCompactionSstFiles);
-    removeSstFile(sstFileNodesRemoved);
-    deleteOlderSnapshotsCompactionFiles(olderSnapshotsLogFilePaths);
+    try {
+      lockBootstrapState();
+      removeSstFiles(sstFileNodesRemoved);
+      deleteOlderSnapshotsCompactionFiles(olderSnapshotsLogFilePaths);
+    } finally {
+      unlockBootstrapState();
+    }
   }
 
   /**
    * Deletes the SST file from the backup directory if exists.
    */
-  private void removeSstFile(Set<String> sstFileNodes) {
+  private void removeSstFiles(Set<String> sstFileNodes) {
     for (String sstFileNode: sstFileNodes) {
       File file =
           new File(sstBackupDir + "/" + sstFileNode + SST_FILE_EXTENSION);
@@ -1418,8 +1426,12 @@ public class RocksDBCheckpointDiffer implements AutoCloseable {
           .map(node -> node.getFileName())
           .collect(Collectors.toSet());
     }
-
-    removeSstFile(nonLeafSstFiles);
+    try {
+      lockBootstrapState();
+      removeSstFiles(nonLeafSstFiles);
+    } finally {
+      unlockBootstrapState();
+    }
   }
 
   @VisibleForTesting
@@ -1435,5 +1447,19 @@ public class RocksDBCheckpointDiffer implements AutoCloseable {
   @VisibleForTesting
   public ConcurrentHashMap<String, CompactionNode> getCompactionNodeMap() {
     return compactionNodeMap;
+  }
+
+  @Override
+  public void lockBootstrapState() {
+    try {
+      bootstrapStateLock.acquire();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Override
+  public void unlockBootstrapState() {
+    bootstrapStateLock.release();
   }
 }

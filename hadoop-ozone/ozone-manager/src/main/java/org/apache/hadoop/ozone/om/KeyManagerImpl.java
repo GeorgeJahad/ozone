@@ -164,9 +164,9 @@ public class KeyManagerImpl implements KeyManager {
   private final OzoneBlockTokenSecretManager secretManager;
   private final boolean grpcBlockTokenEnabled;
 
-  private BackgroundService keyDeletingService;
+  private KeyDeletingService keyDeletingService;
 
-  private BackgroundService snapshotSstFilteringService;
+  private SstFilteringService snapshotSstFilteringService;
   private BackgroundService snapshotDeletingService;
 
   private final KeyProviderCryptoExtension kmsProvider;
@@ -642,7 +642,7 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   @Override
-  public BackgroundService getDeletingService() {
+  public KeyDeletingService getDeletingService() {
     return keyDeletingService;
   }
 
@@ -655,7 +655,7 @@ public class KeyManagerImpl implements KeyManager {
     return openKeyCleanupService;
   }
 
-  public BackgroundService getSnapshotSstFilteringService() {
+  public SstFilteringService getSnapshotSstFilteringService() {
     return snapshotSstFilteringService;
   }
 
