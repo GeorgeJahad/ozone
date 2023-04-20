@@ -421,32 +421,6 @@ public class SnapshotDeletingService extends AbstractKeyDeletingService {
       }
     }
 
-    private void submitSnapshotMoveDeletedKeys(SnapshotInfo snapInfo,
-        List<SnapshotMoveKeyInfos> toReclaimList,
-        List<SnapshotMoveKeyInfos> toNextDBList,
-        List<HddsProtos.KeyValue> renamedKeysList,
-        List<String> dirsToMove) {
-
-      SnapshotMoveDeletedKeysRequest.Builder moveDeletedKeysBuilder =
-          SnapshotMoveDeletedKeysRequest.newBuilder()
-              .setFromSnapshot(snapInfo.getProtobuf());
-
-      SnapshotMoveDeletedKeysRequest moveDeletedKeys = moveDeletedKeysBuilder
-          .addAllReclaimKeys(toReclaimList)
-          .addAllNextDBKeys(toNextDBList)
-          .addAllRenamedKeys(renamedKeysList)
-          .addAllDeletedDirsToMove(dirsToMove)
-          .build();
-
-      OMRequest omRequest = OMRequest.newBuilder()
-          .setCmdType(Type.SnapshotMoveDeletedKeys)
-          .setSnapshotMoveDeletedKeysRequest(moveDeletedKeys)
-          .setClientId(clientId.toString())
-          .build();
-
-      submitRequest(omRequest);
-    }
-
     private boolean checkDirReclaimable(
         Table.KeyValue<String, OmKeyInfo> deletedDir,
         Table<String, OmDirectoryInfo> previousDirTable) throws IOException {
@@ -542,31 +516,6 @@ public class SnapshotDeletingService extends AbstractKeyDeletingService {
         return omSnapshotManager.getSnapshotInfo(tableKey);
       }
       return null;
-    }
-
-    private void submitRequest(OMRequest omRequest) {
-      try {
-        if (isRatisEnabled()) {
-          OzoneManagerRatisServer server = ozoneManager.getOmRatisServer();
-
-          RaftClientRequest raftClientRequest = RaftClientRequest.newBuilder()
-              .setClientId(clientId)
-              .setServerId(server.getRaftPeerId())
-              .setGroupId(server.getRaftGroupId())
-              .setCallId(getRunCount().get())
-              .setMessage(Message.valueOf(
-                  OMRatisHelper.convertRequestToByteString(omRequest)))
-              .setType(RaftClientRequest.writeRequestType())
-              .build();
-
-          server.submitRequest(omRequest, raftClientRequest);
-        } else {
-          ozoneManager.getOmServerProtocol().submitRequest(null, omRequest);
-        }
-      } catch (ServiceException e) {
-        LOG.error("Snapshot Deleting request failed. " +
-            "Will retry at next run.", e);
-      }
     }
   }
 

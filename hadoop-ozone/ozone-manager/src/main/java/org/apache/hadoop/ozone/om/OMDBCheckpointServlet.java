@@ -136,12 +136,9 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
         .getAttribute(OzoneConsts.OM_CONTEXT_ATTRIBUTE);
     om.getOmRatisServer().getOmStateMachine().awaitDoubleBufferFlush();
 
-    getFilesForArchive(checkpoint, copyFiles, hardLinkFiles,
-        includeSnapshotData(request));
-
+    lockBootstrapState();
     try (TarArchiveOutputStream archiveOutputStream =
             new TarArchiveOutputStream(destination)) {
-      lockBootstrapState();
       getFilesForArchive(checkpoint, copyFiles, hardLinkFiles,
           includeSnapshotData(request));
       archiveOutputStream
