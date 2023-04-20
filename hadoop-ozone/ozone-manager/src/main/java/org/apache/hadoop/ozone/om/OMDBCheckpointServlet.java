@@ -132,6 +132,12 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
     // Map of link to path.
     Map<Path, Path> hardLinkFiles = new HashMap<>();
 
+    OzoneManager om = (OzoneManager) getServletContext()
+        .getAttribute(OzoneConsts.OM_CONTEXT_ATTRIBUTE);
+    om.getOmRatisServer().getOmStateMachine().awaitDoubleBufferFlush();
+
+    getFilesForArchive(checkpoint, copyFiles, hardLinkFiles,
+        includeSnapshotData(request));
 
     try (TarArchiveOutputStream archiveOutputStream =
             new TarArchiveOutputStream(destination)) {
