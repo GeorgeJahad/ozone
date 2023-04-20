@@ -84,6 +84,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
   private transient BootstrapStateHandler keyDeletingService;
   private transient BootstrapStateHandler sstFilteringService;
   private transient BootstrapStateHandler rocksDbCheckpointDiffer;
+  private transient BootstrapStateHandler snapshotDeletingService;
 
   @Override
   public void init() throws ServletException {
@@ -120,6 +121,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
     sstFilteringService = om.getKeyManager().getSnapshotSstFilteringService();
     rocksDbCheckpointDiffer = om.getMetadataManager().getStore()
         .getRocksDBCheckpointDiffer();
+    snapshotDeletingService = om.getKeyManager().getSnapshotDeletingService();
   }
 
   @Override
@@ -132,20 +134,18 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
     // Map of link to path.
     Map<Path, Path> hardLinkFiles = new HashMap<>();
 
-    OzoneManager om = (OzoneManager) getServletContext()
-        .getAttribute(OzoneConsts.OM_CONTEXT_ATTRIBUTE);
-    om.getOmRatisServer().getOmStateMachine().awaitDoubleBufferFlush();
-
-    lockBootstrapState();
-    try (TarArchiveOutputStream archiveOutputStream =
-            new TarArchiveOutputStream(destination)) {
-      getFilesForArchive(checkpoint, copyFiles, hardLinkFiles,
-          includeSnapshotData(request));
-      archiveOutputStream
-          .setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
-      archiveOutputStream
-          .setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_POSIX);
-      writeFilesToArchive(copyFiles, hardLinkFiles, archiveOutputStream);
+    try {
+      lockBootstrapState();
+      try (TarArchiveOutputStream archiveOutputStream =
+               new TarArchiveOutputStream(destination)) {
+        getFilesForArchive(checkpoint, copyFiles, hardLinkFiles,
+            includeSnapshotData(request));
+        archiveOutputStream
+            .setLongFileMode(TarArchiveOutputStream.LONGFILE_POSIX);
+        archiveOutputStream
+            .setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_POSIX);
+        writeFilesToArchive(copyFiles, hardLinkFiles, archiveOutputStream);
+      }
     } finally {
       unlockBootstrapState();
     }
@@ -291,13 +291,20 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
 
   @Override
   public void lockBootstrapState() throws InterruptedException {
+    OzoneManager om = (OzoneManager) getServletContext()
+        .getAttribute(OzoneConsts.OM_CONTEXT_ATTRIBUTE);
+
     keyDeletingService.lockBootstrapState();
     sstFilteringService.lockBootstrapState();
     rocksDbCheckpointDiffer.lockBootstrapState();
+    snapshotDeletingService.lockBootstrapState();
+    om.getOmRatisServer().getOmStateMachine().awaitDoubleBufferFlush();
+
   }
 
   @Override
   public void unlockBootstrapState() {
+    snapshotDeletingService.unlockBootstrapState();
     rocksDbCheckpointDiffer.unlockBootstrapState();
     sstFilteringService.unlockBootstrapState();
     keyDeletingService.unlockBootstrapState();

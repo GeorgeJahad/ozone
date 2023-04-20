@@ -29,6 +29,7 @@ import org.apache.hadoop.ozone.om.fs.OzoneManagerFS;
 import org.apache.hadoop.hdds.utils.BackgroundService;
 import org.apache.hadoop.ozone.om.helpers.RepeatedOmKeyInfo;
 import org.apache.hadoop.ozone.om.service.KeyDeletingService;
+import org.apache.hadoop.ozone.om.service.SnapshotDeletingService;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -253,5 +254,5 @@ public interface KeyManager extends OzoneManagerFS, IOzoneAcl {
    * Returns the instance of Snapshot Deleting service.
    * @return Background service.
    */
-  BackgroundService getSnapshotDeletingService();
+  SnapshotDeletingService getSnapshotDeletingService();
 }

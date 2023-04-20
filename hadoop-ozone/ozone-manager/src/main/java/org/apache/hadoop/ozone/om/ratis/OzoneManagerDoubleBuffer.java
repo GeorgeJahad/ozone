@@ -662,7 +662,7 @@ public final class OzoneManagerDoubleBuffer {
 
     // wait until both the current and ready buffers are flushed
     CountDownLatch latch = new CountDownLatch(2);
-    flushLatches.put(latch, null);
+    flushLatches.put(latch, latch);
     latch.await();
     flushLatches.remove(latch);
   }

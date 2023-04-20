@@ -167,7 +167,7 @@ public class KeyManagerImpl implements KeyManager {
   private KeyDeletingService keyDeletingService;
 
   private SstFilteringService snapshotSstFilteringService;
-  private BackgroundService snapshotDeletingService;
+  private SnapshotDeletingService snapshotDeletingService;
 
   private final KeyProviderCryptoExtension kmsProvider;
   private final boolean enableFileSystemPaths;
@@ -659,7 +659,7 @@ public class KeyManagerImpl implements KeyManager {
     return snapshotSstFilteringService;
   }
 
-  public BackgroundService getSnapshotDeletingService() {
+  public SnapshotDeletingService getSnapshotDeletingService() {
     return snapshotDeletingService;
   }
 

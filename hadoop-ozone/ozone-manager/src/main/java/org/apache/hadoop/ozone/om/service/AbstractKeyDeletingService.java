@@ -466,7 +466,8 @@ public abstract class AbstractKeyDeletingService extends BackgroundService
                                                List<OzoneManagerProtocolProtos.SnapshotMoveKeyInfos> toReclaimList,
                                                List<OzoneManagerProtocolProtos.SnapshotMoveKeyInfos> toNextDBList,
                                                List<HddsProtos.KeyValue> renamedKeysList,
-                                               List<String> dirsToMove) {
+                                               List<String> dirsToMove)
+      throws InterruptedException {
 
     OzoneManagerProtocolProtos.SnapshotMoveDeletedKeysRequest.Builder moveDeletedKeysBuilder =
         OzoneManagerProtocolProtos.SnapshotMoveDeletedKeysRequest.newBuilder()
@@ -485,7 +486,12 @@ public abstract class AbstractKeyDeletingService extends BackgroundService
         .setClientId(clientId.toString())
         .build();
 
-    submitRequest(omRequest);
+    try {
+      lockBootstrapState();
+      submitRequest(omRequest);
+    } finally {
+      unlockBootstrapState();
+    }
   }
 
   protected void submitRequest(OMRequest omRequest) {
