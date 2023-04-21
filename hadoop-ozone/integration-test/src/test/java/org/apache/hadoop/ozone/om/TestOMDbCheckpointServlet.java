@@ -606,7 +606,7 @@ public class TestOMDbCheckpointServlet {
     // Confirm that servlet takes the lock when none of the other
     //  processes have it.
     Future<?> servletTest = checkLock(spyServlet, executorService);
-    Assert.assertNull(servletTest.get(500, TimeUnit.MILLISECONDS));
+    Assert.assertNull(servletTest.get(50000, TimeUnit.MILLISECONDS));
 
     executorService.shutdownNow();
 

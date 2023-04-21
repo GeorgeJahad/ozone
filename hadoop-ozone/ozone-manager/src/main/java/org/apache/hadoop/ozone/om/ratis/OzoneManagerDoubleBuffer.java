@@ -619,7 +619,8 @@ public final class OzoneManagerDoubleBuffer {
   private synchronized boolean canFlush() {
     try {
       while (currentBuffer.size() == 0) {
-        wait(Long.MAX_VALUE);
+        wait(1000L);
+        notifyWaiters();
       }
       return true;
     }  catch (InterruptedException ex) {
