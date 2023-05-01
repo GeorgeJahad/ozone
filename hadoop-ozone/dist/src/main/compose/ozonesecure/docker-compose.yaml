@@ -61,7 +61,7 @@ services:
       ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
       OZONE_OPTS: -Dcom.sun.net.ssl.checkRevocation=false
     env_file:
-      - docker-config
+      - ${DOCKER_CONFIG}
     command: ["/opt/hadoop/bin/ozone","om"]
   httpfs:
     image: apache/ozone-runner:${OZONE_RUNNER_VERSION}
@@ -88,7 +88,7 @@ services:
     ports:
       - 9878:9878
     env_file:
-      - ./docker-config
+      - ${DOCKER_CONFIG}
     command: ["/opt/hadoop/bin/ozone","s3g"]
     environment:
       OZONE_OPTS:

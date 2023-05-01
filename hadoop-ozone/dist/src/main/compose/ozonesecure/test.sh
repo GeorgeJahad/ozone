@@ -55,21 +55,19 @@ execute_robot_test scm -v container:1 -v count:2 replication/wait.robot
 docker-compose up -d --scale datanode=3
 execute_robot_test scm -v container:1 -v count:3 replication/wait.robot
 
+// Restart om and s3g with fcq
+docker-compose up -d --scale om=0 om
+docker-compose --env-file=./env-fcq up -d --scale om=1 om
+docker-compose up -d --scale s3g=0 s3g
+docker-compose --env-file=./env-fcq up -d --scale s3g=1 s3g
+
+execute_robot_test s3g fcq/s3_om_fcq.robot
+
+
+# restore om and s3g containers to non fcq config
 stop_containers om s3g
+start_containers om s3g
 
-docker-compose run -d \
--e CORE-SITE.XML_ipc.9862.callqueue.impl=org.apache.hadoop.ipc.FairCallQueue \
--e CORE-SITE.XML_ipc.9862.identity-provider.impl=org.apache.hadoop.ozone.om.helpers.OzoneIdentityProvider \
--e OZONE-SITE.XML_ozone.om.transport.class=org.apache.hadoop.ozone.om.protocolPB.Hadoop3OmTransportFactory om
-
-docker-compose run -d \
--e CORE-SITE.XML_ipc.9862.callqueue.impl=org.apache.hadoop.ipc.FairCallQueue \
--e CORE-SITE.XML_ipc.9862.identity-provider.impl=org.apache.hadoop.ozone.om.helpers.OzoneIdentityProvider \
--e OZONE-SITE.XML_ozone.om.transport.class=org.apache.hadoop.ozone.om.protocolPB.Hadoop3OmTransportFactory s3g
-
-s3g_run_container=$(docker ps | grep "_s3g_run_" | head -n 1 | awk '{print $1}')
-
-docker exec $s3g_run_container robot smoketest/fcq/s3_om_fcq.robot
 
 stop_docker_env
 
