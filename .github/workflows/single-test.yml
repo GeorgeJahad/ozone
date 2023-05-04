@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: snapshotBootstrap5
+          ref: testBootstrapLock2
       - name: Cache for maven dependencies
         uses: actions/cache@v2
         with:
