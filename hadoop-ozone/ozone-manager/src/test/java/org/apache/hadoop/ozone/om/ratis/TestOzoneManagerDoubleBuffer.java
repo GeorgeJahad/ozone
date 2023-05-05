@@ -54,7 +54,6 @@ import static org.mockito.Mockito.when;
  * This class tests snapshot aware OzoneManagerDoubleBuffer flushing logic.
  */
 class TestOzoneManagerDoubleBuffer {
-
   private OzoneManagerDoubleBuffer doubleBuffer;
   private CreateSnapshotResponse snapshotResponse1 =
       mock(CreateSnapshotResponse.class);
@@ -74,6 +73,7 @@ class TestOzoneManagerDoubleBuffer {
       mock(OMSnapshotCreateResponse.class);
   @TempDir
   private File tempDir;
+  private OMMetadataManager omMetadataManager;
 
   @BeforeEach
   public void setup() throws IOException {
@@ -81,7 +81,7 @@ class TestOzoneManagerDoubleBuffer {
     OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
     ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
         tempDir.getAbsolutePath());
-    OMMetadataManager omMetadataManager =
+    omMetadataManager =
         new OmMetadataManagerImpl(ozoneConfiguration);
     OzoneManager ozoneManager = mock(OzoneManager.class);
     when(ozoneManager.getMetrics()).thenReturn(omMetrics);
@@ -128,10 +128,11 @@ class TestOzoneManagerDoubleBuffer {
   }
 
   @AfterEach
-  public void stop() {
+  public void stop() throws Exception {
     if (doubleBuffer != null) {
       doubleBuffer.stop();
     }
+    omMetadataManager.stop();
   }
 
   private static Stream<Arguments> doubleBufferFlushCases() {
