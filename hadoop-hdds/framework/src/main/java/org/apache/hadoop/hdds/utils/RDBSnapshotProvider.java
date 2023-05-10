@@ -115,13 +115,14 @@ public abstract class RDBSnapshotProvider implements Closeable {
     LOG.info("Successfully download the latest snapshot {} from leader OM: {}",
         targetFile, leaderNodeID);
 
+    numDownloaded.incrementAndGet();
+    injectPause();
+
     RocksDBCheckpoint checkpoint = getCheckpointFromSnapshotFile(targetFile,
         candidateDir, true);
     LOG.info("Successfully untar the downloaded snapshot {} at {}.", targetFile,
         checkpoint.getCheckpointLocation());
 
-    numDownloaded.incrementAndGet();
-    injectPause();
     return checkpoint;
   }
 
