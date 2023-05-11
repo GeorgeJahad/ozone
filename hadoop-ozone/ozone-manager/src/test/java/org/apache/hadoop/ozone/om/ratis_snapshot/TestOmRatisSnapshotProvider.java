@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 
 import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.ozone.OzoneConsts.MULTIPART_FORM_DATA_BOUNDARY;
@@ -55,6 +56,7 @@ import static org.mockito.Mockito.when;
 public class TestOmRatisSnapshotProvider {
 
   private OmRatisSnapshotProvider omRatisSnapshotProvider;
+  private OmRatisSnapshotProvider spyProvider;
   private OMNodeDetails leader;
   private String leaderNodeId;
   private static final String CR_NL = "\r\n";
@@ -84,6 +86,7 @@ public class TestOmRatisSnapshotProvider {
     omRatisSnapshotProvider =
         new OmRatisSnapshotProvider(conf, snapshotDir, peerNodesMap);
 
+    spyProvider = Mockito.spy(omRatisSnapshotProvider);
     sb = new StringBuilder();
     sb.append("--" + MULTIPART_FORM_DATA_BOUNDARY + CR_NL);
     sb.append(CONTENT_DISPOSITION);
@@ -98,7 +101,7 @@ public class TestOmRatisSnapshotProvider {
 
     URLConnectionFactory connectionFactory =
         mock(URLConnectionFactory.class);
-    omRatisSnapshotProvider.setConnectionFactory(connectionFactory);
+    when(spyProvider.getConnectionFactory()).thenReturn(connectionFactory);
 
     HttpURLConnection connection = mock(HttpURLConnection.class);
     when(connectionFactory.openConnection(any(URL.class), anyBoolean()))
@@ -111,7 +114,7 @@ public class TestOmRatisSnapshotProvider {
         new ByteArrayInputStream(outputStream.toByteArray());
     when(connection.getInputStream()).thenReturn(inputStream);
 
-    omRatisSnapshotProvider.downloadSnapshot(leaderNodeId, targetFile);
+    spyProvider.downloadSnapshot(leaderNodeId, targetFile);
 
     sb.append("--" + MULTIPART_FORM_DATA_BOUNDARY + "--" + CR_NL);
     Assertions.assertEquals(sb.toString(),
