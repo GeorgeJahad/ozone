@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.om;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -260,7 +261,8 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
    * @param toExcludeFiles The db files to be excluded from tarball.
    * @param excluded The list of db files that actually were excluded.
    */
-  private void processFile(Path file, Set<Path> copyFiles,
+  @VisibleForTesting
+  public void processFile(Path file, Set<Path> copyFiles,
                            Map<Path, Path> hardLinkFiles,
                            Set<Path> toExcludeFiles,
                            List<String> excluded) {

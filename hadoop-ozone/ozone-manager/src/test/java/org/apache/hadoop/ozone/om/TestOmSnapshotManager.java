@@ -36,13 +36,18 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
+import static org.apache.hadoop.hdds.utils.HAUtils.getExistingSstFiles;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_CHECKPOINT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
@@ -190,6 +195,33 @@ public class TestOmSnapshotManager {
       Assert.assertEquals("link matches original file",
           getINode(entry.getKey()), getINode(value));
     }
+  }
+
+  @Test
+  public void testFileUtilities() throws IOException {
+
+    // testDir/
+    //     f1.sst
+    //     d2
+    //     d3/f3.sst
+
+    Path file1 = Paths.get(testDir.toString(), "file1.sst");
+    Files.write(file1,
+        "dummyData".getBytes(StandardCharsets.UTF_8));
+    File dir2 = new File(testDir, "dir2");
+    dir2.mkdirs();
+    File dir3 = new File(testDir, "dir3");
+    dir3.mkdirs();
+    Path file3 = Paths.get(dir3.toString(), "file3.sst");
+    Files.write(file3,
+        "dummyData".getBytes(StandardCharsets.UTF_8));
+
+    Set<String> existingSstFiles = new HashSet<>(getExistingSstFiles(testDir));
+    int truncateLength = testDir.toString().length() + 1;
+    Set<String> expectedSstFiles = new HashSet<>(Arrays.asList(
+        file1.toString().substring(truncateLength),
+        file3.toString().substring(truncateLength)));
+    Assert.assertEquals(expectedSstFiles, existingSstFiles);
   }
 
   private SnapshotInfo createSnapshotInfo() {
