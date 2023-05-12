@@ -381,12 +381,17 @@ public class TestOMRatisSnapshots {
     Path followerCandidatePath = followerOM.getOmSnapshotProvider().
         getCandidateDir().toPath();
 
+    // Confirm that none of the files in the tarball match one in the candidate dir.
     for (String s: sstFiles) {
       File sstFile = Paths.get(followerCandidatePath.toString(), s).toFile();
       Assertions.assertFalse(sstFile.exists(),
           sstFile + " should not duplicate existing files");
     }
     Path hardLinkFile = Paths.get(tempDir.toString(), OM_HARDLINK_FILE);
+
+    // Confirm that none of the links in the tarballs hardLinkFile
+    //  match the existing files
+    // gbjnote, is the path right here?
     try (Stream<String> lines = Files.lines(hardLinkFile)) {
       for (String line: lines.collect(Collectors.toList())) {
         String link = line.split("\t")[0];
@@ -460,7 +465,7 @@ public class TestOMRatisSnapshots {
     assertNotNull(filesInCandidate);
     assertEquals(0, filesInCandidate.length);
 
-    // Read back data from the OM snapshot.
+    // Read back data from snap2.
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
@@ -512,7 +517,7 @@ public class TestOMRatisSnapshots {
     }
     Assertions.assertTrue(hardLinkCount > 0, "No hard links were found");
 
-    // Read back data from the OM snapshot.
+    // Read back data from snap3
     omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
@@ -1075,6 +1080,7 @@ public class TestOMRatisSnapshots {
   private Path unTarLatestTarBall(OzoneManager followerOm, Path tempDir)
       throws IOException {
     File snapshotDir = followerOm.getOmSnapshotProvider().getSnapshotDir();
+    // Find the latest snapshot.
     String tarBall = Arrays.stream(snapshotDir.list()).
         filter(s -> {
           return s.toLowerCase().endsWith(".tar");
