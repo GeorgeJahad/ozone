@@ -131,7 +131,9 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     Map<Path, Path> hardLinkFiles = new HashMap<>();
 
     // Files to be excluded from tarball
-    Set<Path> toExcludeFiles = normalizeExcludeList(toExcludeList, checkpoint);
+    Set<Path> toExcludeFiles = normalizeExcludeList(toExcludeList,
+        checkpoint.getCheckpointLocation().toString(),
+        ServerUtils.getOzoneMetaDirPath(getConf()).toString());
     getFilesForArchive(checkpoint, copyFiles, hardLinkFiles, toExcludeFiles,
         includeSnapshotData(request), excludedList);
 
@@ -145,13 +147,14 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
     }
   }
 
-  // format list from leader to match data on follower
-  private Set<Path> normalizeExcludeList(List<String> toExcludeList, DBCheckpoint checkpoint) {
+  // format list from follower to match data on leader
+  @VisibleForTesting
+  public static Set<Path> normalizeExcludeList(List<String> toExcludeList,
+      String checkpointLocation, String metaDirPath) {
     Set<Path> paths = new HashSet<>();
-    String metaDirPath = ServerUtils.getOzoneMetaDirPath(getConf()).toString();
     for (String s: toExcludeList) {
       if (!s.startsWith(OM_SNAPSHOT_DIR)) {
-        Path fixedPath = Paths.get(checkpoint.getCheckpointLocation().toString(), s);
+        Path fixedPath = Paths.get(checkpointLocation, s);
         paths.add(fixedPath);
       } else {
         paths.add(Paths.get(metaDirPath, s));

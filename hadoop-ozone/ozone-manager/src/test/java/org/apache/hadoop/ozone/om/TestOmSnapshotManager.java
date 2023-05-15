@@ -43,10 +43,12 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.apache.commons.io.file.PathUtils.copyDirectory;
 import static org.apache.hadoop.hdds.utils.HAUtils.getExistingSstFiles;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_CHECKPOINT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
@@ -145,38 +147,49 @@ public class TestOmSnapshotManager {
   public void testHardLinkCreation() throws IOException {
     byte[] dummyData = {0};
 
-    // Create dummy files to be linked to.
+    // Create dummy leader files to calculate links
+    File leaderDir = new File(testDir.toString(),
+        "leader");
+    leaderDir.mkdirs();
+    String pathSnap1 = OM_SNAPSHOT_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir1";
+    String pathSnap2 = OM_SNAPSHOT_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir2";
+    File leaderSnapdir1 = new File(leaderDir.toString(), pathSnap1);
+    if (!leaderSnapdir1.mkdirs()) {
+      throw new IOException("failed to make directory: " + leaderSnapdir1);
+    }
+    Files.write(Paths.get(leaderSnapdir1.toString(), "s1"), dummyData);
+
+    File leaderSnapdir2 = new File(leaderDir.toString(), pathSnap2);
+    if (!leaderSnapdir2.mkdirs()) {
+      throw new IOException("failed to make directory: " + leaderSnapdir2);
+    }
+
+    // Also create the follower files
     File candidateDir = new File(testDir.toString(),
         CANDIDATE_DIR_NAME);
-    candidateDir.mkdirs();
+    File followerSnapdir1 = new File(candidateDir.toString(), pathSnap1);
+    File followerSnapdir2 = new File(candidateDir.toString(), pathSnap2);
+    copyDirectory(leaderDir.toPath(), candidateDir.toPath());
     Files.write(Paths.get(candidateDir.toString(), "f1"), dummyData);
 
-    File snapDir1 = new File(candidateDir.toString(),
-        OM_SNAPSHOT_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir1");
-    if (!snapDir1.mkdirs()) {
-      throw new IOException("failed to make directory: " + snapDir1);
-    }
-    Files.write(Paths.get(snapDir1.toString(), "s1"), dummyData);
 
-    File snapDir2 = new File(candidateDir.toString(),
-        OM_SNAPSHOT_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir2");
-    if (!snapDir2.mkdirs()) {
-      throw new IOException("failed to make directory: " + snapDir2);
-    }
+    File leaderCheckpointDir = new File(leaderDir.toString(),
+        OM_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir1");
+    leaderCheckpointDir.mkdirs();
+    Files.write(Paths.get(leaderCheckpointDir.toString(), "f1"), dummyData);
 
     // Create map of links to dummy files.
-    File checkpointDir1 = new File(candidateDir.toString(),
-        OM_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir1");
     Map<Path, Path> hardLinkFiles = new HashMap<>();
-    hardLinkFiles.put(Paths.get(snapDir2.toString(), "f1"),
-        Paths.get(checkpointDir1.toString(), "f1"));
-    hardLinkFiles.put(Paths.get(snapDir2.toString(), "s1"),
-        Paths.get(snapDir1.toString(), "s1"));
+    hardLinkFiles.put(Paths.get(leaderSnapdir2.toString(), "f1"),
+        Paths.get(leaderCheckpointDir.toString(), "f1"));
+    hardLinkFiles.put(Paths.get(leaderSnapdir2.toString(), "s1"),
+        Paths.get(leaderSnapdir1.toString(), "s1"));
 
     // Create link list.
     Path hardLinkList =
         OmSnapshotUtils.createHardLinkList(
-            candidateDir.toString().length() + 1, hardLinkFiles);
+            leaderDir.toString().length() + 1, hardLinkFiles);
+
     Files.move(hardLinkList, Paths.get(candidateDir.toString(),
         OM_HARDLINK_FILE));
 
@@ -184,44 +197,57 @@ public class TestOmSnapshotManager {
     OmSnapshotUtils.createHardLinks(candidateDir.toPath());
 
     // Confirm expected links.
-    for (Map.Entry<Path, Path> entry : hardLinkFiles.entrySet()) {
-      Assert.assertTrue(entry.getKey().toFile().exists());
-      Path value = entry.getValue();
-      // Convert checkpoint path to om.db.
-      if (value.toString().contains(OM_CHECKPOINT_DIR)) {
-        value = Paths.get(candidateDir.toString(),
-                          value.getFileName().toString());
-      }
-      Assert.assertEquals("link matches original file",
-          getINode(entry.getKey()), getINode(value));
-    }
+    File s1FileLink = new File(followerSnapdir2, "s1");
+    File s1File = new File(followerSnapdir1, "s1");
+    Assert.assertTrue(s1FileLink.exists());
+    Assert.assertEquals("link matches original file",
+        getINode(s1File.toPath()), getINode(s1FileLink.toPath()));
+
+    File f1FileLink = new File(followerSnapdir2, "f1");
+    File f1File = new File(candidateDir, "f1");
+    Assert.assertTrue(f1FileLink.exists());
+    Assert.assertEquals("link matches original file",
+        getINode(f1File.toPath()), getINode(f1FileLink.toPath()));
   }
 
   @Test
   public void testFileUtilities() throws IOException {
 
-    // testDir/
+    // testSubDir/
     //     f1.sst
     //     d2
-    //     d3/f3.sst
+    //     db.snapshots/snapshot1/f3.sst
 
-    Path file1 = Paths.get(testDir.toString(), "file1.sst");
+    File testSubDir = new File(testDir, "testSubDir");
+    testSubDir.mkdirs();
+    File checkpointDir = new File(testDir, "checkpointDir");
+    checkpointDir.mkdirs();
+    Path file1 = Paths.get(testSubDir.toString(), "file1.sst");
     Files.write(file1,
         "dummyData".getBytes(StandardCharsets.UTF_8));
-    File dir2 = new File(testDir, "dir2");
+    File dir2 = new File(testSubDir, "dir2");
     dir2.mkdirs();
-    File dir3 = new File(testDir, "dir3");
+    File dir3 = new File(testSubDir, "db.snapshots/snapshot1");
     dir3.mkdirs();
     Path file3 = Paths.get(dir3.toString(), "file3.sst");
     Files.write(file3,
         "dummyData".getBytes(StandardCharsets.UTF_8));
 
-    Set<String> existingSstFiles = new HashSet<>(getExistingSstFiles(testDir));
-    int truncateLength = testDir.toString().length() + 1;
+    List<String> excludeList = getExistingSstFiles(testSubDir);
+    Set<String> existingSstFiles = new HashSet<>(excludeList);
+    int truncateLength = testSubDir.toString().length() + 1;
     Set<String> expectedSstFiles = new HashSet<>(Arrays.asList(
         file1.toString().substring(truncateLength),
         file3.toString().substring(truncateLength)));
     Assert.assertEquals(expectedSstFiles, existingSstFiles);
+
+    Set<Path> normalizedSet =
+        OMDBCheckpointServlet.normalizeExcludeList(excludeList,
+            checkpointDir.toString(), testDir.toString());
+    Set<Path> expectedNormalizedSet = new HashSet<>(Arrays.asList(
+        file1.toAbsolutePath(),
+        file3.toAbsolutePath()));
+    Assert.assertEquals(expectedNormalizedSet, normalizedSet);
   }
 
   private SnapshotInfo createSnapshotInfo() {
