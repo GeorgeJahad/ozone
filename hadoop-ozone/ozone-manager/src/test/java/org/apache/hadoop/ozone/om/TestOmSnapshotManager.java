@@ -155,9 +155,22 @@ public class TestOmSnapshotManager {
     File s1File;
     File f1FileLink;
     File f1File;
+    File nolinkFile;
   }
 
   private DirectoryData setupData() throws IOException {
+    // Setup the leader with the following files:
+    // leader/db.checkpoints/dir1/f1
+    // leader/db.snapshots/checkpointState/dir1/s1
+
+    // and the following links
+    // leader/db.snapshots/checkpointState/dir2/<link to f1>
+    // leader/db.snapshots/checkpointState/dir2/<link to s1>
+
+    // Setup the follower with the following files, (as if they came from the tarball from the leader)
+    // follower/cand/f1
+    // follower/cand/db.snapshots/checkpointState/dir1/s1
+
     byte[] dummyData = {0};
     DirectoryData directoryData = new DirectoryData();
 
@@ -177,6 +190,8 @@ public class TestOmSnapshotManager {
     if (!directoryData.leaderSnapdir2.mkdirs()) {
       throw new IOException("failed to make directory: " + directoryData.leaderSnapdir2);
     }
+    Files.write(Paths.get(directoryData.leaderSnapdir2.toString(), "noLink.sst"), dummyData);
+
 
     // Also create the follower files
     directoryData.candidateDir = new File(testDir.toString(),
@@ -195,6 +210,7 @@ public class TestOmSnapshotManager {
     directoryData.s1File = new File(directoryData.followerSnapdir1, "s1.sst");
     directoryData.f1FileLink = new File(directoryData.followerSnapdir2, "f1.sst");
     directoryData.f1File = new File(directoryData.candidateDir, "f1.sst");
+    directoryData.nolinkFile = new File(directoryData.followerSnapdir2, "noLink.sst");
 
     return directoryData;
   }
@@ -202,6 +218,11 @@ public class TestOmSnapshotManager {
   @Test
   @SuppressFBWarnings({"NP_NULL_ON_SOME_PATH"})
   public void testHardLinkCreation() throws IOException {
+
+    // test that following links are created on the follower
+    //     follower/db.snapshots/checkpointState/dir2/f1.sst
+    //     follower/db.snapshots/checkpointState/dir2/s1.sst
+
     DirectoryData directoryData = setupData();
 
     // Create map of links to dummy files on the leader
@@ -241,16 +262,18 @@ public class TestOmSnapshotManager {
     int truncateLength = directoryData.candidateDir.toString().length() + 1;
     Set<String> expectedSstFiles = new HashSet<>(Arrays.asList(
         directoryData.s1File.toString().substring(truncateLength),
+        directoryData.nolinkFile.toString().substring(truncateLength),
         directoryData.f1File.toString().substring(truncateLength)));
-    Assert.assertEquals(expectedSstFiles, existingSstFiles);
+    Assert.assertTrue(expectedSstFiles.equals(existingSstFiles));
 
     Set<Path> normalizedSet =
         OMDBCheckpointServlet.normalizeExcludeList(excludeList,
             directoryData.leaderCheckpointDir.toString(), directoryData.leaderDir.toString());
     Set<Path> expectedNormalizedSet = new HashSet<>(Arrays.asList(
         Paths.get(directoryData.leaderSnapdir1.toString(), "s1.sst"),
+        Paths.get(directoryData.leaderSnapdir2.toString(), "noLink.sst"),
         Paths.get(directoryData.leaderCheckpointDir.toString(), "f1.sst")));
-    Assert.assertEquals(expectedNormalizedSet, normalizedSet);
+    Assert.assertTrue(expectedNormalizedSet.equals(normalizedSet));
   }
 
   private SnapshotInfo createSnapshotInfo() {
