@@ -160,16 +160,23 @@ public class TestOmSnapshotManager {
 
   private DirectoryData setupData() throws IOException {
     // Setup the leader with the following files:
-    // leader/db.checkpoints/dir1/f1
-    // leader/db.snapshots/checkpointState/dir1/s1
+    // leader/db.checkpoints/dir1/f1.sst
+    // leader/db.snapshots/checkpointState/dir1/s1.sst
 
-    // and the following links
-    // leader/db.snapshots/checkpointState/dir2/<link to f1>
-    // leader/db.snapshots/checkpointState/dir2/<link to s1>
+    // And the following links:
+    // leader/db.snapshots/checkpointState/dir2/<link to f1.sst>
+    // leader/db.snapshots/checkpointState/dir2/<link to s1.sst>
 
-    // Setup the follower with the following files, (as if they came from the tarball from the leader)
-    // follower/cand/f1
-    // follower/cand/db.snapshots/checkpointState/dir1/s1
+    // Setup the follower with the following files, (as if they came
+    // from the tarball from the leader)
+
+    // follower/cand/f1.sst
+    // follower/cand/db.snapshots/checkpointState/dir1/s1.sst
+
+    // Note that the layout is slightly different in that the f1.sst on
+    // the leader is in a checkpoint directory but on the follower is
+    // moved to the candidate omdb directory; the links must be
+    // adjusted accordingly.
 
     byte[] dummyData = {0};
     DirectoryData directoryData = new DirectoryData();
@@ -191,6 +198,7 @@ public class TestOmSnapshotManager {
       throw new IOException("failed to make directory: " + directoryData.leaderSnapdir2);
     }
     Files.write(Paths.get(directoryData.leaderSnapdir2.toString(), "noLink.sst"), dummyData);
+    Files.write(Paths.get(directoryData.leaderSnapdir2.toString(), "nonSstFile"), dummyData);
 
 
     // Also create the follower files
