@@ -213,29 +213,32 @@ public class TestOmSnapshotManager {
   @Test
   public void testFileUtilities() throws IOException {
 
-    // testSubDir/
+    // candidateDir/
     //     f1.sst
-    //     d2
     //     db.snapshots/snapshot1/f3.sst
+    //     db.snapshots/snapshot1/dummyFile
 
-    File testSubDir = new File(testDir, "testSubDir");
-    testSubDir.mkdirs();
+    File candidateDir = new File(testDir, "candidateDir");
+    candidateDir.mkdirs();
     File checkpointDir = new File(testDir, "checkpointDir");
     checkpointDir.mkdirs();
-    Path file1 = Paths.get(testSubDir.toString(), "file1.sst");
+    Path file1 = Paths.get(candidateDir.toString(), "file1.sst");
     Files.write(file1,
         "dummyData".getBytes(StandardCharsets.UTF_8));
-    File dir2 = new File(testSubDir, "dir2");
+    File dir2 = new File(candidateDir, "dir2");
     dir2.mkdirs();
-    File dir3 = new File(testSubDir, "db.snapshots/snapshot1");
+    File dir3 = new File(candidateDir, "db.snapshots/snapshot1");
     dir3.mkdirs();
     Path file3 = Paths.get(dir3.toString(), "file3.sst");
+    Path dummyFile = Paths.get(dir3.toString(), "dummyFile");
     Files.write(file3,
         "dummyData".getBytes(StandardCharsets.UTF_8));
+    Files.write(dummyFile,
+        "dummyData".getBytes(StandardCharsets.UTF_8));
 
-    List<String> excludeList = getExistingSstFiles(testSubDir);
+    List<String> excludeList = getExistingSstFiles(candidateDir);
     Set<String> existingSstFiles = new HashSet<>(excludeList);
-    int truncateLength = testSubDir.toString().length() + 1;
+    int truncateLength = candidateDir.toString().length() + 1;
     Set<String> expectedSstFiles = new HashSet<>(Arrays.asList(
         file1.toString().substring(truncateLength),
         file3.toString().substring(truncateLength)));
