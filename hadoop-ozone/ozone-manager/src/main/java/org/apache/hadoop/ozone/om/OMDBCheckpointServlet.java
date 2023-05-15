@@ -265,7 +265,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
    * @param excluded The list of db files that actually were excluded.
    */
   @VisibleForTesting
-  public void processFile(Path file, Set<Path> copyFiles,
+  public static void processFile(Path file, Set<Path> copyFiles,
                            Map<Path, Path> hardLinkFiles,
                            Set<Path> toExcludeFiles,
                            List<String> excluded) {
@@ -296,7 +296,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
 
   // If fileName exists in "files" parameter,
   // it should be linked to path in files.
-  private Path findLinkPath(Set<Path> files, String fileName) {
+  private static Path findLinkPath(Set<Path> files, String fileName) {
     for (Path p: files) {
       if (p.toString().endsWith(fileName)) {
         return p;

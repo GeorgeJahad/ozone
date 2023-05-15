@@ -39,7 +39,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -54,6 +56,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_CHECKPOINT_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.SNAPSHOT_CANDIDATE_DIR;
+import static org.apache.hadoop.ozone.om.OMDBCheckpointServlet.processFile;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.OM_HARDLINK_FILE;
 import static org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils.getINode;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPrefix;
@@ -272,7 +275,7 @@ public class TestOmSnapshotManager {
         directoryData.s1File.toString().substring(truncateLength),
         directoryData.nolinkFile.toString().substring(truncateLength),
         directoryData.f1File.toString().substring(truncateLength)));
-    Assert.assertTrue(expectedSstFiles.equals(existingSstFiles));
+    Assert.assertEquals(expectedSstFiles, existingSstFiles);
 
     Set<Path> normalizedSet =
         OMDBCheckpointServlet.normalizeExcludeList(excludeList,
@@ -281,7 +284,59 @@ public class TestOmSnapshotManager {
         Paths.get(directoryData.leaderSnapdir1.toString(), "s1.sst"),
         Paths.get(directoryData.leaderSnapdir2.toString(), "noLink.sst"),
         Paths.get(directoryData.leaderCheckpointDir.toString(), "f1.sst")));
-    Assert.assertTrue(expectedNormalizedSet.equals(normalizedSet));
+    Assert.assertEquals(expectedNormalizedSet, normalizedSet);
+  }
+
+  @Test
+  public void testProcessFile() {
+    Path copyFile = Paths.get("/dir1/copyfile.sst");
+    Path excludeFile = Paths.get("/dir1/excludefile.sst");
+    Path linkToExcludedFile = Paths.get("/dir2/excludefile.sst");
+    Path linkToCopiedFile = Paths.get("/dir2/copyfile.sst");
+    Path addToCopiedFiles = Paths.get("/dir1/copyfile2.sst");
+    Path addNonSstToCopiedFiles = Paths.get("/dir1/nonSst");
+
+    Set<Path> toExcludeFiles = new HashSet<>(
+        Collections.singletonList(excludeFile));
+    Set<Path> copyFiles = new HashSet<>(Collections.singletonList(copyFile));
+    List<String> excluded = new ArrayList<>();
+    Map<Path, Path> hardLinkFiles = new HashMap<>();
+
+    processFile(excludeFile, copyFiles, hardLinkFiles, toExcludeFiles, excluded);
+    Assert.assertEquals(excluded.size(), 1);
+    Assert.assertEquals((excluded.get(0)), excludeFile.toString());
+    Assert.assertEquals(copyFiles.size(), 1);
+    Assert.assertEquals(hardLinkFiles.size(), 0);
+    excluded = new ArrayList<>();
+
+    processFile(linkToExcludedFile, copyFiles, hardLinkFiles, toExcludeFiles,
+        excluded);
+    Assert.assertEquals(excluded.size(), 0);
+    Assert.assertEquals(copyFiles.size(), 1);
+    Assert.assertEquals(hardLinkFiles.size(), 1);
+    Assert.assertEquals(hardLinkFiles.get(linkToExcludedFile), excludeFile);
+    hardLinkFiles = new HashMap<>();
+
+    processFile(linkToCopiedFile, copyFiles, hardLinkFiles, toExcludeFiles,
+        excluded);
+    Assert.assertEquals(excluded.size(), 0);
+    Assert.assertEquals(copyFiles.size(), 1);
+    Assert.assertEquals(hardLinkFiles.size(), 1);
+    Assert.assertEquals(hardLinkFiles.get(linkToCopiedFile), copyFile);
+    hardLinkFiles = new HashMap<>();
+
+    processFile(addToCopiedFiles, copyFiles, hardLinkFiles, toExcludeFiles,
+        excluded);
+    Assert.assertEquals(excluded.size(), 0);
+    Assert.assertEquals(copyFiles.size(), 2);
+    Assert.assertTrue(copyFiles.contains(addToCopiedFiles));
+    copyFiles = new HashSet<>(Collections.singletonList(copyFile));
+
+    processFile(addNonSstToCopiedFiles, copyFiles, hardLinkFiles, toExcludeFiles,
+        excluded);
+    Assert.assertEquals(excluded.size(), 0);
+    Assert.assertEquals(copyFiles.size(), 2);
+    Assert.assertTrue(copyFiles.contains(addNonSstToCopiedFiles));
   }
 
   private SnapshotInfo createSnapshotInfo() {
