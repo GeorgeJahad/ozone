@@ -142,69 +142,87 @@ public class TestOmSnapshotManager {
     verify(firstSnapshotStore, timeout(3000).times(1)).close();
   }
 
-  @Test
-  @SuppressFBWarnings({"NP_NULL_ON_SOME_PATH"})
-  public void testHardLinkCreation() throws IOException {
+  static class DirectoryData {
+    String pathSnap1;
+    String pathSnap2;
+    File leaderDir;
+    File leaderSnapdir1;
+    File leaderSnapdir2;
+    File leaderCheckpointDir;
+    File candidateDir;
+    File followerSnapdir1;
+    File followerSnapdir2;
+  };
+
+  private DirectoryData setupData() throws IOException {
     byte[] dummyData = {0};
+    DirectoryData directoryData = new DirectoryData();
 
     // Create dummy leader files to calculate links
-    File leaderDir = new File(testDir.toString(),
+    directoryData.leaderDir = new File(testDir.toString(),
         "leader");
-    leaderDir.mkdirs();
-    String pathSnap1 = OM_SNAPSHOT_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir1";
-    String pathSnap2 = OM_SNAPSHOT_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir2";
-    File leaderSnapdir1 = new File(leaderDir.toString(), pathSnap1);
-    if (!leaderSnapdir1.mkdirs()) {
-      throw new IOException("failed to make directory: " + leaderSnapdir1);
+    directoryData.leaderDir.mkdirs();
+    directoryData.pathSnap1 = OM_SNAPSHOT_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir1";
+    directoryData.pathSnap2 = OM_SNAPSHOT_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir2";
+    directoryData.leaderSnapdir1 = new File(directoryData.leaderDir.toString(), directoryData.pathSnap1);
+    if (!directoryData.leaderSnapdir1.mkdirs()) {
+      throw new IOException("failed to make directory: " + directoryData.leaderSnapdir1);
     }
-    Files.write(Paths.get(leaderSnapdir1.toString(), "s1"), dummyData);
+    Files.write(Paths.get(directoryData.leaderSnapdir1.toString(), "s1"), dummyData);
 
-    File leaderSnapdir2 = new File(leaderDir.toString(), pathSnap2);
-    if (!leaderSnapdir2.mkdirs()) {
-      throw new IOException("failed to make directory: " + leaderSnapdir2);
+    directoryData.leaderSnapdir2 = new File(directoryData.leaderDir.toString(), directoryData.pathSnap2);
+    if (!directoryData.leaderSnapdir2.mkdirs()) {
+      throw new IOException("failed to make directory: " + directoryData.leaderSnapdir2);
     }
 
     // Also create the follower files
-    File candidateDir = new File(testDir.toString(),
+    directoryData.candidateDir = new File(testDir.toString(),
         CANDIDATE_DIR_NAME);
-    File followerSnapdir1 = new File(candidateDir.toString(), pathSnap1);
-    File followerSnapdir2 = new File(candidateDir.toString(), pathSnap2);
-    copyDirectory(leaderDir.toPath(), candidateDir.toPath());
-    Files.write(Paths.get(candidateDir.toString(), "f1"), dummyData);
+    directoryData.followerSnapdir1 = new File(directoryData.candidateDir.toString(), directoryData.pathSnap1);
+    directoryData.followerSnapdir2 = new File(directoryData.candidateDir.toString(), directoryData.pathSnap2);
+    copyDirectory(directoryData.leaderDir.toPath(), directoryData.candidateDir.toPath());
+    Files.write(Paths.get(directoryData.candidateDir.toString(), "f1"), dummyData);
 
 
-    File leaderCheckpointDir = new File(leaderDir.toString(),
+    directoryData.leaderCheckpointDir = new File(directoryData.leaderDir.toString(),
         OM_CHECKPOINT_DIR + OM_KEY_PREFIX + "dir1");
-    leaderCheckpointDir.mkdirs();
-    Files.write(Paths.get(leaderCheckpointDir.toString(), "f1"), dummyData);
+    directoryData.leaderCheckpointDir.mkdirs();
+    Files.write(Paths.get(directoryData.leaderCheckpointDir.toString(), "f1"), dummyData);
+    return directoryData;
+  }
 
-    // Create map of links to dummy files.
+  @Test
+  @SuppressFBWarnings({"NP_NULL_ON_SOME_PATH"})
+  public void testHardLinkCreation() throws IOException {
+    DirectoryData directoryData = setupData();
+
+    // Create map of links to dummy files on the leader
     Map<Path, Path> hardLinkFiles = new HashMap<>();
-    hardLinkFiles.put(Paths.get(leaderSnapdir2.toString(), "f1"),
-        Paths.get(leaderCheckpointDir.toString(), "f1"));
-    hardLinkFiles.put(Paths.get(leaderSnapdir2.toString(), "s1"),
-        Paths.get(leaderSnapdir1.toString(), "s1"));
+    hardLinkFiles.put(Paths.get(directoryData.leaderSnapdir2.toString(), "f1"),
+        Paths.get(directoryData.leaderCheckpointDir.toString(), "f1"));
+    hardLinkFiles.put(Paths.get(directoryData.leaderSnapdir2.toString(), "s1"),
+        Paths.get(directoryData.leaderSnapdir1.toString(), "s1"));
 
     // Create link list.
     Path hardLinkList =
         OmSnapshotUtils.createHardLinkList(
-            leaderDir.toString().length() + 1, hardLinkFiles);
+            directoryData.leaderDir.toString().length() + 1, hardLinkFiles);
 
-    Files.move(hardLinkList, Paths.get(candidateDir.toString(),
+    Files.move(hardLinkList, Paths.get(directoryData.candidateDir.toString(),
         OM_HARDLINK_FILE));
 
-    // Create links from list.
-    OmSnapshotUtils.createHardLinks(candidateDir.toPath());
+    // Create links on the follower from list.
+    OmSnapshotUtils.createHardLinks(directoryData.candidateDir.toPath());
 
-    // Confirm expected links.
-    File s1FileLink = new File(followerSnapdir2, "s1");
-    File s1File = new File(followerSnapdir1, "s1");
+    // Confirm expected follower links.
+    File s1FileLink = new File(directoryData.followerSnapdir2, "s1");
+    File s1File = new File(directoryData.followerSnapdir1, "s1");
     Assert.assertTrue(s1FileLink.exists());
     Assert.assertEquals("link matches original file",
         getINode(s1File.toPath()), getINode(s1FileLink.toPath()));
 
-    File f1FileLink = new File(followerSnapdir2, "f1");
-    File f1File = new File(candidateDir, "f1");
+    File f1FileLink = new File(directoryData.followerSnapdir2, "f1");
+    File f1File = new File(directoryData.candidateDir, "f1");
     Assert.assertTrue(f1FileLink.exists());
     Assert.assertEquals("link matches original file",
         getINode(f1File.toPath()), getINode(f1FileLink.toPath()));
