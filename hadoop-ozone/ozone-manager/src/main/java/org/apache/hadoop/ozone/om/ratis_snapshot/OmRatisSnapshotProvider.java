@@ -135,6 +135,8 @@ public class OmRatisSnapshotProvider extends RDBSnapshotProvider {
       HttpURLConnection connection = (HttpURLConnection)
           connectionFactory.openConnection(omCheckpointUrl, spnegoEnabled);
       connection.setRequestMethod("GET");
+      connection.setConnectTimeout(0);
+      connection.setReadTimeout(0);
       connection.connect();
       int errorCode = connection.getResponseCode();
       if ((errorCode != HTTP_OK) && (errorCode != HTTP_CREATED)) {

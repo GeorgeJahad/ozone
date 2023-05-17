@@ -173,9 +173,11 @@ public class TestOMRatisSnapshots {
     }
   }
 
-  @ParameterizedTest
-  @ValueSource(ints = {5})
-  public void testInstallSnapshot(int numSnapshotsToCreate) throws Exception {
+  //  @ParameterizedTest
+  //  @ValueSource(ints = {1000})
+  @Test
+  public void testInstallSnapshot() throws Exception {
+    int numSnapshotsToCreate = 500;
     // Get the leader OM
     String leaderOMNodeId = OmFailoverProxyUtil
         .getFailoverProxyProvider(objectStore.getClientProxy())
@@ -192,7 +194,7 @@ public class TestOMRatisSnapshots {
     OzoneManager followerOM = cluster.getOzoneManager(followerNodeId);
 
     // Do some transactions so that the log index increases
-    int keyIncrement = 200;
+    int keyIncrement = 10;
     int keyCount = 0;
     String snapshotNamePrefix = "snapshot";
     String snapshotName = "";
