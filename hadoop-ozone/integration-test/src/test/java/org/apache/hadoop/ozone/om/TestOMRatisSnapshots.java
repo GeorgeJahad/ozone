@@ -21,7 +21,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.ExitManager;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
-import org.apache.hadoop.hdds.scm.net.NetworkTopologyImpl;
 import org.apache.hadoop.hdds.utils.DBCheckpointMetrics;
 import org.apache.hadoop.hdds.utils.FaultInjector;
 import org.apache.hadoop.hdds.utils.HAUtils;
@@ -70,6 +69,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -182,7 +182,6 @@ public class TestOMRatisSnapshots {
         .getCurrentProxyOMNodeId();
 
     OzoneManager leaderOM = cluster.getOzoneManager(leaderOMNodeId);
-    OzoneManagerRatisServer leaderRatisServer = leaderOM.getOmRatisServer();
 
     // Find the inactive OM
     String followerNodeId = leaderOM.getPeerNodes().get(0).getNodeId();
@@ -193,13 +192,11 @@ public class TestOMRatisSnapshots {
 
     // Do some transactions so that the log index increases
     int keyIncrement = 10;
-    int keyCount = 0;
     String snapshotNamePrefix = "snapshot";
     String snapshotName = "";
     List<String> keys = new ArrayList<>();
     SnapshotInfo snapshotInfo = null;
     for (int snapshotCount = 0; snapshotCount < numSnapshotsToCreate; snapshotCount++) {
-      keyCount += keyIncrement;
       snapshotName = snapshotNamePrefix + snapshotCount;
       keys = writeKeys(keyIncrement);
       snapshotInfo = createOzoneSnapshot(leaderOM, snapshotName);
@@ -249,12 +246,12 @@ public class TestOMRatisSnapshots {
     // Verify that the follower OM's DB contains the transactions which were
     // made while it was inactive.
     OMMetadataManager followerOMMetaMngr = followerOM.getMetadataManager();
-    Assert.assertNotNull(followerOMMetaMngr.getVolumeTable().get(
+    assertNotNull(followerOMMetaMngr.getVolumeTable().get(
         followerOMMetaMngr.getVolumeKey(volumeName)));
-    Assert.assertNotNull(followerOMMetaMngr.getBucketTable().get(
+    assertNotNull(followerOMMetaMngr.getBucketTable().get(
         followerOMMetaMngr.getBucketKey(volumeName, bucketName)));
     for (String key : keys) {
-      Assert.assertNotNull(followerOMMetaMngr.getKeyTable(
+      assertNotNull(followerOMMetaMngr.getKeyTable(
           TEST_BUCKET_LAYOUT)
           .get(followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
     }
@@ -530,7 +527,7 @@ public class TestOMRatisSnapshots {
     tr.keys = writeKeysToIncreaseLogIndex(leaderRatisServer,
         numKeys);
 
-    tr.snapshotInfo = createOzoneSnapshot(leaderOM, "snap" + String.valueOf(numKeys));
+    tr.snapshotInfo = createOzoneSnapshot(leaderOM, "snap" + numKeys);
     // Resume the follower thread, it would download the incremental snapshot.
     faultInjector.resume();
 
@@ -540,13 +537,11 @@ public class TestOMRatisSnapshots {
     //gbjfix
     // Wait the follower download the incremental snapshot, but get stuck
     // by injector
-    GenericTestUtils.waitFor(() -> {
-      return followerOM.getOmSnapshotProvider().getNumDownloaded() == expectedNumDownloads;
-    }, 1000, 10000);
+    GenericTestUtils.waitFor(() -> followerOM.getOmSnapshotProvider().getNumDownloaded() == expectedNumDownloads, 1000, 10000);
 
     assertTrue(followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
                       >= leaderOMSnapshotIndex - 1);
-    Path increment = Paths.get(tempDir.toString(), "increment" + String.valueOf(numKeys));
+    Path increment = Paths.get(tempDir.toString(), "increment" + numKeys);
     increment.toFile().mkdirs();
     unTarLatestTarBall(followerOM, increment);
     List<String> sstFiles = HAUtils.getExistingSstFiles(increment.toFile());
@@ -1006,10 +1001,6 @@ public class TestOMRatisSnapshots {
     assertLogCapture(logCapture, msg);
   }
 
-  private SnapshotInfo createOzoneSnapshot(OzoneManager leaderOM)
-      throws IOException {
-    return createOzoneSnapshot(leaderOM, "snap0");
-  }
   private SnapshotInfo createOzoneSnapshot(OzoneManager leaderOM, String name)
       throws IOException {
     objectStore.createSnapshot(volumeName, bucketName, name);
@@ -1082,19 +1073,14 @@ public class TestOMRatisSnapshots {
   }
 
   // Returns temp dir where tarball was untarred.
-  private Path unTarLatestTarBall(OzoneManager followerOm, Path tempDir)
+  private void unTarLatestTarBall(OzoneManager followerOm, Path tempDir)
       throws IOException {
     File snapshotDir = followerOm.getOmSnapshotProvider().getSnapshotDir();
     // Find the latest snapshot.
-    String tarBall = Arrays.stream(snapshotDir.list()).
-        filter(s -> {
-          return s.toLowerCase().endsWith(".tar");
-        }).
-        reduce("", (s1, s2) -> {
-          return s1.compareToIgnoreCase(s2) > 0 ? s1 : s2;
-        });
+    String tarBall = Arrays.stream(Objects.requireNonNull(snapshotDir.list())).
+        filter(s -> s.toLowerCase().endsWith(".tar")).
+        reduce("", (s1, s2) -> s1.compareToIgnoreCase(s2) > 0 ? s1 : s2);
     FileUtil.unTar(new File(snapshotDir, tarBall), tempDir.toFile());
-    return tempDir;
   }
 
   private static class DummyExitManager extends ExitManager {
