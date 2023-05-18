@@ -177,7 +177,7 @@ public class TestOMRatisSnapshots {
   //  @ValueSource(ints = {1000})
   @Test
   public void testInstallSnapshot() throws Exception {
-    int numSnapshotsToCreate = 500;
+    int numSnapshotsToCreate = 1000;
     // Get the leader OM
     String leaderOMNodeId = OmFailoverProxyUtil
         .getFailoverProxyProvider(objectStore.getClientProxy())
@@ -228,7 +228,7 @@ public class TestOMRatisSnapshots {
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
           >= leaderOMSnapshotIndex - 1;
-    }, 100, 60000);
+    }, 100, 600000);
 
     long followerOMLastAppliedIndex =
         followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex();
@@ -445,14 +445,6 @@ public class TestOMRatisSnapshots {
 
     // Pause the follower thread again to block the third-time install
     faultInjector.reset();
-
-    // Get the latest db checkpoint from the leader OM.
-    transactionInfo =
-        TransactionInfo.readTransactionInfo(leaderOM.getMetadataManager());
-    leaderOMTermIndex =
-        TermIndex.valueOf(transactionInfo.getTerm(),
-            transactionInfo.getTransactionIndex());
-    long gbjnextLeaderOMSnapshotIndex = leaderOMTermIndex.getIndex();
 
     //gbjfix
     // Wait the follower download the incremental snapshot, but get stuck

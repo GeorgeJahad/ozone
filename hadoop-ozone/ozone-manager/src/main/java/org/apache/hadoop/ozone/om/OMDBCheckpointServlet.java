@@ -144,6 +144,9 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
       archiveOutputStream
           .setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_POSIX);
       writeFilesToArchive(copyFiles, hardLinkFiles, archiveOutputStream);
+    } catch (Exception e) {
+      LOG.error("got exception writing to archive " + e);
+      throw e;
     }
   }
 
