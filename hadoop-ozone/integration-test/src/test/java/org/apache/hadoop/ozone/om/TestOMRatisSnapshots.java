@@ -435,6 +435,9 @@ public class TestOMRatisSnapshots {
     // Resume the follower thread, it would download the incremental snapshot.
     faultInjector.resume();
 
+    // Pause the follower thread again to block the third-time install
+    faultInjector.reset();
+
     // The recently started OM should be lagging behind the leader OM.
     // Wait & for follower to update transactions to leader snapshot index.
     // Timeout error if follower does not load update within 3s
@@ -442,9 +445,6 @@ public class TestOMRatisSnapshots {
       return followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
           >= leaderOMSnapshotIndex - 1;
     }, 100, 300000);
-
-    // Pause the follower thread again to block the third-time install
-    faultInjector.reset();
 
     //gbjfix
     // Wait the follower download the incremental snapshot, but get stuck
@@ -1204,6 +1204,12 @@ public class TestOMRatisSnapshots {
 
     @Override
     public void resume() throws IOException {
+      try {
+        ready.await();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+        Fail.fail("resume interrupted");
+      }
       wait.countDown();
     }
 
