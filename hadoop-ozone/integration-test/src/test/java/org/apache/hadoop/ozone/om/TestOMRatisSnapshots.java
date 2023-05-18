@@ -372,6 +372,13 @@ public class TestOMRatisSnapshots {
       return followerOM.getOmSnapshotProvider().getNumDownloaded() == 1;
     }, 1000, 10000);
 
+    // Get the latest db checkpoint from the leader OM.
+    TransactionInfo transactionInfo =
+        TransactionInfo.readTransactionInfo(leaderOM.getMetadataManager());
+    TermIndex leaderOMTermIndex =
+        TermIndex.valueOf(transactionInfo.getTerm(),
+            transactionInfo.getTransactionIndex());
+    long leaderOMSnapshotIndex = leaderOMTermIndex.getIndex();
     // Do some transactions, let leader OM take a new snapshot and purge the
     // old logs, so that follower must download the new snapshot again.
     List<String> secondKeys = writeKeysToIncreaseLogIndex(leaderRatisServer,
@@ -391,6 +398,8 @@ public class TestOMRatisSnapshots {
       return followerOM.getOmSnapshotProvider().getNumDownloaded() == 2;
     }, 1000, 10000);
 
+    assertTrue(followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
+                      >= leaderOMSnapshotIndex - 1);
     Path firstIncrement = Paths.get(tempDir.toString(), "firstIncrement");
     firstIncrement.toFile().mkdirs();
     unTarLatestTarBall(followerOM, firstIncrement);
@@ -420,12 +429,12 @@ public class TestOMRatisSnapshots {
     }
 
     // Get the latest db checkpoint from the leader OM.
-    TransactionInfo transactionInfo =
+    transactionInfo =
         TransactionInfo.readTransactionInfo(leaderOM.getMetadataManager());
-    TermIndex leaderOMTermIndex =
+    leaderOMTermIndex =
         TermIndex.valueOf(transactionInfo.getTerm(),
             transactionInfo.getTransactionIndex());
-    long leaderOMSnapshotIndex = leaderOMTermIndex.getIndex();
+    long gbjLeaderOMSnapshotIndex = leaderOMTermIndex.getIndex();
     // Do some transactions, let leader OM take a new snapshot and purge the
     // old logs, so that follower must download the new snapshot again.
     List<String> thirdKeys = writeKeysToIncreaseLogIndex(leaderRatisServer,
@@ -438,14 +447,6 @@ public class TestOMRatisSnapshots {
     // Pause the follower thread again to block the third-time install
     faultInjector.reset();
 
-    // The recently started OM should be lagging behind the leader OM.
-    // Wait & for follower to update transactions to leader snapshot index.
-    // Timeout error if follower does not load update within 3s
-    GenericTestUtils.waitFor(() -> {
-      return followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
-          >= leaderOMSnapshotIndex - 1;
-    }, 100, 300000);
-
     //gbjfix
     // Wait the follower download the incremental snapshot, but get stuck
     // by injector
@@ -453,6 +454,8 @@ public class TestOMRatisSnapshots {
       return followerOM.getOmSnapshotProvider().getNumDownloaded() == 3;
     }, 1000, 60000);
 
+    assertTrue(followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
+                      >= gbjLeaderOMSnapshotIndex - 1);
     Path secondIncrement = Paths.get(tempDir.toString(), "secondIncrement");
     secondIncrement.toFile().mkdirs();
     unTarLatestTarBall(followerOM, secondIncrement);
