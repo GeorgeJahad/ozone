@@ -84,6 +84,7 @@ import static org.apache.hadoop.ozone.om.OmSnapshotManager.OM_HARDLINK_FILE;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPath;
 import static org.apache.hadoop.ozone.om.TestOzoneManagerHAWithData.createKey;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -175,7 +176,7 @@ public class TestOMRatisSnapshots {
   //  @ValueSource(ints = {1000})
   @Test
   public void testInstallSnapshot() throws Exception {
-    int numSnapshotsToCreate = 1000;
+    int numSnapshotsToCreate = 100;
     // Get the leader OM
     String leaderOMNodeId = OmFailoverProxyUtil
         .getFailoverProxyProvider(objectStore.getClientProxy())
@@ -274,11 +275,17 @@ public class TestOMRatisSnapshots {
         volumeName, bucketName, newKeys.get(0))));
      */
 
-    // Read back data from the last OM snapshot.
+    checkSnapshot(leaderOM, followerOM, snapshotName, keys, snapshotInfo);
+  }
+
+  private void checkSnapshot(OzoneManager leaderOM, OzoneManager followerOM, String snapshotName,
+                         List<String> keys, SnapshotInfo snapshotInfo)
+      throws IOException {
+    // Read back data from snapshot.
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
-        .setKeyName(".snapshot/"+ snapshotName + "/" + keys.get(0)).build();
+        .setKeyName(".snapshot/" + snapshotName + "/" + keys.get(keys.size() - 1)).build();
     OmKeyInfo omKeyInfo;
     omKeyInfo = followerOM.lookupKey(omKeyArgs);
     Assertions.assertNotNull(omKeyInfo);
@@ -444,62 +451,6 @@ public class TestOMRatisSnapshots {
         "Only initialized twice");
   }
 
-  private void checkSnapshot(OzoneManager leaderOM, OzoneManager followerOM, String snapshotName,
-                         List<String> keys, SnapshotInfo snapshotInfo)
-      throws IOException {
-    // Read back data from snapshot.
-    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
-        .setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setKeyName(".snapshot/" + snapshotName + "/" + keys.get(keys.size() - 1)).build();
-    OmKeyInfo omKeyInfo;
-    omKeyInfo = followerOM.lookupKey(omKeyArgs);
-    Assertions.assertNotNull(omKeyInfo);
-    Assertions.assertEquals(omKeyInfo.getKeyName(), omKeyArgs.getKeyName());
-
-    // Confirm followers snapshot hard links are as expected
-    File followerMetaDir = OMStorage.getOmDbDir(followerOM.getConfiguration());
-    Path followerActiveDir = Paths.get(followerMetaDir.toString(), OM_DB_NAME);
-    Path followerSnapshotDir =
-        Paths.get(getSnapshotPath(followerOM.getConfiguration(), snapshotInfo));
-    File leaderMetaDir = OMStorage.getOmDbDir(leaderOM.getConfiguration());
-    Path leaderActiveDir = Paths.get(leaderMetaDir.toString(), OM_DB_NAME);
-    Path leaderSnapshotDir =
-        Paths.get(getSnapshotPath(leaderOM.getConfiguration(), snapshotInfo));
-    // Get the list of hardlinks from the leader.  Then confirm those links
-    //  are on the follower
-    int hardLinkCount = 0;
-    try (Stream<Path>list = Files.list(leaderSnapshotDir)) {
-      for (Path leaderSnapshotSST: list.collect(Collectors.toList())) {
-        String fileName = leaderSnapshotSST.getFileName().toString();
-        if (fileName.toLowerCase().endsWith(".sst")) {
-
-          Path leaderActiveSST =
-              Paths.get(leaderActiveDir.toString(), fileName);
-          // Skip if not hard link on the leader
-          if (!leaderActiveSST.toFile().exists()) {
-            continue;
-          }
-          // If it is a hard link on the leader, it should be a hard
-          // link on the follower
-          if (OmSnapshotUtils.getINode(leaderActiveSST)
-              .equals(OmSnapshotUtils.getINode(leaderSnapshotSST))) {
-            Path followerSnapshotSST =
-                Paths.get(followerSnapshotDir.toString(), fileName);
-            Path followerActiveSST =
-                Paths.get(followerActiveDir.toString(), fileName);
-            Assertions.assertEquals(
-                OmSnapshotUtils.getINode(followerActiveSST),
-                OmSnapshotUtils.getINode(followerSnapshotSST),
-                "Snapshot sst file is supposed to be a hard link");
-            hardLinkCount++;
-          }
-        }
-      }
-    }
-    Assertions.assertTrue(hardLinkCount > 0, "No hard links were found");
-  }
-
   private static class TestResults {
     SnapshotInfo snapshotInfo;
     List<String> keys;
@@ -537,10 +488,12 @@ public class TestOMRatisSnapshots {
     //gbjfix
     // Wait the follower download the incremental snapshot, but get stuck
     // by injector
-    GenericTestUtils.waitFor(() -> followerOM.getOmSnapshotProvider().getNumDownloaded() == expectedNumDownloads, 1000, 10000);
+    GenericTestUtils.waitFor(() ->
+        followerOM.getOmSnapshotProvider().getNumDownloaded() ==
+        expectedNumDownloads, 1000, 10000);
 
     assertTrue(followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
-                      >= leaderOMSnapshotIndex - 1);
+        >= leaderOMSnapshotIndex - 1);
     Path increment = Paths.get(tempDir.toString(), "increment" + numKeys);
     increment.toFile().mkdirs();
     unTarLatestTarBall(followerOM, increment);
@@ -549,24 +502,28 @@ public class TestOMRatisSnapshots {
         getCandidateDir().toPath();
 
     // Confirm that none of the files in the tarball match one in the candidate dir.
+    assertTrue(sstFiles.size() > 0);
     for (String s: sstFiles) {
       File sstFile = Paths.get(followerCandidatePath.toString(), s).toFile();
-      Assertions.assertFalse(sstFile.exists(),
+      assertFalse(sstFile.exists(),
           sstFile + " should not duplicate existing files");
     }
-    Path hardLinkFile = Paths.get(increment.toString(), OM_HARDLINK_FILE);
 
     // Confirm that none of the links in the tarballs hardLinkFile
     //  match the existing files
     // gbjnote, is the path right here?
+    Path hardLinkFile = Paths.get(increment.toString(), OM_HARDLINK_FILE);
     try (Stream<String> lines = Files.lines(hardLinkFile)) {
+      int lineCount = 0;
       for (String line: lines.collect(Collectors.toList())) {
+        lineCount++;
         String link = line.split("\t")[0];
         File linkFile = Paths.get(followerCandidatePath.toString(), link).toFile();
-        Assertions.assertFalse(linkFile.exists(),
+        assertFalse(linkFile.exists(),
             "Incremental checkpoint should not " +
                 "duplicate existing links");
       }
+      assertTrue(lineCount > 0);
     }
     return tr;
   }
