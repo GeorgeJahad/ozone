@@ -410,6 +410,11 @@ public class TestOMRatisSnapshots {
           .get(followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
     }
 
+    for (String key : secondIncrement.keys) {
+      assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT)
+          .get(followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
+    }
+
     // Verify the metrics recording the incremental checkpoint at leader side
     DBCheckpointMetrics dbMetrics = leaderOM.getMetrics().
         getDBCheckpointMetrics();
@@ -435,11 +440,21 @@ public class TestOMRatisSnapshots {
     assertNotNull(filesInCandidate);
     assertEquals(0, filesInCandidate.length);
 
-    // Read back data from snap2.
+    checkSnapshot(leaderOM, followerOM, "snap2", firstKeys, snapshotInfo2);
+    checkSnapshot(leaderOM, followerOM, "snap160", firstIncrement.keys, firstIncrement.snapshotInfo);
+    checkSnapshot(leaderOM, followerOM, "snap240", secondIncrement.keys, secondIncrement.snapshotInfo);
+    Assertions.assertEquals(followerOM.getOmSnapshotProvider().getInitCount(), 2,
+        "Only initialized twice");
+  }
+
+  private void checkSnapshot(OzoneManager leaderOM, OzoneManager followerOM, String snapshotName,
+                         List<String> keys, SnapshotInfo snapshotInfo)
+      throws IOException {
+    // Read back data from snapshot.
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
-        .setKeyName(".snapshot/snap2/" + firstKeys.get(0)).build();
+        .setKeyName(".snapshot/" + snapshotName + "/" + keys.get(keys.size() - 1)).build();
     OmKeyInfo omKeyInfo;
     omKeyInfo = followerOM.lookupKey(omKeyArgs);
     Assertions.assertNotNull(omKeyInfo);
@@ -449,11 +464,11 @@ public class TestOMRatisSnapshots {
     File followerMetaDir = OMStorage.getOmDbDir(followerOM.getConfiguration());
     Path followerActiveDir = Paths.get(followerMetaDir.toString(), OM_DB_NAME);
     Path followerSnapshotDir =
-        Paths.get(getSnapshotPath(followerOM.getConfiguration(), snapshotInfo2));
+        Paths.get(getSnapshotPath(followerOM.getConfiguration(), snapshotInfo));
     File leaderMetaDir = OMStorage.getOmDbDir(leaderOM.getConfiguration());
     Path leaderActiveDir = Paths.get(leaderMetaDir.toString(), OM_DB_NAME);
     Path leaderSnapshotDir =
-        Paths.get(getSnapshotPath(leaderOM.getConfiguration(), snapshotInfo2));
+        Paths.get(getSnapshotPath(leaderOM.getConfiguration(), snapshotInfo));
     // Get the list of hardlinks from the leader.  Then confirm those links
     //  are on the follower
     int hardLinkCount = 0;
@@ -486,59 +501,6 @@ public class TestOMRatisSnapshots {
       }
     }
     Assertions.assertTrue(hardLinkCount > 0, "No hard links were found");
-
-    // Read back data from snap160
-    omKeyArgs = new OmKeyArgs.Builder()
-        .setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setKeyName(".snapshot/snap160/" + firstIncrement.keys.get(firstIncrement.keys.size() - 1)).build();
-    omKeyInfo = followerOM.lookupKey(omKeyArgs);
-    Assertions.assertNotNull(omKeyInfo);
-    Assertions.assertEquals(omKeyInfo.getKeyName(), omKeyArgs.getKeyName());
-
-    // Confirm followers snapshot hard links are as expected
-    followerMetaDir = OMStorage.getOmDbDir(followerOM.getConfiguration());
-    followerActiveDir = Paths.get(followerMetaDir.toString(), OM_DB_NAME);
-    followerSnapshotDir =
-        Paths.get(getSnapshotPath(followerOM.getConfiguration(), firstIncrement.snapshotInfo));
-    leaderMetaDir = OMStorage.getOmDbDir(leaderOM.getConfiguration());
-    leaderActiveDir = Paths.get(leaderMetaDir.toString(), OM_DB_NAME);
-    leaderSnapshotDir =
-        Paths.get(getSnapshotPath(leaderOM.getConfiguration(), firstIncrement.snapshotInfo));
-    // Get the list of hardlinks from the leader.  Then confirm those links
-    //  are on the follower
-    hardLinkCount = 0;
-    try (Stream<Path>list = Files.list(leaderSnapshotDir)) {
-      for (Path leaderSnapshotSST: list.collect(Collectors.toList())) {
-        String fileName = leaderSnapshotSST.getFileName().toString();
-        if (fileName.toLowerCase().endsWith(".sst")) {
-
-          Path leaderActiveSST =
-              Paths.get(leaderActiveDir.toString(), fileName);
-          // Skip if not hard link on the leader
-          if (!leaderActiveSST.toFile().exists()) {
-            continue;
-          }
-          // If it is a hard link on the leader, it should be a hard
-          // link on the follower
-          if (OmSnapshotUtils.getINode(leaderActiveSST)
-              .equals(OmSnapshotUtils.getINode(leaderSnapshotSST))) {
-            Path followerSnapshotSST =
-                Paths.get(followerSnapshotDir.toString(), fileName);
-            Path followerActiveSST =
-                Paths.get(followerActiveDir.toString(), fileName);
-            Assertions.assertEquals(
-                OmSnapshotUtils.getINode(followerActiveSST),
-                OmSnapshotUtils.getINode(followerSnapshotSST),
-                "Snapshot sst file is supposed to be a hard link");
-            hardLinkCount++;
-          }
-        }
-      }
-    }
-    Assertions.assertTrue(hardLinkCount > 0, "No hard links were found");
-    Assertions.assertEquals(followerOM.getOmSnapshotProvider().getInitCount(), 2,
-        "Only initialized twice");
   }
 
   private static class TestResults {
