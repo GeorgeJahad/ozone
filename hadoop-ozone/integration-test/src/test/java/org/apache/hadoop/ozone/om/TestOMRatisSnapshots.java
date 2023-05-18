@@ -358,8 +358,7 @@ public class TestOMRatisSnapshots {
     List<String> firstKeys = writeKeysToIncreaseLogIndex(leaderRatisServer,
         80);
 
-    SnapshotInfo snapshotInfo2 = createOzoneSnapshot(leaderOM, "snap2");
-
+    SnapshotInfo snapshotInfo2 = createOzoneSnapshot(leaderOM, "snap80");
 
     // Start the inactive OM. Checkpoint installation will happen spontaneously.
     cluster.startInactiveOM(followerNodeId);
@@ -375,6 +374,7 @@ public class TestOMRatisSnapshots {
     TestResults secondIncrement = getNextIncrementalTarball(240, 3, leaderOM,
         leaderRatisServer, faultInjector, followerOM, tempDir);
     faultInjector.resume();
+
     // Get the latest db checkpoint from the leader OM.
     TransactionInfo transactionInfo =
         TransactionInfo.readTransactionInfo(leaderOM.getMetadataManager());
@@ -440,7 +440,7 @@ public class TestOMRatisSnapshots {
     assertNotNull(filesInCandidate);
     assertEquals(0, filesInCandidate.length);
 
-    checkSnapshot(leaderOM, followerOM, "snap2", firstKeys, snapshotInfo2);
+    checkSnapshot(leaderOM, followerOM, "snap80", firstKeys, snapshotInfo2);
     checkSnapshot(leaderOM, followerOM, "snap160", firstIncrement.keys, firstIncrement.snapshotInfo);
     checkSnapshot(leaderOM, followerOM, "snap240", secondIncrement.keys, secondIncrement.snapshotInfo);
     Assertions.assertEquals(followerOM.getOmSnapshotProvider().getInitCount(), 2,
