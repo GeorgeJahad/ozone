@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.ExitManager;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
+import org.apache.hadoop.hdds.scm.net.NetworkTopologyImpl;
 import org.apache.hadoop.hdds.utils.DBCheckpointMetrics;
 import org.apache.hadoop.hdds.utils.FaultInjector;
 import org.apache.hadoop.hdds.utils.HAUtils;
@@ -57,13 +58,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -372,6 +370,11 @@ public class TestOMRatisSnapshots {
       return followerOM.getOmSnapshotProvider().getNumDownloaded() == 1;
     }, 1000, 10000);
 
+    TestResults firstIncrement = getNextIncrementalTarball(160, 2, leaderOM,
+        leaderRatisServer, faultInjector, followerOM, tempDir);
+    TestResults secondIncrement = getNextIncrementalTarball(240, 3, leaderOM,
+        leaderRatisServer, faultInjector, followerOM, tempDir);
+    faultInjector.resume();
     // Get the latest db checkpoint from the leader OM.
     TransactionInfo transactionInfo =
         TransactionInfo.readTransactionInfo(leaderOM.getMetadataManager());
@@ -379,127 +382,13 @@ public class TestOMRatisSnapshots {
         TermIndex.valueOf(transactionInfo.getTerm(),
             transactionInfo.getTransactionIndex());
     long leaderOMSnapshotIndex = leaderOMTermIndex.getIndex();
-    // Do some transactions, let leader OM take a new snapshot and purge the
-    // old logs, so that follower must download the new snapshot again.
-    List<String> secondKeys = writeKeysToIncreaseLogIndex(leaderRatisServer,
-        160);
-
-    SnapshotInfo snapshotInfo3 = createOzoneSnapshot(leaderOM, "snap3");
-    // Resume the follower thread, it would download the incremental snapshot.
-    faultInjector.resume();
-
-    // Pause the follower thread again to block the second-time install
-    faultInjector.reset();
-
-    //gbjfix
-    // Wait the follower download the incremental snapshot, but get stuck
-    // by injector
-    GenericTestUtils.waitFor(() -> {
-      return followerOM.getOmSnapshotProvider().getNumDownloaded() == 2;
-    }, 1000, 10000);
-
-    assertTrue(followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
-                      >= leaderOMSnapshotIndex - 1);
-    Path firstIncrement = Paths.get(tempDir.toString(), "firstIncrement");
-    firstIncrement.toFile().mkdirs();
-    unTarLatestTarBall(followerOM, firstIncrement);
-    List<String> sstFiles = HAUtils.getExistingSstFiles(firstIncrement.toFile());
-    Path followerCandidatePath = followerOM.getOmSnapshotProvider().
-        getCandidateDir().toPath();
-
-    // Confirm that none of the files in the tarball match one in the candidate dir.
-    for (String s: sstFiles) {
-      File sstFile = Paths.get(followerCandidatePath.toString(), s).toFile();
-      Assertions.assertFalse(sstFile.exists(),
-          sstFile + " should not duplicate existing files");
-    }
-    Path hardLinkFile = Paths.get(firstIncrement.toString(), OM_HARDLINK_FILE);
-
-    // Confirm that none of the links in the tarballs hardLinkFile
-    //  match the existing files
-    // gbjnote, is the path right here?
-    try (Stream<String> lines = Files.lines(hardLinkFile)) {
-      for (String line: lines.collect(Collectors.toList())) {
-        String link = line.split("\t")[0];
-        File linkFile = Paths.get(followerCandidatePath.toString(), link).toFile();
-        Assertions.assertFalse(linkFile.exists(),
-            "Incremental checkpoint should not " +
-                "duplicate existing links");
-      }
-    }
-
-    // Get the latest db checkpoint from the leader OM.
-    transactionInfo =
-        TransactionInfo.readTransactionInfo(leaderOM.getMetadataManager());
-    leaderOMTermIndex =
-        TermIndex.valueOf(transactionInfo.getTerm(),
-            transactionInfo.getTransactionIndex());
-    long gbjLeaderOMSnapshotIndex = leaderOMTermIndex.getIndex();
-    // Do some transactions, let leader OM take a new snapshot and purge the
-    // old logs, so that follower must download the new snapshot again.
-    List<String> thirdKeys = writeKeysToIncreaseLogIndex(leaderRatisServer,
-        240);
-
-    SnapshotInfo snapshotInfo4 = createOzoneSnapshot(leaderOM, "snap4");
-    // Resume the follower thread, it would download the incremental snapshot.
-    faultInjector.resume();
-
-    // Pause the follower thread again to block the third-time install
-    faultInjector.reset();
-
-    //gbjfix
-    // Wait the follower download the incremental snapshot, but get stuck
-    // by injector
-    GenericTestUtils.waitFor(() -> {
-      return followerOM.getOmSnapshotProvider().getNumDownloaded() == 3;
-    }, 1000, 60000);
-
-    assertTrue(followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
-                      >= gbjLeaderOMSnapshotIndex - 1);
-    Path secondIncrement = Paths.get(tempDir.toString(), "secondIncrement");
-    secondIncrement.toFile().mkdirs();
-    unTarLatestTarBall(followerOM, secondIncrement);
-    sstFiles = HAUtils.getExistingSstFiles(secondIncrement.toFile());
-    followerCandidatePath = followerOM.getOmSnapshotProvider().
-        getCandidateDir().toPath();
-
-    // Confirm that none of the files in the tarball match one in the candidate dir.
-    for (String s: sstFiles) {
-      File sstFile = Paths.get(followerCandidatePath.toString(), s).toFile();
-      Assertions.assertFalse(sstFile.exists(),
-          sstFile + " should not duplicate existing files");
-    }
-    hardLinkFile = Paths.get(secondIncrement.toString(), OM_HARDLINK_FILE);
-
-    // Confirm that none of the links in the tarballs hardLinkFile
-    //  match the existing files
-    // gbjnote, is the path right here?
-    try (Stream<String> lines = Files.lines(hardLinkFile)) {
-      for (String line: lines.collect(Collectors.toList())) {
-        String link = line.split("\t")[0];
-        File linkFile = Paths.get(followerCandidatePath.toString(), link).toFile();
-        Assertions.assertFalse(linkFile.exists(),
-            "Incremental checkpoint should not " +
-                "duplicate existing links");
-      }
-    }
-
-    faultInjector.resume();
-    // Get the latest db checkpoint from the leader OM.
-    transactionInfo =
-        TransactionInfo.readTransactionInfo(leaderOM.getMetadataManager());
-    leaderOMTermIndex =
-        TermIndex.valueOf(transactionInfo.getTerm(),
-            transactionInfo.getTransactionIndex());
-    long nextLeaderOMSnapshotIndex = leaderOMTermIndex.getIndex();
-
     //gbjfix
     // The recently started OM should be lagging behind the leader OM.
     // Wait & for follower to update transactions to leader snapshot index.
     // Timeout error if follower does not load update within 10s
     GenericTestUtils.waitFor(() -> {
       return followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
-          >= nextLeaderOMSnapshotIndex - 1;
+          >= leaderOMSnapshotIndex - 1;
     }, 1000, 30000);
 
     assertEquals(3, followerOM.getOmSnapshotProvider().getNumDownloaded());
@@ -516,7 +405,7 @@ public class TestOMRatisSnapshots {
       assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT)
           .get(followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
     }
-    for (String key : secondKeys) {
+    for (String key : firstIncrement.keys) {
       assertNotNull(followerOMMetaMngr.getKeyTable(TEST_BUCKET_LAYOUT)
           .get(followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
     }
@@ -598,11 +487,11 @@ public class TestOMRatisSnapshots {
     }
     Assertions.assertTrue(hardLinkCount > 0, "No hard links were found");
 
-    // Read back data from snap3
+    // Read back data from snap160
     omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
-        .setKeyName(".snapshot/snap3/" + secondKeys.get(secondKeys.size() - 1)).build();
+        .setKeyName(".snapshot/snap160/" + firstIncrement.keys.get(firstIncrement.keys.size() - 1)).build();
     omKeyInfo = followerOM.lookupKey(omKeyArgs);
     Assertions.assertNotNull(omKeyInfo);
     Assertions.assertEquals(omKeyInfo.getKeyName(), omKeyArgs.getKeyName());
@@ -611,11 +500,11 @@ public class TestOMRatisSnapshots {
     followerMetaDir = OMStorage.getOmDbDir(followerOM.getConfiguration());
     followerActiveDir = Paths.get(followerMetaDir.toString(), OM_DB_NAME);
     followerSnapshotDir =
-        Paths.get(getSnapshotPath(followerOM.getConfiguration(), snapshotInfo3));
+        Paths.get(getSnapshotPath(followerOM.getConfiguration(), firstIncrement.snapshotInfo));
     leaderMetaDir = OMStorage.getOmDbDir(leaderOM.getConfiguration());
     leaderActiveDir = Paths.get(leaderMetaDir.toString(), OM_DB_NAME);
     leaderSnapshotDir =
-        Paths.get(getSnapshotPath(leaderOM.getConfiguration(), snapshotInfo3));
+        Paths.get(getSnapshotPath(leaderOM.getConfiguration(), firstIncrement.snapshotInfo));
     // Get the list of hardlinks from the leader.  Then confirm those links
     //  are on the follower
     hardLinkCount = 0;
@@ -650,6 +539,79 @@ public class TestOMRatisSnapshots {
     Assertions.assertTrue(hardLinkCount > 0, "No hard links were found");
     Assertions.assertEquals(followerOM.getOmSnapshotProvider().getInitCount(), 2,
         "Only initialized twice");
+  }
+
+  private static class TestResults {
+    SnapshotInfo snapshotInfo;
+    List<String> keys;
+  }
+
+  private TestResults getNextIncrementalTarball(int numKeys,
+                                                int expectedNumDownloads,
+                                                OzoneManager leaderOM,
+                                                OzoneManagerRatisServer leaderRatisServer,
+                                                FaultInjector faultInjector,
+                                                OzoneManager followerOM,
+                                                Path tempDir)
+      throws IOException, InterruptedException, TimeoutException {
+    TestResults tr = new TestResults();
+
+    // Get the latest db checkpoint from the leader OM.
+    TransactionInfo transactionInfo =
+        TransactionInfo.readTransactionInfo(leaderOM.getMetadataManager());
+    TermIndex leaderOMTermIndex =
+        TermIndex.valueOf(transactionInfo.getTerm(),
+            transactionInfo.getTransactionIndex());
+    long leaderOMSnapshotIndex = leaderOMTermIndex.getIndex();
+    // Do some transactions, let leader OM take a new snapshot and purge the
+    // old logs, so that follower must download the new snapshot again.
+    tr.keys = writeKeysToIncreaseLogIndex(leaderRatisServer,
+        numKeys);
+
+    tr.snapshotInfo = createOzoneSnapshot(leaderOM, "snap" + String.valueOf(numKeys));
+    // Resume the follower thread, it would download the incremental snapshot.
+    faultInjector.resume();
+
+    // Pause the follower thread again to block the second-time install
+    faultInjector.reset();
+
+    //gbjfix
+    // Wait the follower download the incremental snapshot, but get stuck
+    // by injector
+    GenericTestUtils.waitFor(() -> {
+      return followerOM.getOmSnapshotProvider().getNumDownloaded() == expectedNumDownloads;
+    }, 1000, 10000);
+
+    assertTrue(followerOM.getOmRatisServer().getLastAppliedTermIndex().getIndex()
+                      >= leaderOMSnapshotIndex - 1);
+    Path increment = Paths.get(tempDir.toString(), "increment" + String.valueOf(numKeys));
+    increment.toFile().mkdirs();
+    unTarLatestTarBall(followerOM, increment);
+    List<String> sstFiles = HAUtils.getExistingSstFiles(increment.toFile());
+    Path followerCandidatePath = followerOM.getOmSnapshotProvider().
+        getCandidateDir().toPath();
+
+    // Confirm that none of the files in the tarball match one in the candidate dir.
+    for (String s: sstFiles) {
+      File sstFile = Paths.get(followerCandidatePath.toString(), s).toFile();
+      Assertions.assertFalse(sstFile.exists(),
+          sstFile + " should not duplicate existing files");
+    }
+    Path hardLinkFile = Paths.get(increment.toString(), OM_HARDLINK_FILE);
+
+    // Confirm that none of the links in the tarballs hardLinkFile
+    //  match the existing files
+    // gbjnote, is the path right here?
+    try (Stream<String> lines = Files.lines(hardLinkFile)) {
+      for (String line: lines.collect(Collectors.toList())) {
+        String link = line.split("\t")[0];
+        File linkFile = Paths.get(followerCandidatePath.toString(), link).toFile();
+        Assertions.assertFalse(linkFile.exists(),
+            "Incremental checkpoint should not " +
+                "duplicate existing links");
+      }
+    }
+    return tr;
   }
 
   @Test
@@ -694,7 +656,7 @@ public class TestOMRatisSnapshots {
     // Resume the follower thread, it would download the incremental snapshot.
     faultInjector.resume();
 
-    // Pause the follower thread again to block the second-time install
+    // Pause the follower thread again to block the tarball install
     faultInjector.reset();
 
     // Wait the follower download the incremental snapshot, but get stuck
