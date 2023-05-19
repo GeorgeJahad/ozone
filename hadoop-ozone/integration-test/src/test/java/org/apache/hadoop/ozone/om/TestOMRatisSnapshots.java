@@ -474,7 +474,7 @@ public class TestOMRatisSnapshots {
             transactionInfo.getTransactionIndex());
     long leaderOMSnapshotIndex = leaderOMTermIndex.getIndex();
     // Do some transactions, let leader OM take a new snapshot and purge the
-    // old logs, so that follower must download the new snapshot again.
+    // old logs, so that follower must download the new increment.
     tr.keys = writeKeysToIncreaseLogIndex(leaderRatisServer,
         numKeys);
 
@@ -482,7 +482,7 @@ public class TestOMRatisSnapshots {
     // Resume the follower thread, it would download the incremental snapshot.
     faultInjector.resume();
 
-    // Pause the follower thread again to block the second-time install
+    // Pause the follower thread again to block the next install
     faultInjector.reset();
 
     //gbjfix
