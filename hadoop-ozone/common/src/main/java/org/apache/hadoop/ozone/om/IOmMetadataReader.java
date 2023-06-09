@@ -31,7 +31,7 @@ import java.util.List;
 /**
  * Protocol for OmMetadataReader's.
  */
-public interface IOmMetadataReader {
+public interface IOmMetadataReader extends Evictable{
   /**
    * Look up for the container of an existing key.
    *

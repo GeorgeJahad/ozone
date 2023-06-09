@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.om.snapshot;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.om.Evictable;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -26,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Add reference counter to an object instance.
  * TODO: Move this up a package level?
  */
-public class ReferenceCounted<T> implements AutoCloseable {
+public class ReferenceCounted<T extends Evictable> implements AutoCloseable {
 
   /**
    * Object that is being reference counted. e.g. OmSnapshot
@@ -116,6 +117,9 @@ public class ReferenceCounted<T> implements AutoCloseable {
       Preconditions.checkState(newValTotal >= 0L,
           "Total reference count underflow");
 
+      if (newValue == 0) {
+        obj.evict();
+      }
       // Remove entry by returning null here when thread ref count reaches zero
       return newValue != 0L ? newValue : null;
     });

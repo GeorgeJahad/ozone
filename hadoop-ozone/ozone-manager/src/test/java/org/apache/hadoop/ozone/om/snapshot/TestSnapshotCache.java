@@ -98,7 +98,7 @@ class TestSnapshotCache {
     ReferenceCounted<IOmMetadataReader> omSnapshot = snapshotCache.get(dbKey1);
     assertNotNull(omSnapshot);
     assertNotNull(omSnapshot.get());
-    assertTrue(omSnapshot.get() instanceof OmSnapshot);
+    assertTrue(omSnapshot.get() instanceof SnapshotCache.CacheEntry);
     assertEquals(1, snapshotCache.size());
   }
 
@@ -144,7 +144,7 @@ class TestSnapshotCache {
     assertEquals(1, snapshotCache.size());
     assertEquals(0, snapshotCache.getPendingEvictionList().size());
 
-    snapshotCache.release((OmSnapshot) omSnapshot1.get());
+    snapshotCache.release(((SnapshotCache.CacheEntry) omSnapshot1.get()).get());
     // Entry will not be immediately evicted
     assertEquals(1, snapshotCache.size());
     // Entry is queued for eviction as its ref count reaches zero

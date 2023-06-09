@@ -19,17 +19,25 @@ package org.apache.hadoop.ozone.om.snapshot;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.cache.Cache;
 import com.google.common.cache.CacheLoader;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.IOmMetadataReader;
 import org.apache.hadoop.ozone.om.OmSnapshot;
 import org.apache.hadoop.ozone.om.OmSnapshotManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.KeyInfoWithVolumeContext;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -55,7 +63,7 @@ public class SnapshotCache {
   // Sorted in last used order.
   // Least-recently-used entry located at the beginning.
   // TODO: Check thread safety. Try ConcurrentHashMultiset ?
-  private final LinkedHashSet<ReferenceCounted<IOmMetadataReader>>
+  private final LinkedHashSet<IOmMetadataReader>
       pendingEvictionList;
   private final OmSnapshotManager omSnapshotManager;
   private final CacheLoader<String, OmSnapshot> cacheLoader;
@@ -80,7 +88,7 @@ public class SnapshotCache {
   }
 
   @VisibleForTesting
-  LinkedHashSet<ReferenceCounted<IOmMetadataReader>> getPendingEvictionList() {
+  LinkedHashSet<IOmMetadataReader> getPendingEvictionList() {
     return pendingEvictionList;
   }
 
@@ -97,9 +105,9 @@ public class SnapshotCache {
    */
   public void invalidate(String key) throws IOException {
     dbMap.computeIfPresent(key, (k, v) -> {
-      pendingEvictionList.remove(v);
+      pendingEvictionList.remove(v.get());
       try {
-        ((OmSnapshot) v.get()).close();
+        (((CacheEntry)v.get()).get()).close();
       } catch (IOException e) {
         throw new IllegalStateException("Failed to close snapshot: " + key, e);
       }
@@ -117,8 +125,8 @@ public class SnapshotCache {
 
     while (it.hasNext()) {
       Map.Entry<String, ReferenceCounted<IOmMetadataReader>> entry = it.next();
-      pendingEvictionList.remove(entry.getValue());
-      OmSnapshot omSnapshot = (OmSnapshot) entry.getValue().get();
+      pendingEvictionList.remove(entry.getValue().get());
+      OmSnapshot omSnapshot = ((CacheEntry) entry.getValue().get()).get();
       try {
         // TODO: If wrapped with SoftReference<>, omSnapshot could be null?
         omSnapshot.close();
@@ -159,7 +167,7 @@ public class SnapshotCache {
         dbMap.computeIfAbsent(key, k -> {
           LOG.info("Loading snapshot. Table key: {}", k);
           try {
-            return new ReferenceCounted<>(cacheLoader.load(k));
+            return new ReferenceCounted<>(new CacheEntry(cacheLoader.load(k)));
           } catch (OMException omEx) {
             // Return null if the snapshot is no longer active
             if (!omEx.getResult().equals(FILE_NOT_FOUND)) {
@@ -199,7 +207,7 @@ public class SnapshotCache {
 
     // Remove instance from clean up list when it exists.
     // TODO: [SNAPSHOT] Check thread safety with release()
-    pendingEvictionList.remove(rcOmSnapshot);
+    pendingEvictionList.remove(rcOmSnapshot.get());
 
     // Check if any entries can be cleaned up.
     // At this point, cache size might temporarily exceed cacheSizeLimit
@@ -221,9 +229,24 @@ public class SnapshotCache {
 
     if (rcOmSnapshot.decrementRefCount() == 0L) {
       // Eligible to be closed, add it to the list.
-      pendingEvictionList.add(rcOmSnapshot);
+      pendingEvictionList.add(rcOmSnapshot.get());
       cleanup();
     }
+  }
+
+  /**
+   * Evict the reference count on the OmSnapshot instance.
+   * @param omSnapshot OmSnapshot
+   */
+  public void evict(OmSnapshot omSnapshot) {
+    final String key = omSnapshot.getSnapshotTableKey();
+    ReferenceCounted<IOmMetadataReader> rcOmSnapshot = dbMap.get(key);
+    Preconditions.checkNotNull(rcOmSnapshot,
+        "Key '" + key + "' does not exist in cache");
+
+    // Eligible to be closed, add it to the list.
+    pendingEvictionList.add(rcOmSnapshot.get());
+    cleanup();
   }
 
   /**
@@ -244,30 +267,29 @@ public class SnapshotCache {
     long numEntriesToEvict = (long) dbMap.size() - cacheSizeLimit;
     while (pendingEvictionList.size() > 0 && numEntriesToEvict > 0L) {
       // Get the first instance in the clean up list
-      ReferenceCounted<IOmMetadataReader> rcOmSnapshot =
-          pendingEvictionList.iterator().next();
-      OmSnapshot omSnapshot = (OmSnapshot) rcOmSnapshot.get();
-      LOG.debug("Evicting OmSnapshot instance {} with table key {}",
-          rcOmSnapshot, omSnapshot.getSnapshotTableKey());
-      // Sanity check
-      Preconditions.checkState(rcOmSnapshot.getTotalRefCount() == 0L,
-          "Illegal state: OmSnapshot reference count non-zero ("
-              + rcOmSnapshot.getTotalRefCount() + ") but shows up in the "
-              + "clean up list");
-
+      OmSnapshot omSnapshot =
+          ((CacheEntry)pendingEvictionList.iterator().next()).get();
+      LOG.debug("Evicting OmSnapshot instance with table key {}",
+          omSnapshot.getSnapshotTableKey());
       final String key = omSnapshot.getSnapshotTableKey();
       final ReferenceCounted<IOmMetadataReader> result = dbMap.remove(key);
       // Sanity check
-      Preconditions.checkState(rcOmSnapshot == result,
+      Preconditions.checkState(omSnapshot == ((CacheEntry) result.get()).get(),
           "Cache map entry removal failure. The cache is in an inconsistent "
-              + "state. Expected OmSnapshot instance: " + rcOmSnapshot
-              + ", actual: " + result);
+              + "state. Expected OmSnapshot instance: " + omSnapshot
+              + ", actual: " + result.get());
 
-      pendingEvictionList.remove(result);
+      // Sanity check
+      Preconditions.checkState(result.getTotalRefCount() == 0L,
+          "Illegal state: OmSnapshot reference count non-zero ("
+              + result.getTotalRefCount() + ") but shows up in the "
+              + "clean up list");
+
+      pendingEvictionList.remove(result.get());
 
       // Close the instance, which also closes its DB handle.
       try {
-        ((OmSnapshot) rcOmSnapshot.get()).close();
+        omSnapshot.close();
       } catch (IOException ex) {
         throw new IllegalStateException("Error while closing snapshot DB", ex);
       }
@@ -301,6 +323,82 @@ public class SnapshotCache {
     // 3. instancesEligibleForClosure must be empty if cache size exceeds limit
 
     return true;
+  }
+
+  // The evict() method is the only reason for this class.  The rest
+  //  of the methods just delegate to the omSnapshot private field.
+  class CacheEntry implements IOmMetadataReader {
+    private final OmSnapshot omSnapshot;
+    CacheEntry(OmSnapshot omSnapshot) {
+      this.omSnapshot = omSnapshot;
+    }
+
+    public OmSnapshot get() {
+      return omSnapshot;
+    }
+
+    @Override
+    public void evict() {
+      SnapshotCache.this.evict(omSnapshot);
+    }
+
+    @Override
+    public List<OzoneFileStatus> listStatus(
+        OmKeyArgs args, boolean recursive,
+        String startKey, long numEntries) throws IOException {
+      return omSnapshot.listStatus(args, recursive, startKey, numEntries);
+    }
+
+    @Override
+    public OmKeyInfo lookupKey(
+        OmKeyArgs args) throws IOException {
+      return omSnapshot.lookupKey(args);
+    }
+
+    @Override
+    public KeyInfoWithVolumeContext getKeyInfo(
+        OmKeyArgs args,
+        boolean assumeS3Context) throws IOException {
+      return omSnapshot.getKeyInfo(args, assumeS3Context);
+    }
+
+    @Override
+    public List<OzoneFileStatus> listStatus(
+        OmKeyArgs args, boolean recursive,
+        String startKey, long numEntries, boolean allowPartialPrefixes)
+        throws IOException {
+      return omSnapshot.listStatus(args, recursive, startKey, numEntries,
+          allowPartialPrefixes);
+    }
+
+    @Override
+    public OzoneFileStatus getFileStatus(
+        OmKeyArgs args) throws IOException {
+      return omSnapshot.getFileStatus(args);
+    }
+
+    @Override
+    public OmKeyInfo lookupFile(
+        OmKeyArgs args) throws IOException {
+      return omSnapshot.lookupFile(args);
+    }
+
+    @Override
+    public List<OmKeyInfo> listKeys(
+        String vname, String bname, String startKey, String keyPrefix,
+        int maxKeys) throws IOException {
+      return omSnapshot.listKeys(vname, bname, startKey, keyPrefix, maxKeys);
+    }
+
+    @Override
+    public List<OzoneAcl> getAcl(
+        OzoneObj obj) throws IOException {
+      return omSnapshot.getAcl(obj);
+    }
+
+    public String getName() {
+      return omSnapshot.getName();
+    }
   }
 
 }
