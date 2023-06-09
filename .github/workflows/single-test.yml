@@ -22,7 +22,7 @@ jobs:
             maven-repo-${{ hashFiles('**/pom.xml') }}
             maven-repo-
       - name: Execute tests
-        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest=TestOMRatisSnapshots
+        run: hadoop-ozone/dev-support/checks/integration.sh -Dtest=TestOMDbCheckpointServlet
         env:
           ITERATIONS: 4
       - name: Summary of failures
