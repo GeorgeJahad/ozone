@@ -264,9 +264,9 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
           }
         } else {
           copySize.addAndGet(processFile(file, copyFiles, hardLinkFiles, toExcludeFiles, excluded));
-        }
-        if (copySize.get() > MAX_COPY_SIZE) {
-          return false;
+          if (copySize.get() > MAX_COPY_SIZE) {
+            return false;
+          }
         }
       }
     }
