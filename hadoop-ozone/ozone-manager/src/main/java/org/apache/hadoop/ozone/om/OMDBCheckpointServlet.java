@@ -317,7 +317,6 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
       } else {
         // Not sst file.
         copyFiles.add(file);
-        fileSize = Files.size(file);
       }
     }
     return fileSize;
