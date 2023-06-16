@@ -322,7 +322,7 @@ public class TestOmSnapshotManager {
    * should be copied, linked, or excluded from the tarball entirely.
    */
   @Test
-  public void testProcessFile() {
+  public void testProcessFile() throws IOException {
     Path copyFile = Paths.get(testDir.toString(),
         "snap1/copyfile.sst");
     Path excludeFile = Paths.get(testDir.toString(),

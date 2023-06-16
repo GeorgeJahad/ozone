@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -84,6 +85,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
   private static final Logger LOG =
       LoggerFactory.getLogger(OMDBCheckpointServlet.class);
   private static final long serialVersionUID = 1L;
+  private static final long MAX_COPY_SIZE = 100000;
   private transient BootstrapStateHandler.Lock lock;
 
   @Override
@@ -146,9 +148,9 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
       Set<Path> toExcludeFiles = normalizeExcludeList(toExcludeList,
           checkpoint.getCheckpointLocation().toString(),
           ServerUtils.getOzoneMetaDirPath(getConf()).toString());
-      getFilesForArchive(checkpoint, copyFiles, hardLinkFiles, toExcludeFiles,
+      boolean completed = getFilesForArchive(checkpoint, copyFiles, hardLinkFiles, toExcludeFiles,
           includeSnapshotData(request), excludedList);
-      writeFilesToArchive(copyFiles, hardLinkFiles, archiveOutputStream);
+      writeFilesToArchive(copyFiles, hardLinkFiles, archiveOutputStream, completed);
     } catch (Exception e) {
       LOG.error("got exception writing to archive " + e);
       throw e;
@@ -171,7 +173,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
     return paths;
   }
 
-  private void getFilesForArchive(DBCheckpoint checkpoint,
+  private boolean getFilesForArchive(DBCheckpoint checkpoint,
                                   Set<Path> copyFiles,
                                   Map<Path, Path> hardLinkFiles,
                                   Set<Path> toExcludeFiles,
@@ -179,21 +181,23 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
                                   List<String> excluded)
       throws IOException {
 
+    AtomicLong copySize = new AtomicLong(0L);
     // Get the active fs files.
     Path dir = checkpoint.getCheckpointLocation();
-    processDir(dir, copyFiles, hardLinkFiles, toExcludeFiles,
-        new HashSet<>(), excluded);
+    boolean completed =
+      processDir(dir, copyFiles, hardLinkFiles, toExcludeFiles,
+               new HashSet<>(), excluded, copySize);
 
-    if (!includeSnapshotData) {
-      return;
+    if (!completed || !includeSnapshotData) {
+      return false;
     }
 
     // Get the snapshot files.
     Set<Path> snapshotPaths = waitForSnapshotDirs(checkpoint);
     Path snapshotDir = Paths.get(OMStorage.getOmDbDir(getConf()).toString(),
         OM_SNAPSHOT_DIR);
-    processDir(snapshotDir, copyFiles, hardLinkFiles, toExcludeFiles,
-        snapshotPaths, excluded);
+    return processDir(snapshotDir, copyFiles, hardLinkFiles, toExcludeFiles,
+        snapshotPaths, excluded, copySize);
   }
 
   /**
@@ -236,11 +240,12 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
     }
   }
 
-  private void processDir(Path dir, Set<Path> copyFiles,
+  private boolean processDir(Path dir, Set<Path> copyFiles,
                           Map<Path, Path> hardLinkFiles,
                           Set<Path> toExcludeFiles,
                           Set<Path> snapshotPaths,
-                          List<String> excluded)
+                          List<String> excluded,
+                          AtomicLong copySize)
       throws IOException {
     try (Stream<Path> files = Files.list(dir)) {
       for (Path file : files.collect(Collectors.toList())) {
@@ -253,13 +258,19 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
             LOG.debug("Skipping unneeded file: " + file);
             continue;
           }
-          processDir(file, copyFiles, hardLinkFiles, toExcludeFiles,
-              snapshotPaths, excluded);
+          if (!processDir(file, copyFiles, hardLinkFiles, toExcludeFiles,
+                          snapshotPaths, excluded, copySize)) {
+            return false;
+          }
         } else {
-          processFile(file, copyFiles, hardLinkFiles, toExcludeFiles, excluded);
+          copySize.addAndGet(processFile(file, copyFiles, hardLinkFiles, toExcludeFiles, excluded));
+        }
+        if (copySize.get() > MAX_COPY_SIZE) {
+          return false;
         }
       }
     }
+    return true;
   }
 
   /**
@@ -274,10 +285,11 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
    * @param excluded The list of db files that actually were excluded.
    */
   @VisibleForTesting
-  public static void processFile(Path file, Set<Path> copyFiles,
+  public static long processFile(Path file, Set<Path> copyFiles,
                                  Map<Path, Path> hardLinkFiles,
                                  Set<Path> toExcludeFiles,
-                                 List<String> excluded) {
+                                 List<String> excluded) throws IOException {
+    long fileSize = 0;
     if (toExcludeFiles.contains(file)) {
       excluded.add(file.toString());
     } else {
@@ -299,13 +311,16 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
           } else {
             // Add to tarball.
             copyFiles.add(file);
+            fileSize = Files.size(file);
           }
         }
       } else {
         // Not sst file.
         copyFiles.add(file);
+        fileSize = Files.size(file);
       }
     }
+    return fileSize;
   }
 
   // If fileName exists in "files" parameter,
@@ -328,7 +343,8 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
 
   private void writeFilesToArchive(Set<Path> copyFiles,
                                    Map<Path, Path> hardLinkFiles,
-                                   ArchiveOutputStream archiveOutputStream)
+                                   ArchiveOutputStream archiveOutputStream,
+                                   boolean completed)
       throws IOException {
 
     File metaDirPath = ServerUtils.getOzoneMetaDirPath(getConf());
@@ -352,6 +368,10 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
       Path hardLinkFile = createHardLinkList(truncateLength, hardLinkFiles);
       includeFile(hardLinkFile.toFile(), OmSnapshotManager.OM_HARDLINK_FILE,
           archiveOutputStream);
+    }
+    if (!completed) {
+      Path incompleteFlag = Files.createTempFile("incompleteFlag", "txt");
+      includeFile(incompleteFlag.toFile(), "incompleteFlag.txt", archiveOutputStream);
     }
   }
 
