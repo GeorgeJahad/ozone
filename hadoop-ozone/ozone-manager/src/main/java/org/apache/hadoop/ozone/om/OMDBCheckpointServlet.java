@@ -184,12 +184,11 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
     AtomicLong copySize = new AtomicLong(0L);
     // Get the active fs files.
     Path dir = checkpoint.getCheckpointLocation();
-    boolean completed =
-      processDir(dir, copyFiles, hardLinkFiles, toExcludeFiles,
+    processDir(dir, copyFiles, hardLinkFiles, toExcludeFiles,
                new HashSet<>(), excluded, copySize);
 
-    if (!completed || !includeSnapshotData) {
-      return false;
+    if (!includeSnapshotData) {
+      return true;
     }
 
     // Get the snapshot files.
