@@ -518,25 +518,13 @@ public class TestOMDbCheckpointServlet {
 
     writeClient.createSnapshot(vname, bname, snapshotName);
 
-    //Thread.sleep(10000);
     om.getOmRatisServer().getOmStateMachine().awaitDoubleBufferFlush();
-
-    // DBCheckpoint checkpoint = null;
-    // checkpoint = om.getMetadataManager().getStore().getCheckpoint(true);
-    // OmMetadataManagerImpl checkpointMetadataManager =
-    //     OmMetadataManagerImpl.createCheckpointMetadataManager(
-    //         conf, checkpoint);
-    // SnapshotInfo checkpointSnapshotInfo = checkpointMetadataManager.getSnapshotInfoTable()
-    //     .get(SnapshotInfo.getTableKey(vname, bname, snapshotName));
-    // Assert.assertNotNull("checkoint snapshot info should exist",
-    //     checkpointSnapshotInfo);
-    // checkpointMetadataManager.stop();
     SnapshotInfo snapshotInfo = om.getMetadataManager().getSnapshotInfoTable()
         .get(SnapshotInfo.getTableKey(vname, bname, snapshotName));
     String snapshotPath = getSnapshotPath(conf, snapshotInfo)
         + OM_KEY_PREFIX;
     GenericTestUtils.waitFor(() -> new File(snapshotPath).exists(),
-        100, 20000);
+        100, 2000);
     return snapshotPath;
   }
 
