@@ -81,11 +81,6 @@ public class OMSnapshotCreateResponse extends OMClientResponse {
     OmSnapshotManager.createOmSnapshotCheckpoint(omMetadataManager,
         snapshotInfo);
 
-    try {
-      Thread.sleep(10000);
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    }
     // TODO: [SNAPSHOT] Move to createOmSnapshotCheckpoint and add table lock
     // Remove all entries from snapshotRenamedTable
     try (TableIterator<String, ? extends Table.KeyValue<String, String>>
