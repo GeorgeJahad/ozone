@@ -58,7 +58,6 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_DIRS;
@@ -173,7 +172,7 @@ public class TestOMSnapshotDAG {
 
   @Test
   public void testDAGReconstruction()
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException, InterruptedException {
 
     // Generate keys
     RandomKeyGenerator randomKeyGenerator =
@@ -231,10 +230,11 @@ public class TestOMSnapshotDAG {
         volumeName, bucketName, "snap2");
 
     // RocksDB does checkpointing in a separate thread, wait for it
-    final File checkpointSnap1 = new File(snap1.getDbPath());
-    GenericTestUtils.waitFor(checkpointSnap1::exists, 2000, 20000);
-    final File checkpointSnap2 = new File(snap2.getDbPath());
-    GenericTestUtils.waitFor(checkpointSnap2::exists, 2000, 20000);
+    ozoneManager.getOmSnapshotManager().waitForFlush(
+        volumeName, bucketName, "snap1");
+    ozoneManager.getOmSnapshotManager().waitForFlush(
+        volumeName, bucketName, "snap2");
+
 
     List<String> sstDiffList21 = differ.getSSTDiffList(snap2, snap1);
     LOG.debug("Got diff list: {}", sstDiffList21);
@@ -249,8 +249,8 @@ public class TestOMSnapshotDAG {
 
     DifferSnapshotInfo snap3 = getDifferSnapshotInfo(omMetadataManager,
         volumeName, bucketName, "snap3");
-    final File checkpointSnap3 = new File(snap3.getDbPath());
-    GenericTestUtils.waitFor(checkpointSnap3::exists, 2000, 20000);
+    ozoneManager.getOmSnapshotManager().waitForFlush(
+        volumeName, bucketName, "snap3");
 
     List<String> sstDiffList32 = differ.getSSTDiffList(snap3, snap2);
 

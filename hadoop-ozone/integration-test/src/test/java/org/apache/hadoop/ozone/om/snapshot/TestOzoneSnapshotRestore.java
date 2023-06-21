@@ -39,7 +39,6 @@ import org.apache.hadoop.ozone.om.OMStorage;
 import org.apache.hadoop.ozone.om.OmSnapshotManager;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
-import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.ozone.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -50,7 +49,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.UUID;
@@ -153,19 +151,13 @@ public class TestOzoneSnapshotRestore {
   }
 
   private String createSnapshot(String volName, String buckName)
-          throws IOException, InterruptedException, TimeoutException {
+          throws IOException, InterruptedException {
     String snapshotName = UUID.randomUUID().toString();
     store.createSnapshot(volName, buckName, snapshotName);
     String snapshotKeyPrefix = OmSnapshotManager
             .getSnapshotPrefix(snapshotName);
-    SnapshotInfo snapshotInfo = leaderOzoneManager
-            .getMetadataManager()
-            .getSnapshotInfoTable()
-            .get(SnapshotInfo.getTableKey(volName, buckName, snapshotName));
-    String snapshotDirName = OmSnapshotManager
-        .getSnapshotPath(clientConf, snapshotInfo) + OM_KEY_PREFIX + "CURRENT";
-    GenericTestUtils.waitFor(() -> new File(snapshotDirName).exists(),
-            1000, 120000);
+    leaderOzoneManager.getOmSnapshotManager().waitForFlush(
+        volName, buckName, snapshotName);
     return snapshotKeyPrefix;
 
   }

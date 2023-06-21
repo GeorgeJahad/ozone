@@ -27,7 +27,6 @@ import org.apache.hadoop.hdds.utils.HAUtils;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
-import org.apache.hadoop.hdds.utils.db.RDBCheckpointUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
 import org.apache.hadoop.ozone.client.BucketArgs;
@@ -980,7 +979,7 @@ public class TestOMRatisSnapshots {
   }
 
   private SnapshotInfo createOzoneSnapshot(OzoneManager leaderOM, String name)
-      throws IOException {
+      throws IOException, InterruptedException {
     objectStore.createSnapshot(volumeName, bucketName, name);
 
     String tableKey = SnapshotInfo.getTableKey(volumeName,
@@ -990,13 +989,7 @@ public class TestOMRatisSnapshots {
         .getSnapshotInfoTable()
         .get(tableKey);
     // Allow the snapshot to be written to disk
-    String fileName =
-        getSnapshotPath(leaderOM.getConfiguration(), snapshotInfo);
-    File snapshotDir = new File(fileName);
-    if (!RDBCheckpointUtils
-        .waitForCheckpointDirectoryExist(snapshotDir)) {
-      throw new IOException("snapshot directory doesn't exist");
-    }
+    leaderOM.getOmSnapshotManager().waitForFlush(volumeName, bucketName, name);
     return snapshotInfo;
   }
 

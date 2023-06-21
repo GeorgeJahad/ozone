@@ -19,7 +19,6 @@
 
 package org.apache.hadoop.ozone.om.snapshot;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -28,7 +27,6 @@ import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.HddsWhiteboxTestUtils;
-import org.apache.hadoop.hdds.utils.db.RDBCheckpointUtils;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.client.BucketArgs;
@@ -45,7 +43,6 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
-import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -65,7 +62,6 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConsts.ADMIN;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_OFS_URI_SCHEME;
-import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPath;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
@@ -181,7 +177,7 @@ public class TestOzoneManagerSnapshotAcl {
   @ParameterizedTest
   @EnumSource(BucketLayout.class)
   public void testGeyKeyInfoWithAllowedUser(BucketLayout bucketLayout)
-      throws IOException {
+      throws IOException, InterruptedException {
     // GIVEN
     setup(bucketLayout);
     final OmKeyArgs snapshotKeyArgs = getOmKeyArgs(true);
@@ -195,7 +191,7 @@ public class TestOzoneManagerSnapshotAcl {
   @ParameterizedTest
   @EnumSource(BucketLayout.class)
   public void testGeyKeyInfoWithNotAllowedUser(BucketLayout bucketLayout)
-      throws IOException {
+      throws IOException, InterruptedException {
     // GIVEN
     setup(bucketLayout);
     final OmKeyArgs snapshotKeyOmKeyArgs = getOmKeyArgs(true);
@@ -221,7 +217,7 @@ public class TestOzoneManagerSnapshotAcl {
   @MethodSource("getListStatusArguments")
   public void testListStatusWithAllowedUser(BucketLayout bucketLayout,
       boolean recursive, boolean allowPartialPrefixes)
-      throws IOException {
+      throws IOException, InterruptedException {
     // GIVEN
     setup(bucketLayout);
     final OmKeyArgs snapshotKeyArgs = getOmKeyArgs(true);
@@ -238,7 +234,7 @@ public class TestOzoneManagerSnapshotAcl {
   @MethodSource("getListStatusArguments")
   public void testListStatusWithNotAllowedUser(BucketLayout bucketLayout,
       boolean recursive, boolean allowPartialPrefixes)
-      throws IOException {
+      throws IOException, InterruptedException {
     // GIVEN
     setup(bucketLayout);
     final OmKeyArgs snapshotKeyArgs = getOmKeyArgs(true);
@@ -382,7 +378,7 @@ public class TestOzoneManagerSnapshotAcl {
   }
 
   private void setup(BucketLayout bucketLayout)
-      throws IOException {
+      throws IOException, InterruptedException {
     UserGroupInformation.setLoginUser(UGI1);
 
     createVolume();
@@ -458,25 +454,15 @@ public class TestOzoneManagerSnapshotAcl {
   }
 
   private void createSnapshot()
-      throws IOException {
+      throws IOException, InterruptedException {
     final String snapshotPrefix = "snapshot-";
     final String snapshotName =
         snapshotPrefix + RandomStringUtils.randomNumeric(32);
     objectStore.createSnapshot(volumeName, bucketName, snapshotName);
     snapshotKeyPrefix = OmSnapshotManager
         .getSnapshotPrefix(snapshotName);
-    final SnapshotInfo snapshotInfo = ozoneManager
-        .getMetadataManager()
-        .getSnapshotInfoTable()
-        .get(SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName));
-    // Allow the snapshot to be written to disk
-    String fileName =
-        getSnapshotPath(ozoneManager.getConfiguration(), snapshotInfo);
-    File snapshotDir = new File(fileName);
-    if (!RDBCheckpointUtils
-        .waitForCheckpointDirectoryExist(snapshotDir)) {
-      throw new IOException("snapshot directory doesn't exist");
-    }
+    ozoneManager.getOmSnapshotManager().waitForFlush(volumeName, bucketName,
+        snapshotName);
   }
 
   private void setBucketAcl() throws IOException {

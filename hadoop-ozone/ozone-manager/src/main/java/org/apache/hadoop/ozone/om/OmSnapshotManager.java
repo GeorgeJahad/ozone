@@ -43,6 +43,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.hdds.utils.db.CodecRegistry;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
+import org.apache.hadoop.hdds.utils.db.RDBCheckpointUtils;
 import org.apache.hadoop.hdds.utils.db.RDBStore;
 import org.apache.hadoop.hdds.utils.db.RocksDatabase;
 import org.apache.hadoop.hdds.utils.db.Table;
@@ -884,5 +885,24 @@ public final class OmSnapshotManager implements AutoCloseable {
 
   public long getDiffCleanupServiceInterval() {
     return diffCleanupServiceInterval;
+  }
+
+  public void waitForFlush(String volumeName, String bucketName, String snapshotName)
+      throws InterruptedException, IOException {
+    ozoneManager.getOmRatisServer().getOmStateMachine().awaitDoubleBufferFlush();
+    String tableKey = SnapshotInfo.getTableKey(volumeName,
+        bucketName,
+        snapshotName);
+    SnapshotInfo snapshotInfo = ozoneManager.getMetadataManager()
+        .getSnapshotInfoTable()
+        .get(tableKey);
+    // Allow the snapshot to be written to disk
+    String fileName =
+        getSnapshotPath(ozoneManager.getConfiguration(), snapshotInfo);
+    File snapshotDir = new File(fileName);
+    if (!RDBCheckpointUtils
+        .waitForCheckpointDirectoryExist(snapshotDir)) {
+      throw new IOException("snapshot directory doesn't exist: " + snapshotDir);
+    }
   }
 }

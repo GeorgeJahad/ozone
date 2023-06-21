@@ -84,7 +84,6 @@ import static org.apache.hadoop.ozone.OzoneConsts.OZONE_DB_CHECKPOINT_REQUEST_TO
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_AUTH_TYPE;
 
 
-import org.apache.ozone.test.GenericTestUtils;
 
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
@@ -651,7 +650,7 @@ public class TestOMDbCheckpointServlet {
   }
 
   private String createSnapshot(String vname, String bname)
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException, InterruptedException {
     final OzoneManager om = cluster.getOzoneManager();
     String snapshotName = UUID.randomUUID().toString();
     OzoneManagerProtocol writeClient = cluster.newClient().getObjectStore()
@@ -662,8 +661,8 @@ public class TestOMDbCheckpointServlet {
         .get(SnapshotInfo.getTableKey(vname, bname, snapshotName));
     String snapshotPath = getSnapshotPath(conf, snapshotInfo)
         + OM_KEY_PREFIX;
-    GenericTestUtils.waitFor(() -> new File(snapshotPath).exists(),
-        100, 2000);
+    om.getOmSnapshotManager().waitForFlush(vname, bname, snapshotName);
+
     return snapshotPath;
   }
 
@@ -805,7 +804,7 @@ public class TestOMDbCheckpointServlet {
     // Confirm that servlet takes the lock when none of the other
     //  handlers have it.
     Future<Boolean> servletTest = checkLock(spyServlet, executorService);
-    Assert.assertTrue(servletTest.get(10000, TimeUnit.MILLISECONDS));
+    Assertions.assertTrue(servletTest.get(10000, TimeUnit.MILLISECONDS));
 
     executorService.shutdownNow();
 

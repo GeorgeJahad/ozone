@@ -17,7 +17,6 @@
 package org.apache.hadoop.fs.ozone;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
@@ -33,7 +32,6 @@ import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.ozone.test.GenericTestUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -48,7 +46,6 @@ import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_OFS_URI_SCHEME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_SNAPSHOT_INDICATOR;
-import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPath;
 
 /**
  * Test client-side CRUD snapshot operations with Ozone Manager.
@@ -62,7 +59,7 @@ public class TestOzoneFsSnapshot {
   private static OzoneManager ozoneManager;
   private static OzoneFsShell shell;
   private static final String VOLUME =
-      "vol-" + RandomStringUtils.randomNumeric(5);;
+      "vol-" + RandomStringUtils.randomNumeric(5);
   private static final String BUCKET =
       "buck-" + RandomStringUtils.randomNumeric(5);
   private static final String KEY =
@@ -333,17 +330,8 @@ public class TestOzoneFsSnapshot {
     // Asserts that create request succeeded
     Assertions.assertEquals(0, res);
 
-    OzoneConfiguration conf = ozoneManager.getConfiguration();
-
-    // wait till the snapshot directory exists
-    SnapshotInfo snapshotInfo = ozoneManager.getMetadataManager()
-        .getSnapshotInfoTable()
-        .get(SnapshotInfo.getTableKey(VOLUME, BUCKET, snapshotName));
-    String snapshotDirName = getSnapshotPath(conf, snapshotInfo) +
-        OM_KEY_PREFIX + "CURRENT";
-    GenericTestUtils.waitFor(() -> new File(snapshotDirName).exists(),
-        1000, 100000);
-
+    ozoneManager.getOmSnapshotManager().waitForFlush(VOLUME, BUCKET,
+        snapshotName);
     return snapshotName;
   }
 }
