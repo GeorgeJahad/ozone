@@ -661,7 +661,10 @@ public class TestOMDbCheckpointServlet {
         .get(SnapshotInfo.getTableKey(vname, bname, snapshotName));
     String snapshotPath = getSnapshotPath(conf, snapshotInfo)
         + OM_KEY_PREFIX;
-    om.getOmSnapshotManager().waitForSnapshotDirectory(vname, bname, snapshotName);
+    // The tarball checkpoint is created against the rocksDb on
+    // disk, and we want this snapshot included in the tarball, so
+    // wait till the double buffer gets flushed.
+    om.getOmSnapshotManager().waitForSnapshotFlush(vname, bname, snapshotName);
 
     return snapshotPath;
   }

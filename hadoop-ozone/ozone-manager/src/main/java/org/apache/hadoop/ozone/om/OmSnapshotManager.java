@@ -887,8 +887,10 @@ public final class OmSnapshotManager implements AutoCloseable {
     return diffCleanupServiceInterval;
   }
 
-  public void waitForSnapshotDirectory(String volumeName, String bucketName,
-                                       String snapshotName)
+  // Wait for double buffer to be flushed and confirm that the
+  // snapshot directory exists.
+  public void waitForSnapshotFlush(String volumeName, String bucketName,
+                                   String snapshotName)
       throws InterruptedException, IOException {
     ozoneManager.getOmRatisServer().getOmStateMachine().
         awaitDoubleBufferFlush();

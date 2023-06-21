@@ -988,8 +988,11 @@ public class TestOMRatisSnapshots {
     SnapshotInfo snapshotInfo = leaderOM.getMetadataManager()
         .getSnapshotInfoTable()
         .get(tableKey);
-    // Allow the snapshot to be written to disk
-    leaderOM.getOmSnapshotManager().waitForSnapshotDirectory(volumeName, bucketName, name);
+    // The tarball checkpoint is created against the rocksDb on
+    // disk, and we want this snapshot included in the tarball, so
+    // wait till the double buffer gets flushed.
+    leaderOM.getOmSnapshotManager().waitForSnapshotFlush(
+        volumeName, bucketName, name);
     return snapshotInfo;
   }
 
