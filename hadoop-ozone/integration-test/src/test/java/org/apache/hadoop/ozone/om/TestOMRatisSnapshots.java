@@ -989,7 +989,7 @@ public class TestOMRatisSnapshots {
         .getSnapshotInfoTable()
         .get(tableKey);
     // Allow the snapshot to be written to disk
-    leaderOM.getOmSnapshotManager().waitForFlush(volumeName, bucketName, name);
+    leaderOM.getOmSnapshotManager().waitForSnapshotDirectory(volumeName, bucketName, name);
     return snapshotInfo;
   }
 

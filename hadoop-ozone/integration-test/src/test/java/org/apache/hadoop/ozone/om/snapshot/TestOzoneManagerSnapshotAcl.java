@@ -461,7 +461,7 @@ public class TestOzoneManagerSnapshotAcl {
     objectStore.createSnapshot(volumeName, bucketName, snapshotName);
     snapshotKeyPrefix = OmSnapshotManager
         .getSnapshotPrefix(snapshotName);
-    ozoneManager.getOmSnapshotManager().waitForFlush(volumeName, bucketName,
+    ozoneManager.getOmSnapshotManager().waitForSnapshotDirectory(volumeName, bucketName,
         snapshotName);
   }
 

@@ -661,7 +661,7 @@ public class TestOMDbCheckpointServlet {
         .get(SnapshotInfo.getTableKey(vname, bname, snapshotName));
     String snapshotPath = getSnapshotPath(conf, snapshotInfo)
         + OM_KEY_PREFIX;
-    om.getOmSnapshotManager().waitForFlush(vname, bname, snapshotName);
+    om.getOmSnapshotManager().waitForSnapshotDirectory(vname, bname, snapshotName);
 
     return snapshotPath;
   }

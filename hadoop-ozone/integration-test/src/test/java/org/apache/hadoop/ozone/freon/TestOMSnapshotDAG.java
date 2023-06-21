@@ -230,9 +230,9 @@ public class TestOMSnapshotDAG {
         volumeName, bucketName, "snap2");
 
     // RocksDB does checkpointing in a separate thread, wait for it
-    ozoneManager.getOmSnapshotManager().waitForFlush(
+    ozoneManager.getOmSnapshotManager().waitForSnapshotDirectory(
         volumeName, bucketName, "snap1");
-    ozoneManager.getOmSnapshotManager().waitForFlush(
+    ozoneManager.getOmSnapshotManager().waitForSnapshotDirectory(
         volumeName, bucketName, "snap2");
 
 
@@ -249,7 +249,7 @@ public class TestOMSnapshotDAG {
 
     DifferSnapshotInfo snap3 = getDifferSnapshotInfo(omMetadataManager,
         volumeName, bucketName, "snap3");
-    ozoneManager.getOmSnapshotManager().waitForFlush(
+    ozoneManager.getOmSnapshotManager().waitForSnapshotDirectory(
         volumeName, bucketName, "snap3");
 
     List<String> sstDiffList32 = differ.getSSTDiffList(snap3, snap2);

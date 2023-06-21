@@ -156,7 +156,7 @@ public class TestOzoneSnapshotRestore {
     store.createSnapshot(volName, buckName, snapshotName);
     String snapshotKeyPrefix = OmSnapshotManager
             .getSnapshotPrefix(snapshotName);
-    leaderOzoneManager.getOmSnapshotManager().waitForFlush(
+    leaderOzoneManager.getOmSnapshotManager().waitForSnapshotDirectory(
         volName, buckName, snapshotName);
     return snapshotKeyPrefix;
 

@@ -330,7 +330,7 @@ public class TestOzoneFsSnapshot {
     // Asserts that create request succeeded
     Assertions.assertEquals(0, res);
 
-    ozoneManager.getOmSnapshotManager().waitForFlush(VOLUME, BUCKET,
+    ozoneManager.getOmSnapshotManager().waitForSnapshotDirectory(VOLUME, BUCKET,
         snapshotName);
     return snapshotName;
   }

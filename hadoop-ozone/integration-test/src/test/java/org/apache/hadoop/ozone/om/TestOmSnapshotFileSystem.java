@@ -700,7 +700,7 @@ public class TestOmSnapshotFileSystem {
     // create snapshot
     writeClient.createSnapshot(volumeName, bucketName, snapshotName);
 
-    ozoneManager.getOmSnapshotManager().waitForFlush(
+    ozoneManager.getOmSnapshotManager().waitForSnapshotDirectory(
         volumeName, bucketName, snapshotName);
     return OM_KEY_PREFIX + OmSnapshotManager.getSnapshotPrefix(snapshotName);
   }

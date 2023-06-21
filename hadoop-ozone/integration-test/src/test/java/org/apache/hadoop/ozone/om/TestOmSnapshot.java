@@ -1048,7 +1048,7 @@ public class TestOmSnapshot {
     store.createSnapshot(volName, buckName, snapshotName);
     String snapshotKeyPrefix =
         OmSnapshotManager.getSnapshotPrefix(snapshotName);
-    ozoneManager.getOmSnapshotManager().waitForFlush(
+    ozoneManager.getOmSnapshotManager().waitForSnapshotDirectory(
         volName, buckName, snapshotName);
     return snapshotKeyPrefix;
   }
