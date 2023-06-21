@@ -52,6 +52,7 @@ import org.apache.hadoop.ozone.snapshot.SnapshotDiffResponse;
 import org.apache.hadoop.ozone.upgrade.UpgradeFinalizer;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ozone.test.LambdaTestUtils;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
@@ -65,6 +66,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.rocksdb.LiveFileMetaData;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -74,6 +76,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -290,7 +293,7 @@ public class TestOmSnapshot {
   @Test
   // based on TestOzoneRpcClientAbstract:testListKey
   public void testListKey()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     String volumeA = "vol-a-" + counter.incrementAndGet();
     String volumeB = "vol-b-" + counter.incrementAndGet();
     String bucketA = "buc-a-" + counter.incrementAndGet();
@@ -376,7 +379,7 @@ public class TestOmSnapshot {
   @Test
   // based on TestOzoneRpcClientAbstract:testListKeyOnEmptyBucket
   public void testListKeyOnEmptyBucket()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     String volume = "vol-" + counter.incrementAndGet();
     String bucket = "buc-" + counter.incrementAndGet();
     store.createVolume(volume);
@@ -442,7 +445,7 @@ public class TestOmSnapshot {
 
   @Test
   public void testListDeleteKey()
-          throws IOException, InterruptedException {
+          throws IOException, InterruptedException, TimeoutException {
     String volume = "vol-" + counter.incrementAndGet();
     String bucket = "buc-" + counter.incrementAndGet();
     store.createVolume(volume);
@@ -468,7 +471,7 @@ public class TestOmSnapshot {
 
   @Test
   public void testListAddNewKey()
-          throws IOException, InterruptedException {
+          throws IOException, InterruptedException, TimeoutException {
     String volume = "vol-" + counter.incrementAndGet();
     String bucket = "buc-" + counter.incrementAndGet();
     store.createVolume(volume);
@@ -906,7 +909,7 @@ public class TestOmSnapshot {
   @Ignore //TODO - Fix in HDDS-8005
   @Test
   public void testSnapDiffWithMultipleSSTs()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     // Create a volume and 2 buckets
     String volumeName1 = "vol-" + counter.incrementAndGet();
     String bucketName1 = "buck1";
@@ -1038,18 +1041,24 @@ public class TestOmSnapshot {
   }
 
   private String createSnapshot(String volName, String buckName)
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     return createSnapshot(volName, buckName, UUID.randomUUID().toString());
   }
 
   private String createSnapshot(String volName, String buckName,
       String snapshotName)
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     store.createSnapshot(volName, buckName, snapshotName);
     String snapshotKeyPrefix =
         OmSnapshotManager.getSnapshotPrefix(snapshotName);
-    ozoneManager.getOmSnapshotManager().waitForSnapshotDirectory(
-        volName, buckName, snapshotName);
+    SnapshotInfo snapshotInfo = ozoneManager.getMetadataManager()
+        .getSnapshotInfoTable()
+        .get(SnapshotInfo.getTableKey(volName, buckName, snapshotName));
+    String snapshotDirName =
+        OmSnapshotManager.getSnapshotPath(ozoneManager.getConfiguration(),
+            snapshotInfo) + OM_KEY_PREFIX + "CURRENT";
+    GenericTestUtils
+        .waitFor(() -> new File(snapshotDirName).exists(), 1000, 120000);
     return snapshotKeyPrefix;
   }
 

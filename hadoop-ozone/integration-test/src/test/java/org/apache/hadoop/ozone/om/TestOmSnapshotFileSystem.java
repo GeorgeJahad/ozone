@@ -42,6 +42,7 @@ import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.helpers.BucketLayout;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.SnapshotInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ozone.test.LambdaTestUtils;
@@ -56,6 +57,7 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -79,6 +81,7 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_FS_ITERATE_BATCH_SIZE;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
+import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPath;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -563,7 +566,7 @@ public class TestOmSnapshotFileSystem {
       System.arraycopy(buffer.array(), 0, readBytes, 0, strBytes.length);
       Assert.assertArrayEquals(strBytes, readBytes);
     } catch (Exception e) {
-      Assert.fail("Failed to read file , Exception : " + e);
+      Assert.fail("Failed to read file , Exception : " + e.toString());
     }
     deleteRootDir();
   }
@@ -690,18 +693,25 @@ public class TestOmSnapshotFileSystem {
   }
 
   private String createSnapshot()
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
     return createSnapshot(UUID.randomUUID().toString());
   }
 
   private String createSnapshot(String snapshotName)
-      throws IOException, InterruptedException {
+      throws IOException, InterruptedException, TimeoutException {
 
     // create snapshot
     writeClient.createSnapshot(volumeName, bucketName, snapshotName);
 
-    ozoneManager.getOmSnapshotManager().waitForSnapshotDirectory(
-        volumeName, bucketName, snapshotName);
+    // wait till the snapshot directory exists
+    SnapshotInfo snapshotInfo = ozoneManager.getMetadataManager()
+        .getSnapshotInfoTable()
+        .get(SnapshotInfo.getTableKey(volumeName, bucketName, snapshotName));
+    String snapshotDirName = getSnapshotPath(conf, snapshotInfo) +
+        OM_KEY_PREFIX + "CURRENT";
+    GenericTestUtils.waitFor(() -> new File(snapshotDirName).exists(),
+        1000, 120000);
+
     return OM_KEY_PREFIX + OmSnapshotManager.getSnapshotPrefix(snapshotName);
   }
 
