@@ -99,8 +99,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  * Tests the Ratis snapshots feature in OM.
  */
 @Timeout(5000)
-@Flaky("HDDS-8876")
-@Disabled("HDDS-8880")
+//@Flaky("HDDS-8876")
+//@Disabled("HDDS-8880")
 public class TestOMRatisSnapshots {
 
   private MiniOzoneHAClusterImpl cluster = null;
