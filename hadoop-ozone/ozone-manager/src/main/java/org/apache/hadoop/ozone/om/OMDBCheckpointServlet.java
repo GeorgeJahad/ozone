@@ -267,7 +267,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
           }
         } else {
           copySize.addAndGet(processFile(file, copyFiles, hardLinkFiles, toExcludeFiles, excluded));
-          if (copySize.get() > max_copy_size) {
+          if ((copySize.get() > max_copy_size) && containsSstFile(copyFiles)) {
             return false;
           }
         }
@@ -320,6 +320,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
       } else {
         // Not sst file.
         copyFiles.add(file);
+        fileSize = Files.size(file);
       }
     }
     return fileSize;
@@ -375,6 +376,11 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet
       Path incompleteFlag = Files.createTempFile("incompleteFlag", "txt");
       includeFile(incompleteFlag.toFile(), "incompleteFlag.txt", archiveOutputStream);
     }
+  }
+
+  private boolean containsSstFile(Set<Path> copyFiles) {
+    return copyFiles.stream().anyMatch(path ->
+        path.getFileName().toString().toLowerCase().endsWith(".sst"));
   }
 
   private OzoneConfiguration getConf() {
