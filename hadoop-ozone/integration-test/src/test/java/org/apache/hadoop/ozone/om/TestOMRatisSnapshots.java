@@ -183,18 +183,22 @@ public class TestOMRatisSnapshots {
   @Test
   @Timeout(value = 1200, unit = SECONDS)
   public void testSimple() throws Exception {
-    Path dummy = Paths.get("/tmp/dummy");
+    Path countFile = Paths.get("/tmp/countFile");
 
     int numIterations = 1000;
     int keyIncrement = 10;
-    List<String> keys = new ArrayList<>();
-    for (int count = 0; count < numIterations;
-        count++) {
-      Files.write(dummy,
-                  "fabricatedData".getBytes(StandardCharsets.UTF_8));
-      keys = writeKeys(keyIncrement);
+
+    for (int count = 0; count < numIterations; count++) {
+
+      // Write keyIncrement number of keys to the bucket
+      writeKeys(keyIncrement);
+
+      // Log the current count to the temp file.
+      Files.write(countFile, String.format("%d\n", count*keyIncrement)
+                  .getBytes(StandardCharsets.UTF_8));
     }
   }
+
   @ParameterizedTest
   @ValueSource(ints = {100})
   // tried up to 1000 snapshots and this test works, but some of the
