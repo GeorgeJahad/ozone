@@ -65,6 +65,7 @@ import org.slf4j.event.Level;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -82,6 +83,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.OM_HARDLINK_FILE;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPath;
@@ -97,7 +99,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  */
 @Timeout(5000)
 @Flaky("HDDS-8876")
-@Disabled("HDDS-8880")
+//@Disabled("HDDS-8880")
 public class TestOMRatisSnapshots {
 
   private MiniOzoneHAClusterImpl cluster = null;
@@ -178,6 +180,21 @@ public class TestOMRatisSnapshots {
     }
   }
 
+  @Test
+  @Timeout(value = 1200, unit = SECONDS)
+  public void testSimple() throws Exception {
+    Path dummy = Paths.get("/tmp/dummy");
+
+    int numIterations = 1000;
+    int keyIncrement = 10;
+    List<String> keys = new ArrayList<>();
+    for (int count = 0; count < numIterations;
+        count++) {
+      Files.write(dummy,
+                  "fabricatedData".getBytes(StandardCharsets.UTF_8));
+      keys = writeKeys(keyIncrement);
+    }
+  }
   @ParameterizedTest
   @ValueSource(ints = {100})
   // tried up to 1000 snapshots and this test works, but some of the
