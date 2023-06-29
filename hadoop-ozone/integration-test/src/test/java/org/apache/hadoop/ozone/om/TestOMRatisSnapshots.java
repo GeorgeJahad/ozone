@@ -62,6 +62,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 /**
  * Tests the Ratis snapshots feature in OM.
@@ -144,6 +148,25 @@ public class TestOMRatisSnapshots {
     IOUtils.closeQuietly(client);
     if (cluster != null) {
       cluster.shutdown();
+    }
+  }
+
+  @Test
+  @Timeout(value = 1200, unit = SECONDS)
+  public void testSimple() throws Exception {
+    Path countFile = Paths.get("/tmp/countFile");
+
+    int numIterations = 1000;
+    int keyIncrement = 10;
+
+    for (int count = 0; count < numIterations; count++) {
+
+      // Write keyIncrement number of keys to the bucket
+      writeKeys(keyIncrement);
+
+      // Log the current count to the temp file.
+      Files.write(countFile, String.format("%d\n", count*keyIncrement)
+                  .getBytes(StandardCharsets.UTF_8));
     }
   }
 
