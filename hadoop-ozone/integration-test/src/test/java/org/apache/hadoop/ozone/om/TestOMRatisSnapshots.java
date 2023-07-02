@@ -56,6 +56,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -125,7 +126,7 @@ public class TestOMRatisSnapshots {
    * @throws IOException
    */
   @BeforeEach
-  public void init() throws Exception {
+  public void init(TestInfo testInfo) throws Exception {
     conf = new OzoneConfiguration();
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
@@ -135,6 +136,11 @@ public class TestOMRatisSnapshots {
         StorageUnit.KB);
     conf.setStorageSize(OMConfigKeys.
         OZONE_OM_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY, 16, StorageUnit.KB);
+    long snapshotThreshold = SNAPSHOT_THRESHOLD;
+    // Todo: remove this once HDDS-8880 is resolved.
+    if (testInfo.getTestMethod().get().getName().equals("testInstallSnapshot")) {
+      snapshotThreshold = SNAPSHOT_THRESHOLD * 10;
+    }
     conf.setLong(
         OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_KEY,
         SNAPSHOT_THRESHOLD);
@@ -177,7 +183,6 @@ public class TestOMRatisSnapshots {
   }
 
   @Flaky("HDDS-8876")
-  @Disabled("HDDS-8880")
   @ParameterizedTest
   @ValueSource(ints = {100})
   // tried up to 1000 snapshots and this test works, but some of the
