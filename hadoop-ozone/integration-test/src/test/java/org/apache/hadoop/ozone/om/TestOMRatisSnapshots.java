@@ -139,7 +139,7 @@ public class TestOMRatisSnapshots {
     long snapshotThreshold = SNAPSHOT_THRESHOLD;
     // Todo: remove this once HDDS-8880 is resolved.
     if (testInfo.getTestMethod().get().getName().equals("testInstallSnapshot")) {
-      snapshotThreshold = SNAPSHOT_THRESHOLD * 10;
+      snapshotThreshold = SNAPSHOT_THRESHOLD;
     }
     conf.setLong(
         OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_AUTO_TRIGGER_THRESHOLD_KEY,
