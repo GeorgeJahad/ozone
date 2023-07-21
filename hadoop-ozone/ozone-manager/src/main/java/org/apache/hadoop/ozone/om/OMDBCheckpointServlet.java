@@ -366,6 +366,10 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
 
     // Go through each of the files to be copied and add to archive.
     for (Path file : filteredCopyFiles) {
+      if (!file.toString().startsWith(metaDirPath.toString())) {
+        throw new RuntimeException("tarball file not in metadata dir: "
+            + file.toString() + ": " + metaDirPath.toString());
+      }
       String fixedFile = truncateFileName(truncateLength, file);
       if (fixedFile.startsWith(OM_CHECKPOINT_DIR)) {
         // checkpoint files go to root of tarball
