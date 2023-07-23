@@ -168,7 +168,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
         Path fixedPath = Paths.get(checkpointLocation.toString(), s);
         paths.add(fixedPath);
       } else {
-        paths.add(Paths.get(checkpointLocation.getParent().toString(), s));
+        paths.add(Paths.get(checkpointLocation.getParent().getParent().toString(), s));
       }
     }
     return paths;
@@ -355,7 +355,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
                                    boolean completed, Path checkpointLocation)
       throws IOException {
 
-    Path metaDirPath = checkpointLocation.getParent();
+    Path metaDirPath = checkpointLocation.getParent().getParent();
     int truncateLength = metaDirPath.toString().length() + 1;
 
     Set<Path> filteredCopyFiles = completed ? copyFiles :
