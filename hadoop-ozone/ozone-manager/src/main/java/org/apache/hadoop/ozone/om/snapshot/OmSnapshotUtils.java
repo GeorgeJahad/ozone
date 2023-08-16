@@ -106,6 +106,10 @@ public final class OmSnapshotUtils {
   public static void createHardLinks(Path dbPath) throws IOException {
     File hardLinkFile =
         new File(dbPath.toString(), OmSnapshotManager.OM_HARDLINK_FILE);
+    Path data = Files.createTempFile("hlinkoutput", "txt");
+    StringBuilder sb = new StringBuilder();
+    sb.append("starting hlink file\n");
+    Integer counter = 0;
     if (hardLinkFile.exists()) {
       // Read file.
       try (Stream<String> s = Files.lines(hardLinkFile.toPath())) {
@@ -125,12 +129,17 @@ public final class OmSnapshotUtils {
                   "Failed to create directory: " + parent.toString());
             }
           }
+          counter++;
           Files.createLink(fullToPath, fullFromPath);
         }
         if (!hardLinkFile.delete()) {
           throw new IOException("Failed to delete: " + hardLinkFile);
         }
+
       }
+      sb.append(counter.toString()).append("\n");
+      Files.write(data, sb.toString().getBytes(StandardCharsets.UTF_8));
+
     }
   }
 
