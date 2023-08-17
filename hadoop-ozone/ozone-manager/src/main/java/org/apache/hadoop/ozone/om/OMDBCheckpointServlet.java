@@ -128,16 +128,16 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
         om.isSpnegoEnabled());
 
     lock = new Lock(om);
-    LOG.info("gbjm33");
+    LOG.info("gbjb33");
     try {
-      Path data = Files.createTempFile("gbjm30-", "txt");
-      Files.write(data, "gbjm30".getBytes(StandardCharsets.UTF_8));
+      Path data = Files.createTempFile("gbjb30-", "txt");
+      Files.write(data, "gbjb30".getBytes(StandardCharsets.UTF_8));
     } catch (Throwable t) {
-      throw new RuntimeException("gbjmex1");
+      throw new RuntimeException("gbjbex1");
     }
   }
 
-static public boolean gbjmThrow = false;
+static public boolean gbjbThrow = false;
   @Override
   public void writeDbDataToStream(DBCheckpoint checkpoint,
                                   HttpServletRequest request,
@@ -148,14 +148,14 @@ static public boolean gbjmThrow = false;
       throws IOException, InterruptedException {
     Objects.requireNonNull(toExcludeList);
     Objects.requireNonNull(excludedList);
-    if (gbjmThrow)
-      throw new RuntimeException("gbjmex2");
-    Path data = Files.createTempFile("gbjm100-", "txt");
-    Files.write(data, "gbjm100".getBytes(StandardCharsets.UTF_8));
-    Path data2 = Files.createTempFile("gbjm200-", "txt");
-    Files.write(data2, "gbjm200".getBytes(StandardCharsets.UTF_8));
-    Path data3 = Files.createTempFile("gbjm300-", "txt");
-    Files.write(data3, "gbjm300".getBytes(StandardCharsets.UTF_8));
+    if (gbjbThrow)
+      throw new RuntimeException("gbjbex2");
+    Path data = Files.createTempFile("gbjb100-", "txt");
+    Files.write(data, "gbjb100".getBytes(StandardCharsets.UTF_8));
+    Path data2 = Files.createTempFile("gbjb200-", "txt");
+    Files.write(data2, "gbjb200".getBytes(StandardCharsets.UTF_8));
+    Path data3 = Files.createTempFile("gbjb300-", "txt");
+    Files.write(data3, "gbjb300".getBytes(StandardCharsets.UTF_8));
 
 
     // copyFiles is a map of files to be added to tarball.  The keys
@@ -431,6 +431,7 @@ static public boolean gbjmThrow = false;
           long fileSize = processFile(file, copyFiles, hardLinkFiles,
               toExcludeFiles, excluded, destDir);
           if (copySize.get() + fileSize > maxTotalSstSize) {
+            LOG.info("gbjb400: size is too large {}", file);
             return false;
           } else {
             copySize.addAndGet(fileSize);
@@ -542,6 +543,9 @@ static public boolean gbjmThrow = false;
         e.getKey().getFileName().toString().toLowerCase().endsWith(".sst")).
         collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
+    LOG.info("gbjb501: fcf is {}, {}", filteredCopyFiles.size(),
+        filteredCopyFiles.values().stream().findFirst());
+
     // Go through each of the files to be copied and add to archive.
     for (Map.Entry<Path, Path> entry : filteredCopyFiles.entrySet()) {
       Path file = entry.getValue();
@@ -564,6 +568,7 @@ static public boolean gbjmThrow = false;
     }
 
     if (completed) {
+      LOG.info("gbjb402: completed.");
       // Only create the hard link list for the last tarball.
       if (!hardLinkFiles.isEmpty()) {
         Path hardLinkFile = createHardLinkList(truncateLength, hardLinkFiles);
