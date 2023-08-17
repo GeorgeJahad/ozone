@@ -112,22 +112,58 @@ public abstract class RDBSnapshotProvider implements Closeable {
     checkLeaderConsistency(leaderNodeID);
 
     while (true) {
+      // start time
+      long startTime = System.currentTimeMillis();
       String snapshotFileName = getSnapshotFileName(leaderNodeID);
       File targetFile = new File(snapshotDir, snapshotFileName);
       downloadSnapshot(leaderNodeID, targetFile);
       LOG.info(
           "Successfully download the latest snapshot {} from leader OM: {}",
           targetFile, leaderNodeID);
-
+      LOG.info(
+          "xbis: targetFile name: " + targetFile.getName() +
+              "\n targetFile path: " + targetFile.getAbsolutePath() +
+              "\n size in Bytes: " + targetFile.length() +
+              " | KB: " + ((double) targetFile.length() / 1024) +
+              " | MB: " + ((double) targetFile.length() / (1024 * 1024)));
+      long downloadTime = System.currentTimeMillis();
+      long timeToDownload = downloadTime - startTime;
+      LOG.info(
+          "xbis: targetFile name: " + targetFile.getName() +
+              "\n targetFile path: " + targetFile.getAbsolutePath() +
+              "\n startTime(MS): " + startTime +
+              " | downloadTime(MS): " + downloadTime +
+              " | timeToDownload(MS): " + timeToDownload +
+              "\n(Before pause)");
       numDownloaded.incrementAndGet();
       injectPause();
 
       RocksDBCheckpoint checkpoint = getCheckpointFromSnapshotFile(targetFile,
-          candidateDir, true);
+//          candidateDir, true);
+          candidateDir, false);
       LOG.info("Successfully untar the downloaded snapshot {} at {}.",
           targetFile, checkpoint.getCheckpointLocation());
+      long untarTime = System.currentTimeMillis();
+      long timeToDownloadAndUntar = untarTime - startTime;
+      LOG.info(
+          "xbis: targetFile name: " + targetFile.getName() +
+              "\n targetFile path: " + targetFile.getAbsolutePath() +
+              "\n startTime(MS): " + startTime +
+              " | untarTime(MS): " + untarTime +
+              " | timeToDownloadAndUntar(MS): " + timeToDownloadAndUntar +
+              "\n(After pause)");
       if (ratisSnapshotComplete(checkpoint.getCheckpointLocation())) {
         LOG.info("Ratis snapshot transfer is complete.");
+
+        // end time
+        long endTime = System.currentTimeMillis();
+        long timeToComplete = endTime - startTime;
+        LOG.info(
+            "xbis: targetFile name: " + targetFile.getName() +
+                "\n targetFile path: " + targetFile.getAbsolutePath() +
+                "\n startTime(MS): " + startTime +
+                " | endTime(MS): " + endTime +
+                " | timeToComplete(MS): " + timeToComplete);
         return checkpoint;
       }
     }

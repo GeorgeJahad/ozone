@@ -72,6 +72,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_MA
 import static org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils.createHardLinkList;
 import static org.apache.hadoop.ozone.om.OmSnapshotManager.getSnapshotPath;
 import static org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils.truncateFileName;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Provides the current checkpoint Snapshot of the OM DB. (tar.gz)
@@ -127,8 +128,16 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
         om.isSpnegoEnabled());
 
     lock = new Lock(om);
+    LOG.info("gbjm33");
+    try {
+      Path data = Files.createTempFile("gbjm30-", "txt");
+      Files.write(data, "gbjm30".getBytes(StandardCharsets.UTF_8));
+    } catch (Throwable t) {
+      throw new RuntimeException("gbjmex1");
+    }
   }
 
+static public boolean gbjmThrow = false;
   @Override
   public void writeDbDataToStream(DBCheckpoint checkpoint,
                                   HttpServletRequest request,
@@ -139,6 +148,15 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
       throws IOException, InterruptedException {
     Objects.requireNonNull(toExcludeList);
     Objects.requireNonNull(excludedList);
+    if (gbjmThrow)
+      throw new RuntimeException("gbjmex2");
+    Path data = Files.createTempFile("gbjm100-", "txt");
+    Files.write(data, "gbjm100".getBytes(StandardCharsets.UTF_8));
+    Path data2 = Files.createTempFile("gbjm200-", "txt");
+    Files.write(data2, "gbjm200".getBytes(StandardCharsets.UTF_8));
+    Path data3 = Files.createTempFile("gbjm300-", "txt");
+    Files.write(data3, "gbjm300".getBytes(StandardCharsets.UTF_8));
+
 
     // copyFiles is a map of files to be added to tarball.  The keys
     // are the src path of the file, (where they are copied from on
@@ -465,12 +483,12 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
       String fileName = fileNamePath.toString();
       if (fileName.endsWith(ROCKSDB_SST_SUFFIX)) {
         // If same as existing excluded file, add a link for it.
-        Path linkPath = findLinkPath(toExcludeFiles, fileName);
+        Path linkPath = findLinkPath(toExcludeFiles, file, fileName);
         if (linkPath != null) {
           hardLinkFiles.put(destFile, linkPath);
         } else {
           // If already in tarball add a link for it.
-          linkPath = findLinkPath(copyFiles.values(), fileName);
+          linkPath = findLinkPath(copyFiles.keySet(), file, fileName);
           if (linkPath != null) {
             hardLinkFiles.put(destFile, linkPath);
           } else {
@@ -489,11 +507,14 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
 
   // If fileName exists in "files" parameter,
   // it should be linked to path in files.
-  private static Path findLinkPath(Collection<Path> files, String fileName) {
+  private static Path findLinkPath(Collection<Path> files, Path file, String fileName)
+      throws IOException {
     for (Path p: files) {
-      Path file = p.getFileName();
-      if ((file != null) && file.toString().equals(fileName)) {
-        return p;
+      if (p.toString().endsWith(fileName)) {
+        if (OmSnapshotUtils.getINode(p).equals(
+            OmSnapshotUtils.getINode(file))) {
+          return p;
+        }
       }
     }
     return null;
