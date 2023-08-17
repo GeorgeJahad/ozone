@@ -35,6 +35,9 @@ import java.util.stream.Stream;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_CHECKPOINT_DIR;
 
+import org.apache.hadoop.ozone.om.OzoneManager;
+import org.slf4j.Logger;
+
 /**
  * Ozone Manager Snapshot Utilities.
  */
@@ -80,6 +83,9 @@ public final class OmSnapshotUtils {
   public static Path createHardLinkList(int truncateLength,
                                         Map<Path, Path> hardLinkFiles)
       throws IOException {
+    Logger log = OzoneManager.getLogger();
+    Integer counter = 0;
+    log.info("gbjm40");
     Path data = Files.createTempFile("data", "txt");
     StringBuilder sb = new StringBuilder();
     for (Map.Entry<Path, Path> entry : hardLinkFiles.entrySet()) {
@@ -94,6 +100,7 @@ public final class OmSnapshotUtils {
       sb.append(truncateFileName(truncateLength, entry.getKey())).append("\t")
           .append(fixedFile).append("\n");
     }
+    log.info("gbjm41: links written: {}", counter);
     Files.write(data, sb.toString().getBytes(StandardCharsets.UTF_8));
     return data;
   }
@@ -104,6 +111,8 @@ public final class OmSnapshotUtils {
    * @param dbPath Path to db to have links created.
    */
   public static void createHardLinks(Path dbPath) throws IOException {
+    Logger log = OzoneManager.getLogger();
+    Integer counter = 0;
     File hardLinkFile =
         new File(dbPath.toString(), OmSnapshotManager.OM_HARDLINK_FILE);
     if (hardLinkFile.exists()) {
@@ -125,11 +134,13 @@ public final class OmSnapshotUtils {
                   "Failed to create directory: " + parent.toString());
             }
           }
+          counter++;
           Files.createLink(fullToPath, fullFromPath);
         }
         if (!hardLinkFile.delete()) {
           throw new IOException("Failed to delete: " + hardLinkFile);
         }
+        log.info("gbjm20 created {} hardlinks", counter);
       }
     }
   }
