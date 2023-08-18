@@ -148,6 +148,7 @@ public class OmRatisSnapshotProvider extends RDBSnapshotProvider {
     SecurityUtil.doAsCurrentUser(() -> {
       HttpURLConnection connection = (HttpURLConnection)
           connectionFactory.openConnection(omCheckpointUrl, spnegoEnabled);
+      connection.setReadTimeout(0);
 
       connection.setRequestMethod("POST");
       String contentTypeValue = "multipart/form-data; boundary=" +

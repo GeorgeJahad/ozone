@@ -553,7 +553,8 @@ static public boolean gbjdThrow = false;
       throws IOException {
     for (Path p: files) {
       if (p.toString().endsWith(fileName)) {
-        if (OmSnapshotUtils.getINode(p).equals(
+
+        if (p.toFile().exists() && OmSnapshotUtils.getINode(p).equals(
             OmSnapshotUtils.getINode(file))) {
           return p;
         }
