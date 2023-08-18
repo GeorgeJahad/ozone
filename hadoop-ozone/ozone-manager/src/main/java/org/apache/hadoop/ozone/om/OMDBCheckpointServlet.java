@@ -128,16 +128,16 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
         om.isSpnegoEnabled());
 
     lock = new Lock(om);
-    LOG.info("gbjb33");
+    LOG.info("gbjd33");
     try {
-      Path data = Files.createTempFile("gbjb30-", "txt");
-      Files.write(data, "gbjb30".getBytes(StandardCharsets.UTF_8));
+      Path data = Files.createTempFile("gbjd30-", "txt");
+      Files.write(data, "gbjd30".getBytes(StandardCharsets.UTF_8));
     } catch (Throwable t) {
-      throw new RuntimeException("gbjbex1");
+      throw new RuntimeException("gbjdex1");
     }
   }
 
-static public boolean gbjbThrow = false;
+static public boolean gbjdThrow = false;
   @Override
   public void writeDbDataToStream(DBCheckpoint checkpoint,
                                   HttpServletRequest request,
@@ -146,16 +146,19 @@ static public boolean gbjbThrow = false;
                                   List<String> excludedList,
                                   Path tmpdir)
       throws IOException, InterruptedException {
+
+    long startTime = System.currentTimeMillis();
+    LOG.info("gbjd600: starting stream.");
     Objects.requireNonNull(toExcludeList);
     Objects.requireNonNull(excludedList);
-    if (gbjbThrow)
-      throw new RuntimeException("gbjbex2");
-    Path data = Files.createTempFile("gbjb100-", "txt");
-    Files.write(data, "gbjb100".getBytes(StandardCharsets.UTF_8));
-    Path data2 = Files.createTempFile("gbjb200-", "txt");
-    Files.write(data2, "gbjb200".getBytes(StandardCharsets.UTF_8));
-    Path data3 = Files.createTempFile("gbjb300-", "txt");
-    Files.write(data3, "gbjb300".getBytes(StandardCharsets.UTF_8));
+    if (gbjdThrow)
+      throw new RuntimeException("gbjdex2");
+    Path data = Files.createTempFile("gbjd100-", "txt");
+    Files.write(data, "gbjd100".getBytes(StandardCharsets.UTF_8));
+    Path data2 = Files.createTempFile("gbjd200-", "txt");
+    Files.write(data2, "gbjd200".getBytes(StandardCharsets.UTF_8));
+    Path data3 = Files.createTempFile("gbjd300-", "txt");
+    Files.write(data3, "gbjd300".getBytes(StandardCharsets.UTF_8));
 
 
     // copyFiles is a map of files to be added to tarball.  The keys
@@ -187,6 +190,9 @@ static public boolean gbjbThrow = false;
     } catch (Exception e) {
       LOG.error("got exception writing to archive " + e);
       throw e;
+    } finally {
+      long elapsedTime = System.currentTimeMillis() - startTime;
+      LOG.info("gbjd601: elapsed: {}", elapsedTime);
     }
   }
 
@@ -283,6 +289,10 @@ static public boolean gbjbThrow = false;
                                   List<String> excluded,
                                   Path tmpdir)
       throws IOException {
+    long startTime = System.currentTimeMillis();
+    try {
+
+    LOG.info("gbjd600: get files.");
 
     maxTotalSstSize = getConf().getLong(
         OZONE_OM_RATIS_SNAPSHOT_MAX_TOTAL_SST_SIZE_KEY,
@@ -295,11 +305,17 @@ static public boolean gbjbThrow = false;
     }
 
     AtomicLong copySize = new AtomicLong(0L);
+    long nextstartTime = System.currentTimeMillis();
+    try {
     // Get the active fs files.
     Path dir = checkpoint.getCheckpointLocation();
     if (!processDir(dir, copyFiles, hardLinkFiles, toExcludeFiles,
         new HashSet<>(), excluded, copySize, null)) {
       return false;
+    }
+    } finally {
+      long elapsedTime = System.currentTimeMillis() - nextstartTime;
+      LOG.info("gbjd601: get files active elapsed: {}", elapsedTime);
     }
 
     if (!includeSnapshotData) {
@@ -307,6 +323,8 @@ static public boolean gbjbThrow = false;
     }
 
     // Get the snapshot files.
+    nextstartTime = System.currentTimeMillis();
+    try {
     Set<Path> snapshotPaths = waitForSnapshotDirs(checkpoint);
     Path snapshotDir = Paths.get(OMStorage.getOmDbDir(getConf()).toString(),
         OM_SNAPSHOT_DIR);
@@ -314,11 +332,16 @@ static public boolean gbjbThrow = false;
         snapshotPaths, excluded, copySize, null)) {
       return false;
     }
+    } finally {
+      long elapsedTime = System.currentTimeMillis() - nextstartTime;
+      LOG.info("gbjd601: get files snapshot elapsed: {}", elapsedTime);
+    }
+
     RocksDBCheckpointDiffer differ = getDbStore().getRocksDBCheckpointDiffer();
+    nextstartTime = System.currentTimeMillis();
+    try {
     DirectoryData sstBackupDir = new DirectoryData(tmpdir,
         differ.getSSTBackupDir());
-    DirectoryData compactionLogDir = new DirectoryData(tmpdir,
-        differ.getCompactionLogDir());
 
     // Process the tmp sst compaction dir.
     if (!processDir(sstBackupDir.getTmpDir().toPath(), copyFiles, hardLinkFiles,
@@ -326,13 +349,31 @@ static public boolean gbjbThrow = false;
         sstBackupDir.getOriginalDir().toPath())) {
       return false;
     }
+    } finally {
+      long elapsedTime = System.currentTimeMillis() - nextstartTime;
+      LOG.info("gbjd601: get files tmpsst elapsed: {}", elapsedTime);
+    }
 
+
+    nextstartTime = System.currentTimeMillis();
+    try {
+    DirectoryData compactionLogDir = new DirectoryData(tmpdir,
+        differ.getCompactionLogDir());
     // Process the tmp compaction log dir.
     return processDir(compactionLogDir.getTmpDir().toPath(), copyFiles,
         hardLinkFiles, toExcludeFiles,
         new HashSet<>(), excluded, copySize,
         compactionLogDir.getOriginalDir().toPath());
+    } finally {
+      long elapsedTime = System.currentTimeMillis() - nextstartTime;
+      LOG.info("gbjd601: get files compaction dir elapsed: {}", elapsedTime);
+    }
 
+
+    } finally {
+      long elapsedTime = System.currentTimeMillis() - startTime;
+      LOG.info("gbjd601: get files elapsed: {}", elapsedTime);
+    }
   }
 
   /**
@@ -431,7 +472,7 @@ static public boolean gbjbThrow = false;
           long fileSize = processFile(file, copyFiles, hardLinkFiles,
               toExcludeFiles, excluded, destDir);
           if (copySize.get() + fileSize > maxTotalSstSize) {
-            LOG.info("gbjb400: size is too large {}", file);
+            LOG.info("gbjd400: size is too large {}", file);
             return false;
           } else {
             copySize.addAndGet(fileSize);
@@ -538,12 +579,14 @@ static public boolean gbjbThrow = false;
     Path metaDirPath = getVerifiedCheckPointPath(checkpointLocation);
     int truncateLength = metaDirPath.toString().length() + 1;
 
+    long startTime = System.currentTimeMillis();
+    try {
     Map<Path, Path> filteredCopyFiles = completed ? copyFiles :
         copyFiles.entrySet().stream().filter(e ->
         e.getKey().getFileName().toString().toLowerCase().endsWith(".sst")).
         collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-    LOG.info("gbjb501: fcf is {}, {}", filteredCopyFiles.size(),
+    LOG.info("gbjd501: fcf is {}, {}", filteredCopyFiles.size(),
         filteredCopyFiles.values().stream().findFirst());
 
     // Go through each of the files to be copied and add to archive.
@@ -568,7 +611,7 @@ static public boolean gbjbThrow = false;
     }
 
     if (completed) {
-      LOG.info("gbjb402: completed.");
+      LOG.info("gbjd402: completed.");
       // Only create the hard link list for the last tarball.
       if (!hardLinkFiles.isEmpty()) {
         Path hardLinkFile = createHardLinkList(truncateLength, hardLinkFiles);
@@ -577,6 +620,10 @@ static public boolean gbjbThrow = false;
       }
       // Mark tarball completed.
       includeRatisSnapshotCompleteFlag(archiveOutputStream);
+    }
+    } finally {
+      long elapsedTime = System.currentTimeMillis() - startTime;
+      LOG.info("gbjd601: write files elapsed: {}", elapsedTime);
     }
   }
 
