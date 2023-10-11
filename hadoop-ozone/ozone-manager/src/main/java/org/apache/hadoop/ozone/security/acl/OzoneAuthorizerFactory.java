@@ -26,6 +26,9 @@ import org.apache.hadoop.ozone.om.PrefixManager;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS;
 import static org.apache.hadoop.util.ReflectionUtils.newInstance;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ENABLE_OFS_SHARED_TMP_DIR;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ENABLE_OFS_SHARED_TMP_DIR_DEFAULT;
+
 
 /**
  * Creates {@link IAccessAuthorizer} instances based on configuration.
@@ -69,6 +72,10 @@ public final class OzoneAuthorizerFactory {
     final OzoneConfiguration conf = om.getConfiguration();
     final Class<? extends IAccessAuthorizer> clazz = authorizerClass(conf);
 
+    if (conf.getBoolean(OZONE_OM_ENABLE_OFS_SHARED_TMP_DIR,
+        OZONE_OM_ENABLE_OFS_SHARED_TMP_DIR_DEFAULT)) {
+      return new SharedTmpDirAuthorizer(om, conf);
+    }
     if (OzoneAccessAuthorizer.class == clazz) {
       return OzoneAccessAuthorizer.get();
     }
