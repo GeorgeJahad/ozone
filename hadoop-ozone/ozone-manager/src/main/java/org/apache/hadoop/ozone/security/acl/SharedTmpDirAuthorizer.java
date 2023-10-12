@@ -80,7 +80,9 @@ public class SharedTmpDirAuthorizer implements IAccessAuthorizer {
 
     if (ozObject instanceof OzoneObjInfo) {
       objInfo = (OzoneObjInfo) ozObject;
-      if (objInfo.getVolumeName().equals("tmp") &&
+      if (StringUtils.isNotEmpty(objInfo.getVolumeName()) &&
+          StringUtils.isNotEmpty(objInfo.getBucketName()) &&
+          objInfo.getVolumeName().equals("tmp") &&
           objInfo.getBucketName().equals("tmp") &&
           StringUtils.isNotEmpty(objInfo.getKeyName())
           && isACLTypeDelete) {

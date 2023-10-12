@@ -59,7 +59,7 @@ public final class OzoneAuthorizerFactory {
   }
 
   /**
-   * Creates new instance (except for {@link OzoneAccessAuthorizer},
+   * Creates new instance (except for {@link OzoneAccessAuthorizer}),
    * which is a no-op authorizer.
    */
   private static IAccessAuthorizer create(
