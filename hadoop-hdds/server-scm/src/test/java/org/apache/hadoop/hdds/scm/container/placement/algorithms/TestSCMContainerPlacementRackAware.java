@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.MockDatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.MetadataStorageReportProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.scm.ContainerPlacementStatus;
@@ -60,6 +61,7 @@ import static org.apache.hadoop.hdds.scm.net.NetConstants.ROOT_SCHEMA;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -561,6 +563,69 @@ public class TestSCMContainerPlacementRackAware {
     stat = policy.validateContainerPlacement(dns, 1);
     assertTrue(stat.isPolicySatisfied());
     assertEquals(0, stat.misReplicationCount());
+  }
+
+  @ParameterizedTest
+  @MethodSource("org.apache.hadoop.hdds.scm.node.NodeStatus#decommissionStates")
+  public void testReplicaOnNodeInDecommission(
+      HddsProtos.NodeOperationalState state) {
+    setup(6);
+    //    6 datanodes, 2 per rack.
+    //    /rack0/node0  -> used
+    //    /rack0/node1  -> used
+    //    /rack0/node2
+    //    /rack0/node3
+    //    /rack0/node4
+    //    /rack1/node5  -> used
+
+    List<DatanodeDetails> dns = new ArrayList<>();
+    dns.add(datanodes.get(0));
+    dns.add(datanodes.get(1));
+    dns.add(datanodes.get(5));
+
+    // Placement policy is satisfied.
+    ContainerPlacementStatus status = policy.validateContainerPlacement(dns, 3);
+    assertTrue(status.isPolicySatisfied());
+    assertEquals(2, status.actualPlacementCount());
+    assertEquals(2, status.expectedPlacementCount());
+    assertEquals(0, status.misReplicationCount());
+    assertNull(status.misReplicatedReason());
+
+    // For RackAware there must be 2 replicas on 1 rack and
+    // 1 replica on another rack. If there are 3 replicas on 1 rack,
+    // then 1 of them will be considered mis-replicated.
+    // If 1 of the 3 replicas belongs to a decommissioned node there are
+    // 2 total available replicas and policy should be satisfied.
+
+    dns = new ArrayList<>();
+    dns.add(datanodes.get(0));
+    dns.add(datanodes.get(1));
+    dns.add(datanodes.get(2));
+    dns.add(datanodes.get(5));
+
+    // All 4 nodes are IN_SERVICE, policy isn't satisfied.
+    status = policy.validateContainerPlacement(dns, 3);
+    assertFalse(status.isPolicySatisfied());
+    assertEquals(2, status.actualPlacementCount());
+    assertEquals(2, status.expectedPlacementCount());
+    assertEquals(1, status.misReplicationCount());
+    assertTrue(status.misReplicatedReason()
+                   .contains("number of replicas per rack are [1, 3]"));
+
+    dns = new ArrayList<>();
+    datanodes.get(0).setPersistedOpState(state);
+    dns.add(datanodes.get(0));
+    dns.add(datanodes.get(1));
+    dns.add(datanodes.get(2));
+    dns.add(datanodes.get(5));
+
+    // '/rack0/node0' is in decommission, policy is satisfied.
+    status = policy.validateContainerPlacement(dns, 3);
+    assertTrue(status.isPolicySatisfied());
+    assertEquals(2, status.actualPlacementCount());
+    assertEquals(2, status.expectedPlacementCount());
+    assertEquals(0, status.misReplicationCount());
+    assertNull(status.misReplicatedReason());
   }
 
   @ParameterizedTest
