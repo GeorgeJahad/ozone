@@ -374,7 +374,7 @@ public class TestOMRatisSnapshots {
                 Paths.get(followerSnapshotDir.toString(), fileName);
 //            Path followerActiveSST =
 //                Paths.get(followerActiveDir.toString(), fileName);
-            Assertions.assertEquals(
+            assertEquals(
                 OmSnapshotUtils.getINode(followerActiveSST),
                 OmSnapshotUtils.getINode(followerSnapshotSST),
                 "Snapshot sst file is supposed to be a hard link");
