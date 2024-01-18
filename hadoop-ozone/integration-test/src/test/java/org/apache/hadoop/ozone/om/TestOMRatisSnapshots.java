@@ -197,12 +197,13 @@ public class TestOMRatisSnapshots {
     }
   }
 
-  @ParameterizedTest
-  @ValueSource(ints = {100})
+  @Test
+
   // tried up to 1000 snapshots and this test works, but some of the
   //  timeouts have to be increased.
-  public void testInstallSnapshot(int numSnapshotsToCreate, @TempDir Path tempDir) throws Exception {
+  public void testInstallSnapshot(@TempDir Path tempDir) throws Exception {
     // Get the leader OM
+    int numSnapshotsToCreate = 100;
     String leaderOMNodeId = OmFailoverProxyUtil
         .getFailoverProxyProvider(objectStore.getClientProxy())
         .getCurrentProxyOMNodeId();
@@ -367,6 +368,10 @@ public class TestOMRatisSnapshots {
                 Paths.get(followerSnapshotDir.toString(), fileName);
             Path followerActiveSST =
                 Paths.get(followerActiveDir.toString(), fileName);
+            if (!followerActiveSST.toFile().exists()  ||
+            !followerSnapshotSST.toFile().exists()) {
+              System.out.println("bad");
+            }
             assertEquals(
                 OmSnapshotUtils.getINode(followerActiveSST),
                 OmSnapshotUtils.getINode(followerSnapshotSST),
