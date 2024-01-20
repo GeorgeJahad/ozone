@@ -248,7 +248,7 @@ public class RocksDBCheckpointDiffer implements AutoCloseable,
     } else {
       this.scheduler = null;
     }
-    this.tarballRequestCount = new AtomicInteger(0);
+    this.tarballRequestCount = new AtomicInteger(1);
   }
 
   private String createCompactionLogDir(String metadataDirName,

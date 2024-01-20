@@ -226,6 +226,8 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
    * @param  flush -  Whether to flush the db or not.
    * @return Checkpoint containing snapshot entries expected.
    */
+  static int moveCount;
+
   @Override
   public DBCheckpoint getCheckpoint(Path tmpdir, boolean flush)
       throws IOException {
@@ -249,7 +251,13 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
           compactionLogDir.getTmpDir());
       OmSnapshotUtils.linkFiles(sstBackupDir.getOriginalDir(),
           sstBackupDir.getTmpDir());
+      File activeCandidate = new File(getDbStore().getDbLocation().getParent(), "active" + moveCount);
+      OmSnapshotUtils.linkFiles(getDbStore().getDbLocation(), activeCandidate);
       checkpoint = getDbStore().getCheckpoint(flush);
+      File savedCandidate = new File(getDbStore().getDbLocation().getParent(), "servlet" + moveCount);
+      OmSnapshotUtils.linkFiles(checkpoint.getCheckpointLocation().toFile(), savedCandidate);
+
+moveCount++;
     } finally {
       // Unpause the compaction threads.
       synchronized (getDbStore().getRocksDBCheckpointDiffer()) {

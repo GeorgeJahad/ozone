@@ -3870,6 +3870,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     // Delete the backup DB
     try {
+
       if (dbBackup != null) {
         FileUtils.deleteFully(dbBackup);
       }
@@ -3935,10 +3936,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return dbBackupDir;
   }
 
+  static int moveCount = 0;
   private void moveCheckpointFiles(File oldDB, Path checkpointPath, File dbDir,
                                    File dbBackup, File dbSnapshotsDir,
                                    File dbSnapshotsBackup) throws IOException {
     // Move the new DB checkpoint into the om metadata dir
+
+
     Path markerFile = new File(dbDir, DB_TRANSIENT_MARKER).toPath();
     try {
       // Create a Transient Marker file. This file will be deleted if the
@@ -3952,6 +3956,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       // candidate db.
       OmSnapshotUtils.linkFiles(checkpointPath.toFile(),
           oldDB);
+      File savedCandidate = new File(oldDB.getParentFile(), "file" + moveCount);
+      OmSnapshotUtils.linkFiles(checkpointPath.toFile(), savedCandidate);;
       moveOmSnapshotData(oldDB.toPath(), dbSnapshotsDir.toPath());
       Files.deleteIfExists(markerFile);
     } catch (IOException e) {
