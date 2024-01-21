@@ -29,10 +29,13 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.apache.hadoop.hdds.utils.HddsServerUtil.ratisSnapshotComplete;
 import static org.apache.hadoop.ozone.OzoneConsts.SNAPSHOT_CANDIDATE_DIR;
@@ -105,6 +108,7 @@ public abstract class RDBSnapshotProvider implements Closeable {
    * @return {@link DBCheckpoint}
    * @throws IOException
    */
+  static int moveCount = 0;
   public DBCheckpoint downloadDBSnapshotFromLeader(String leaderNodeID)
       throws IOException {
     LOG.info("Prepare to download the snapshot from leader OM {} and " +
@@ -122,11 +126,15 @@ public abstract class RDBSnapshotProvider implements Closeable {
       numDownloaded.incrementAndGet();
       injectPause();
 
+      File backupTar = new File(snapshotDir.getParentFile(), targetFile.getName());
+      Files.createLink(backupTar.toPath(), targetFile.toPath());
       RocksDBCheckpoint checkpoint = getCheckpointFromSnapshotFile(targetFile,
           candidateDir, true);
       LOG.info("Successfully untar the downloaded snapshot {} at {}.",
           targetFile, checkpoint.getCheckpointLocation());
       if (ratisSnapshotComplete(checkpoint.getCheckpointLocation())) {
+        File savedCandidate = new File(snapshotDir.getParentFile(), "prefile" + moveCount);
+        linkFiles(checkpoint.getCheckpointLocation().toFile(), savedCandidate);
         LOG.info("Ratis snapshot transfer is complete.");
         return checkpoint;
       }
@@ -175,6 +183,36 @@ public abstract class RDBSnapshotProvider implements Closeable {
     return dbName + "-" + leaderNodeID + "-" + snapshotTime + ".tar";
   }
 
+  public static void linkFiles(File oldDir, File newDir) throws IOException {
+    int truncateLength = oldDir.toString().length() + 1;
+    List<String> oldDirList;
+    try (Stream<Path> files = Files.walk(oldDir.toPath())) {
+      oldDirList = files.map(Path::toString).
+          // Don't copy the directory itself
+          filter(s -> !s.equals(oldDir.toString())).
+          // Remove the old path
+          map(s -> s.substring(truncateLength)).
+          sorted().
+          collect(Collectors.toList());
+    }
+    for (String s: oldDirList) {
+      File oldFile = new File(oldDir, s);
+      File newFile = new File(newDir, s);
+      File newParent = newFile.getParentFile();
+      if (!newParent.exists()) {
+        if (!newParent.mkdirs()) {
+          throw new IOException("Directory create fails: " + newParent);
+        }
+      }
+      if (oldFile.isDirectory()) {
+        if (!newFile.mkdirs()) {
+          throw new IOException("Directory create fails: " + newFile);
+        }
+      } else {
+        Files.createLink(newFile.toPath(), oldFile.toPath());
+      }
+    }
+  }
   /**
    * Untar the downloaded snapshot and convert to {@link RocksDBCheckpoint}.
    *

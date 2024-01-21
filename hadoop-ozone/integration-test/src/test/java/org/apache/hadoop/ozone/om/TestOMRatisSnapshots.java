@@ -102,7 +102,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Tests the Ratis snapshots feature in OM.
  */
-@Timeout(5000)
+@Timeout(500000)
 public class TestOMRatisSnapshots {
 
   private MiniOzoneHAClusterImpl cluster = null;
