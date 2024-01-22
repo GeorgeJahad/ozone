@@ -368,8 +368,7 @@ public class TestOMRatisSnapshots {
           Path leaderActiveSST =
               Paths.get(leaderActiveDir.toString(), fileName);
           // Skip if not hard link on the leader
-          // First confirm it is live
-          if (!liveSstFiles.stream().anyMatch(s -> s.equals(fileName))) {
+          if (!leaderActiveSST.toFile().exists()) {
             continue;
           }
           // If it is a hard link on the leader, it should be a hard
