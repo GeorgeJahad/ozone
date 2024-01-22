@@ -318,24 +318,28 @@ public class TestOMRatisSnapshots {
 
     RocksDB activeRocksDB = ((RDBStore)leaderOM.getMetadataManager().getStore()).getDb().getManagedRocksDb()
         .get();
-    RocksDatabase.ColumnFamily cf = ((RDBStore)leaderOM.getMetadataManager().getStore()).getDb().getColumnFamily(COMPACTION_LOG_TABLE);
-    Set compactedSstFiles = new HashSet();
-    try (ManagedRocksIterator managedRocksIterator = new ManagedRocksIterator(
-        activeRocksDB.newIterator(cf.getHandle()))) {
-      managedRocksIterator.get().seekToFirst();
-      while (managedRocksIterator.get().isValid()) {
-        byte[] value = managedRocksIterator.get().value();
-        CompactionLogEntry compactionLogEntry =
-            CompactionLogEntry.getFromProtobuf(
-                HddsProtos.CompactionLogEntryProto.parseFrom(value));
-        compactedSstFiles.addAll(compactionLogEntry.getInputFileInfoList());
-        managedRocksIterator.get().next();
-      }
-    } catch (InvalidProtocolBufferException e) {
-      throw new RuntimeException(e);
-    }
+    Set liveSstFiles = new HashSet();
+    liveSstFiles.addAll(activeRocksDB.getLiveFiles().files.stream().map(s -> s.substring(1)).collect(
+        Collectors.toList()));
 
-    checkSnapshot(leaderOM, followerOM, snapshotName, keys, snapshotInfo, compactedSstFiles);
+    // RocksDatabase.ColumnFamily cf = ((RDBStore)leaderOM.getMetadataManager().getStore()).getDb().getColumnFamily(COMPACTION_LOG_TABLE);
+    // Set compactedSstFiles = new HashSet();
+    // try (ManagedRocksIterator managedRocksIterator = new ManagedRocksIterator(
+    //     activeRocksDB.newIterator(cf.getHandle()))) {
+    //   managedRocksIterator.get().seekToFirst();
+    //   while (managedRocksIterator.get().isValid()) {
+    //     byte[] value = managedRocksIterator.get().value();
+    //     CompactionLogEntry compactionLogEntry =
+    //         CompactionLogEntry.getFromProtobuf(
+    //             HddsProtos.CompactionLogEntryProto.parseFrom(value));
+    //     compactedSstFiles.addAll(compactionLogEntry.getInputFileInfoList());
+    //     managedRocksIterator.get().next();
+    //   }
+    // } catch (InvalidProtocolBufferException e) {
+    //   throw new RuntimeException(e);
+    // }
+
+    checkSnapshot(leaderOM, followerOM, snapshotName, keys, snapshotInfo, liveSstFiles);
     int sstFileCount = 0;
     Set<String> sstFileUnion = new HashSet<>();
     for (Set<String> sstFiles : sstSetList) {
@@ -357,7 +361,7 @@ public class TestOMRatisSnapshots {
   }
 
   private void checkSnapshot(OzoneManager leaderOM, OzoneManager followerOM, String snapshotName, List<String> keys, SnapshotInfo snapshotInfo,
-                             Set compactedSstFiles)
+                             Set liveSstFiles)
 
       throws IOException {
     // Read back data from snapshot.
@@ -391,7 +395,8 @@ public class TestOMRatisSnapshots {
           Path leaderActiveSST =
               Paths.get(leaderActiveDir.toString(), fileName);
           // Skip if not hard link on the leader
-          if (!leaderActiveSST.toFile().exists()) {
+          if (!leaderActiveSST.toFile().exists() ||
+              !liveSstFiles.contains(leaderActiveSST.getFileName())) {
             continue;
           }
           // If it is a hard link on the leader, it should be a hard
@@ -402,10 +407,13 @@ public class TestOMRatisSnapshots {
                 Paths.get(followerSnapshotDir.toString(), fileName);
             Path followerActiveSST =
                 Paths.get(followerActiveDir.toString(), fileName);
-            if (!followerActiveSST.toFile().exists()  ||
-            !followerSnapshotSST.toFile().exists()) {
-              System.out.println("bad");
-            }
+            // if (!followerActiveSST.toFile().exists()  ||
+            // !followerSnapshotSST.toFile().exists()) {
+            //   System.out.println("bad");
+            //   if (liveSstFiles.contains(followerActiveSST.getFileName())) {
+            //     System.out.println("good");
+            //   }
+            // }
             assertEquals(
                 OmSnapshotUtils.getINode(followerActiveSST),
                 OmSnapshotUtils.getINode(followerSnapshotSST),

@@ -252,7 +252,7 @@ public class OMDBCheckpointServlet extends DBCheckpointServlet {
       OmSnapshotUtils.linkFiles(sstBackupDir.getOriginalDir(),
           sstBackupDir.getTmpDir());
       File activeCandidate = new File(getDbStore().getDbLocation().getParent(), "active" + moveCount);
-      OmSnapshotUtils.linkFiles(getDbStore().getDbLocation(), activeCandidate);
+      FileUtils.copyDirectory(getDbStore().getDbLocation(), activeCandidate);
       checkpoint = getDbStore().getCheckpoint(flush);
       File savedCandidate = new File(getDbStore().getDbLocation().getParent(), "servlet" + moveCount);
       OmSnapshotUtils.linkFiles(checkpoint.getCheckpointLocation().toFile(), savedCandidate);
