@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.om;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
@@ -24,6 +25,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.ExitManager;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.utils.DBCheckpointMetrics;
 import org.apache.hadoop.hdds.utils.FaultInjector;
 import org.apache.hadoop.hdds.utils.HAUtils;
@@ -31,6 +33,9 @@ import org.apache.hadoop.hdds.utils.IOUtils;
 import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.RDBCheckpointUtils;
+import org.apache.hadoop.hdds.utils.db.RDBStore;
+import org.apache.hadoop.hdds.utils.db.RocksDatabase;
+import org.apache.hadoop.hdds.utils.db.managed.ManagedRocksIterator;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
 import org.apache.hadoop.ozone.client.BucketArgs;
@@ -50,6 +55,7 @@ import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServerConfig;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils;
+import org.apache.ozone.compaction.log.CompactionLogEntry;
 import org.apache.ozone.test.GenericTestUtils;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.assertj.core.api.Fail;
@@ -61,6 +67,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.rocksdb.RocksDB;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 
@@ -86,6 +93,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.apache.hadoop.ozone.OzoneConsts.COMPACTION_LOG_TABLE;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_MAX_TOTAL_SST_SIZE_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_SNAPSHOT_SST_FILTERING_SERVICE_INTERVAL;
@@ -308,7 +316,26 @@ public class TestOMRatisSnapshots {
         volumeName, bucketName, newKeys.get(0))));
      */
 
-    checkSnapshot(leaderOM, followerOM, snapshotName, keys, snapshotInfo);
+    RocksDB activeRocksDB = ((RDBStore)leaderOM.getMetadataManager().getStore()).getDb().getManagedRocksDb()
+        .get();
+    RocksDatabase.ColumnFamily cf = ((RDBStore)leaderOM.getMetadataManager().getStore()).getDb().getColumnFamily(COMPACTION_LOG_TABLE);
+    Set compactedSstFiles = new HashSet();
+    try (ManagedRocksIterator managedRocksIterator = new ManagedRocksIterator(
+        activeRocksDB.newIterator(cf.getHandle()))) {
+      managedRocksIterator.get().seekToFirst();
+      while (managedRocksIterator.get().isValid()) {
+        byte[] value = managedRocksIterator.get().value();
+        CompactionLogEntry compactionLogEntry =
+            CompactionLogEntry.getFromProtobuf(
+                HddsProtos.CompactionLogEntryProto.parseFrom(value));
+        compactedSstFiles.addAll(compactionLogEntry.getInputFileInfoList());
+        managedRocksIterator.get().next();
+      }
+    } catch (InvalidProtocolBufferException e) {
+      throw new RuntimeException(e);
+    }
+
+    checkSnapshot(leaderOM, followerOM, snapshotName, keys, snapshotInfo, compactedSstFiles);
     int sstFileCount = 0;
     Set<String> sstFileUnion = new HashSet<>();
     for (Set<String> sstFiles : sstSetList) {
@@ -325,6 +352,13 @@ public class TestOMRatisSnapshots {
   private void checkSnapshot(OzoneManager leaderOM, OzoneManager followerOM,
                              String snapshotName,
                              List<String> keys, SnapshotInfo snapshotInfo)
+      throws IOException {
+    checkSnapshot(leaderOM, followerOM, snapshotName, keys, snapshotInfo, null);
+  }
+
+  private void checkSnapshot(OzoneManager leaderOM, OzoneManager followerOM, String snapshotName, List<String> keys, SnapshotInfo snapshotInfo,
+                             Set compactedSstFiles)
+
       throws IOException {
     // Read back data from snapshot.
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()

@@ -599,9 +599,10 @@ public class OmMetadataManagerImpl implements OMMetadataManager,
         .setOpenReadOnly(readOnly)
         .setPath(Paths.get(metaDir.getPath()))
         .setMaxFSSnapshots(maxFSSnapshots)
-        .setEnableCompactionDag(enableCompactionDag)
-        .setCreateCheckpointDirs(createCheckpointDirs)
-      .disableDefaultCFAutoCompaction(true);
+        .setEnableCompactionDag(true)
+        .setCreateCheckpointDirs(createCheckpointDirs);
+    disableAutoCompaction.ifPresent(
+            dbStoreBuilder::disableDefaultCFAutoCompaction);
     maxOpenFiles.ifPresent(dbStoreBuilder::setMaxNumberOfOpenFiles);
     return addOMTablesAndCodecs(dbStoreBuilder).build();
   }
