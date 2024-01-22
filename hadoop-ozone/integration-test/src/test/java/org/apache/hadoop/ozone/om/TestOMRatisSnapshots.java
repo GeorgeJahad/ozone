@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
@@ -25,7 +24,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.ExitManager;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.conf.StorageUnit;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.utils.DBCheckpointMetrics;
 import org.apache.hadoop.hdds.utils.FaultInjector;
 import org.apache.hadoop.hdds.utils.HAUtils;
@@ -34,8 +32,6 @@ import org.apache.hadoop.hdds.utils.TransactionInfo;
 import org.apache.hadoop.hdds.utils.db.DBCheckpoint;
 import org.apache.hadoop.hdds.utils.db.RDBCheckpointUtils;
 import org.apache.hadoop.hdds.utils.db.RDBStore;
-import org.apache.hadoop.hdds.utils.db.RocksDatabase;
-import org.apache.hadoop.hdds.utils.db.managed.ManagedRocksIterator;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.MiniOzoneHAClusterImpl;
 import org.apache.hadoop.ozone.client.BucketArgs;
@@ -55,8 +51,8 @@ import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServerConfig;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.snapshot.OmSnapshotUtils;
-import org.apache.ozone.compaction.log.CompactionLogEntry;
 import org.apache.ozone.test.GenericTestUtils;
+import org.apache.ozone.test.tag.Unhealthy;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.assertj.core.api.Fail;
 import org.junit.jupiter.api.AfterEach;
@@ -68,6 +64,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.rocksdb.RocksDB;
+import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
 
@@ -93,7 +90,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.apache.hadoop.ozone.OzoneConsts.COMPACTION_LOG_TABLE;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_MAX_TOTAL_SST_SIZE_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_SNAPSHOT_SST_FILTERING_SERVICE_INTERVAL;
@@ -110,7 +106,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Tests the Ratis snapshots feature in OM.
  */
-@Timeout(500000)
+@Timeout(5000)
 public class TestOMRatisSnapshots {
 
   private MiniOzoneHAClusterImpl cluster = null;
@@ -205,13 +201,13 @@ public class TestOMRatisSnapshots {
     }
   }
 
-  @Test
-
+  @ParameterizedTest
+  @ValueSource(ints = {100})
   // tried up to 1000 snapshots and this test works, but some of the
   //  timeouts have to be increased.
-  public void testInstallSnapshot(@TempDir Path tempDir) throws Exception {
+  @Unhealthy("HDDS-10059")
+  void testInstallSnapshot(int numSnapshotsToCreate, @TempDir Path tempDir) throws Exception {
     // Get the leader OM
-    int numSnapshotsToCreate = 100;
     String leaderOMNodeId = OmFailoverProxyUtil
         .getFailoverProxyProvider(objectStore.getClientProxy())
         .getCurrentProxyOMNodeId();
@@ -316,30 +312,7 @@ public class TestOMRatisSnapshots {
         volumeName, bucketName, newKeys.get(0))));
      */
 
-    RocksDB activeRocksDB = ((RDBStore)leaderOM.getMetadataManager().getStore()).getDb().getManagedRocksDb()
-        .get();
-    Set liveSstFiles = new HashSet();
-    liveSstFiles.addAll(activeRocksDB.getLiveFiles().files.stream().map(s -> s.substring(1)).collect(
-        Collectors.toList()));
-
-    // RocksDatabase.ColumnFamily cf = ((RDBStore)leaderOM.getMetadataManager().getStore()).getDb().getColumnFamily(COMPACTION_LOG_TABLE);
-    // Set compactedSstFiles = new HashSet();
-    // try (ManagedRocksIterator managedRocksIterator = new ManagedRocksIterator(
-    //     activeRocksDB.newIterator(cf.getHandle()))) {
-    //   managedRocksIterator.get().seekToFirst();
-    //   while (managedRocksIterator.get().isValid()) {
-    //     byte[] value = managedRocksIterator.get().value();
-    //     CompactionLogEntry compactionLogEntry =
-    //         CompactionLogEntry.getFromProtobuf(
-    //             HddsProtos.CompactionLogEntryProto.parseFrom(value));
-    //     compactedSstFiles.addAll(compactionLogEntry.getInputFileInfoList());
-    //     managedRocksIterator.get().next();
-    //   }
-    // } catch (InvalidProtocolBufferException e) {
-    //   throw new RuntimeException(e);
-    // }
-
-    checkSnapshot(leaderOM, followerOM, snapshotName, keys, snapshotInfo, liveSstFiles);
+    checkSnapshot(leaderOM, followerOM, snapshotName, keys, snapshotInfo);
     int sstFileCount = 0;
     Set<String> sstFileUnion = new HashSet<>();
     for (Set<String> sstFiles : sstSetList) {
@@ -356,14 +329,7 @@ public class TestOMRatisSnapshots {
   private void checkSnapshot(OzoneManager leaderOM, OzoneManager followerOM,
                              String snapshotName,
                              List<String> keys, SnapshotInfo snapshotInfo)
-      throws IOException {
-    checkSnapshot(leaderOM, followerOM, snapshotName, keys, snapshotInfo, null);
-  }
-
-  private void checkSnapshot(OzoneManager leaderOM, OzoneManager followerOM, String snapshotName, List<String> keys, SnapshotInfo snapshotInfo,
-                             Set liveSstFiles)
-
-      throws IOException {
+      throws IOException, RocksDBException {
     // Read back data from snapshot.
     OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
@@ -386,6 +352,13 @@ public class TestOMRatisSnapshots {
         Paths.get(getSnapshotPath(leaderOM.getConfiguration(), snapshotInfo));
     // Get the list of hardlinks from the leader.  Then confirm those links
     //  are on the follower
+    RocksDB activeRocksDB = ((RDBStore)leaderOM.getMetadataManager().getStore()).getDb().getManagedRocksDb()
+        .get();
+    List<String> liveSstFiles = new ArrayList<>();
+    liveSstFiles.addAll(activeRocksDB.getLiveFiles().files.stream().map(s -> s.substring(1)).collect(
+        Collectors.toList()));
+
+
     int hardLinkCount = 0;
     try (Stream<Path>list = Files.list(leaderSnapshotDir)) {
       for (Path leaderSnapshotSST: list.collect(Collectors.toList())) {
@@ -395,8 +368,8 @@ public class TestOMRatisSnapshots {
           Path leaderActiveSST =
               Paths.get(leaderActiveDir.toString(), fileName);
           // Skip if not hard link on the leader
-          if (!leaderActiveSST.toFile().exists() ||
-              !liveSstFiles.contains(leaderActiveSST.getFileName())) {
+          // First confirm it is live
+          if (!liveSstFiles.stream().anyMatch(s -> s.equals(fileName))) {
             continue;
           }
           // If it is a hard link on the leader, it should be a hard
@@ -407,13 +380,6 @@ public class TestOMRatisSnapshots {
                 Paths.get(followerSnapshotDir.toString(), fileName);
             Path followerActiveSST =
                 Paths.get(followerActiveDir.toString(), fileName);
-            // if (!followerActiveSST.toFile().exists()  ||
-            // !followerSnapshotSST.toFile().exists()) {
-            //   System.out.println("bad");
-            //   if (liveSstFiles.contains(followerActiveSST.getFileName())) {
-            //     System.out.println("good");
-            //   }
-            // }
             assertEquals(
                 OmSnapshotUtils.getINode(followerActiveSST),
                 OmSnapshotUtils.getINode(followerSnapshotSST),
